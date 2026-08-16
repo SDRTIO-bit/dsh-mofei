@@ -14,6 +14,9 @@
     "./tools": {
       "default": "./lib/tools.js"
     },
+    "./subagent-max": {
+      "default": "./lib/subagent-max.js"
+    },
     "./skills": {
       "default": "./lib/skills-plugin.js"
     },
@@ -28,6 +31,7 @@
     "lib/ai.js",
     "lib/skills.js",
     "lib/tools.js",
+    "lib/subagent-max.js",
     "lib/skills-plugin.js",
     "lib/summary.js",
     "lib/prompt-chain.js",

@@ -105,10 +105,10 @@
     toolName: subagent_fork
     backgroundMode: continuable
 
-# 子代理辅助（v0.16）：按调用指定模型/推理强度/装配上下文。
+# 子代理辅助（v0.16）：按调用指定模型/推理强度/装配上下文（已并入 mofei-dsh 打包）。
 # 需要时用 subagent_with_model 替代 subagent 派生子代理（详见 persona 的【子代理装配】）。
 - id: tool-subagent-with-model
-  name: '@aaravarr/dsh-subagent-max'
+  name: mofei-dsh/subagent-max
   config:
     subagentProvider: spawn
     toolName: subagent_with_model

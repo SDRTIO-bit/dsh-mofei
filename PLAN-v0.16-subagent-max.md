@@ -113,3 +113,24 @@
   - 真实回合工具帧参数 = `model=deepseek-v4-flash` + `effort=off` + `context=测试上下文`，全部正确；
   - 子代理回合完成并回传。
 - 提交：commit 见 git log（`feat: v0.16.0 墨菲子代理辅助…`）。
+
+---
+
+## 7. 打包修订（v0.16.1，2026-08-16）
+
+用户决定：subagent_with_model **直接并进 mofei-dsh 插件本体**，不再作为独立第三方包挂载。
+
+### 变更
+
+| 项 | 之前（v0.16.0） | 之后（v0.16.1） |
+| --- | --- | --- |
+| 载体 | `vendor/dsh-subagent-max/`（第三方包 + link 依赖 + junction） | `plugin/lib/subagent-max.js`（mofei-dsh 子模块，零外部依赖） |
+| 依赖 | `@deepseek-ai/schemastery/dsh-tools/dsh-subagent`（经 junction 解析） | 无（工具定义/settleRun/maxDepth 校验内联，行为与官方一致） |
+| profile 挂载 | package.json link + `@aaravarr/dsh-subagent-max` entry | 仅 cordis.patch.yml `mofei-dsh/subagent-max` entry |
+| preset 白名单 | `name: '@aaravarr/dsh-subagent-max'` | `name: 'mofei-dsh/subagent-max'` |
+| 清理 | — | 删除 `vendor/dsh-subagent-max/` + junction；profile 移除 link 依赖 |
+
+### 验证
+
+- 重启 3088 后 `verify-v0.16-subagent.cjs` 应仍 ALL PASS（写作会话可见 / standard 隔离 / 真实调用参数）。
+- 换机即用：安装 mofei-dsh 即自带该能力（无额外依赖安装步骤）。
