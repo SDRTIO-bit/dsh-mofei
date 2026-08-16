@@ -9,6 +9,7 @@ node_modules/
 /.jez/
 /.playwright-cli/
 /output/
+/browser-screenshots/
 *.log
 *.tmp
 /probe-*.cjs
