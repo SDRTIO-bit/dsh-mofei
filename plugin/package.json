@@ -1,0 +1,61 @@
+{
+  "name": "mofei-dsh",
+  "version": "0.14.1",
+  "description": "墨扉（Mofei）写作内容平台（DSH 插件版）：MOFEI-SPEC 文件优先规范 + MOFEI-AGENT 写作 preset/技能 + MOFEI-STUDIO 全屏写作工作台（含内嵌 Agent 对话）；区间隔离，标准 DSH 零污染",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./tools": {
+      "default": "./lib/tools.js"
+    },
+    "./skills": {
+      "default": "./lib/skills-plugin.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/client.js.map",
+    "lib/txt.js",
+    "lib/world.js",
+    "lib/ai.js",
+    "lib/skills.js",
+    "lib/tools.js",
+    "lib/skills-plugin.js",
+    "lib/summary.js",
+    "lib/prompt-chain.js",
+    "web/index.html",
+    "web/vendor/react.js",
+    "web/vendor/react-dom.js"
+  ],
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.config.js && node ../tools/verify-client-bundle.mjs",
+    "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/txt.js && node --check lib/world.js && node --check lib/ai.js && node --check lib/skills.js && node --check lib/tools.js && node --check lib/skills-plugin.js"
+  },
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "react": "^18.2.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
+  }
+}

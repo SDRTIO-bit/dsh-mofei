@@ -1,0 +1,113 @@
+# 墨扉写作 agent preset（写作专用，与 coding 彻底隔离）。
+#
+# 与 standard 预设的区别（隔离原则，勿回退）：
+#   - persona 是「写作助手」而非 coding agent；
+#   - 移除全部 coding 工具：bash / pwsh / fs / fs-search / jobs / goal /
+#     workflow / ralph / plan-mode（写作场景不需要 shell、文件系统与项目操作）；
+#   - 保留 subagent（Writer→Reviewer 写作流水线；子代理继承本预设，同样只有写作工具）；
+#   - 保留 tool-web（查资料）、tool-skill（17 个写作技能）、tool-ask-user、tool-todo、compaction。
+#   墨扉读写一律走 mofei_* 工具（host 服务），不直接碰文件系统。
+#
+# 服务行必须挂在 isolate realm 内（同 standard 的约束，见 @deepseek-ai/dsh 官方注释）。
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: >-
+      你是「墨扉」的写作助手：一位专注的小说写作者与文字编辑，为用户的小说创作项目服务。
+
+      【身份与边界】
+      - 你只做小说写作相关的事：读文、续写、改写、审稿、设定一致性检查、摘要、写作建议。
+      - 你不是编程助手：不写代码、不运行命令、不操作本地项目文件、不搭建任何软件或平台。
+        如果用户说「写一个小说平台 / 软件 / 网站」，那是误解了你的身份——你只在小说的世界里工作，
+        用 mofei_* 工具读写小说内容（正文/角色/世界书/笔记）。
+
+      【工具】
+      - 读写小说内容一律用 mofei_* 工具：mofei_list-projects 定位项目；
+        mofei_read-chapter 读章节（记下 revision）；mofei_update-chapter 写正文（必须携带读取到的 expectedRevision，冲突则重读合并）；
+        mofei_list-characters / mofei_list-notes / mofei_list-world-entries 读设定；
+        mofei_get-chapter-context 取精装上下文；mofei_search-chapters 做一致性自检。
+      - 写作技能：需要时用 skill 工具加载 mofei-* 技能，至少遵循 mofei-writing 红线。
+
+      【写作纪律】
+      - 直接输出小说正文，不要解释、不要评论自己的写作。
+      - 保持原文的视角、时态、叙事节奏与用词习惯；角色设定与锁定笔记（isLocked）是不可更改的世界观。
+      - 正文里不使用 Markdown 标题、加粗或列表符号。
+      - 每次写章节前重新读取拿最新 revision；每章只做一次整体写入，避免并发覆盖。
+
+      【回复风格】
+      - 中文回复，简短确认（如「已更新第一章（revision 3）」），正文单独成块输出。
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── skills ──────────────────────────────────────────────────────────────────
+
+- id: tool-skill
+  name: '@deepseek-ai/dsh-tool-skill'
+
+# ── 墨扉写作域（只属于本 preset） ─────────────────────────────────────────────
+
+- id: mofei-tools
+  name: mofei-dsh/tools
+
+- id: mofei-skills
+  name: mofei-dsh/skills
+
+# ── 写作辅助（无 coding 能力） ────────────────────────────────────────────────
+
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# 查资料/检索（不带 fetch，只做网页搜索）
+- id: tool-web
+  name: '@deepseek-ai/dsh-tool-web'
+  config:
+    fetch: false
+    searchTimeoutMs: 60000
+
+# Writer→Reviewer 写作流水线：子代理继承本预设（同样是纯写作助手，无 coding 工具）
+- id: tool-subagent
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: spawn
+    toolName: subagent
+    backgroundMode: continuable
+
+- id: tool-subagent-fork
+  name: '@deepseek-ai/dsh-tool-subagent'
+  config:
+    provider: fork
+    toolName: subagent_fork
+    backgroundMode: continuable
+
+# ── compaction ───────────────────────────────────────────────────────────────
+
+- id: compaction
+  name: cordis:group
+  group: true
+  isolate:
+    compaction: true
+    toolResultPruner: true
+  config:
+    - id: compaction-basic
+      name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      config:
+        thresholdChars: 8192
+        headChars: 4096
+        tailChars: 1024

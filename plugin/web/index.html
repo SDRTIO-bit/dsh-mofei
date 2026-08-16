@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>墨扉 · 写作平台</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body, #root { margin: 0; height: 100%; background: #111318; color: #e6e6eb; }
+    .mf-boot { min-height: 100%; display: grid; place-items: center; font: 13px/1.6 sans-serif; color: #9ca3af; }
+  </style>
+</head>
+<body class="mf-standalone">
+  <div id="root"><div class="mf-boot">墨扉 正在加载…</div></div>
+  <script src="/mofei/vendor/react.js"></script>
+  <script src="/mofei/vendor/react-dom.js"></script>
+  <script>
+    window.__ModuleLoader__ = {
+      load(entry) { window.__MofeiModule__ = entry; },
+    };
+  </script>
+  <script src="/mofei/app.js"></script>
+  <script>
+    (function () {
+      var entry = window.__MofeiModule__;
+      if (!entry || typeof entry.factory !== 'function') {
+        document.getElementById('root').innerHTML = '<div class="mf-boot">墨扉 bundle 加载失败</div>';
+        return;
+      }
+      var requireFromShell = function (id) {
+        if (id === 'react') return window.React;
+        if (id === 'react-dom') return window.ReactDOM;
+        throw new Error('未知的独立站依赖：' + id);
+      };
+      var moduleExports = entry.factory(requireFromShell);
+      if (moduleExports && typeof moduleExports.mountStandalone === 'function') {
+        moduleExports.mountStandalone(document.getElementById('root'));
+      } else {
+        document.getElementById('root').innerHTML = '<div class="mf-boot">墨扉 mount 接口不存在</div>';
+      }
+    })();
+  </script>
+</body>
+</html>

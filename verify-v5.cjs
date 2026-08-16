@@ -1,0 +1,125 @@
+﻿// OpenFic v0.2.0 新功能回归：TXT 导入/导出、查找替换、多标签、AI 助手面板
+// 前置：DSH 已重启加载 openfic-dsh v0.2.0
+const { chromium } = require('C:/Users/zhao/AppData/Roaming/npm/node_modules/@playwright/mcp/node_modules/playwright')
+const fs = require('fs')
+const path = require('path')
+const BASE = process.env.MOFEI_BASE || 'http://127.0.0.1:3080'
+const OUT = path.join(__dirname, 'verify-shots')
+const SESSION_ID = 'session-62a01ca8-ef2a-4da4-b42d-f41369b2cabe'
+const ts = String(Date.now()).slice(-6)
+const PROJ = 'v5验证-' + ts
+let failures = 0
+function log(m) { console.log(m) }
+function fail(m) { failures += 1; console.log('FAIL: ' + m) }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+;(async () => {
+  fs.mkdirSync(OUT, { recursive: true })
+  // 准备导入样例 TXT
+  const samplePath = path.join(OUT, 'import-sample-' + ts + '.txt')
+  fs.writeFileSync(samplePath, '第一卷 风起\n\n第一章 初雪\n雪落无声，天地皆白。\n\n第二章 夜行\n夜色深沉，灯火零星。\n', 'utf8')
+  const browser = await chromium.launch({ channel: 'msedge' })
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } })
+  await context.addInitScript((sid) => {
+    try { localStorage.setItem('dsh.sessions.current', JSON.stringify({ sessionId: sid })) } catch (e) {}
+  }, SESSION_ID)
+  const page = await context.newPage()
+  page.on('pageerror', (e) => console.log('PAGEERROR:', e.message.slice(0, 200)))
+  await page.goto(BASE, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  await sleep(9000)
+  await page.locator('button.of8-open.of8-float').first().waitFor({ state: 'visible', timeout: 30000 })
+  await page.locator('button.of8-open.of8-float').first().click()
+  await page.locator('section.of8-panel').waitFor({ state: 'visible', timeout: 10000 })
+  await sleep(800)
+
+  log('== 1. TXT 导入 ==')
+  await page.locator('header.of8-head button', { hasText: '导入 TXT' }).click()
+  await sleep(400)
+  await page.locator('div.of8-import-card').waitFor({ state: 'visible', timeout: 8000 })
+  await page.locator('div.of8-import-card input[type=file]').setInputFiles(samplePath)
+  await sleep(1200)
+  const previewText = await page.locator('div.of8-import-card').innerText()
+  if (previewText.includes('2 章') && previewText.includes('第一卷 风起')) log('IMPORT-PREVIEW-OK')
+  else fail('导入预览异常: ' + previewText.slice(0, 120))
+  await page.locator('div.of8-import-card input.of8-input').fill(PROJ)
+  await page.locator('div.of8-import-card button', { hasText: '确认导入' }).click()
+  await sleep(2000)
+  if (await page.locator('.of8-item', { hasText: PROJ }).count() > 0) log('IMPORT-CONFIRM-OK')
+  else fail('导入项目未创建')
+  await page.screenshot({ path: path.join(OUT, 'v5-01-import.png') })
+
+  log('== 2. 打开导入章节 + 多标签 ==')
+  await page.locator('.of8-item', { hasText: PROJ }).first().locator('button.of8-title').click()
+  await sleep(1200)
+  await page.locator('.of8-item', { hasText: '第一章 初雪' }).first().locator('button.of8-title').click()
+  await sleep(1200)
+  const editor = page.locator('textarea.of8-text')
+  await editor.waitFor({ state: 'visible', timeout: 8000 })
+  const c1 = await editor.inputValue()
+  if (c1.includes('雪落无声')) log('IMPORT-CONTENT-OK')
+  else fail('导入章节内容异常: ' + c1.slice(0, 60))
+  await page.locator('.of8-item', { hasText: '第二章 夜行' }).first().locator('button.of8-title').click()
+  await sleep(1200)
+  const c2 = await editor.inputValue()
+  if (c2.includes('夜色深沉')) log('TAB-SECOND-OK')
+  else fail('第二章未打开')
+  const tabCount = await page.locator('.of8-tabs2 .of8-tab2').count()
+  if (tabCount >= 2) log('MULTI-TAB-OK (' + tabCount + ')')
+  else fail('多标签未出现: ' + tabCount)
+  await page.locator('.of8-tabs2 .of8-tab2', { hasText: '第一章 初雪' }).click()
+  await sleep(1200)
+  const back1 = await editor.inputValue()
+  if (back1.includes('雪落无声')) log('TAB-SWITCH-OK')
+  else fail('标签切换失败')
+  await page.screenshot({ path: path.join(OUT, 'v5-02-tabs.png') })
+
+  log('== 3. 查找替换 ==')
+  await editor.click()
+  await page.keyboard.press('Control+f')
+  await sleep(500)
+  const findInput = page.locator('.of8-findbar input').first()
+  await findInput.waitFor({ state: 'visible', timeout: 5000 })
+  await findInput.fill('雪落无声')
+  await sleep(600)
+  const counter = await page.locator('.of8-findbar span').innerText()
+  if (counter.startsWith('1/1')) log('FIND-OK (' + counter + ')')
+  else fail('查找计数异常: ' + counter)
+  await page.locator('.of8-findbar input.of8-find-repl').fill('雪落无痕')
+  await page.locator('.of8-findbar button', { hasText: '全部替换' }).click()
+  await sleep(600)
+  const replaced = await editor.inputValue()
+  if (replaced.includes('雪落无痕') && !replaced.includes('雪落无声')) log('REPLACE-ALL-OK')
+  else fail('全部替换失败')
+  await page.screenshot({ path: path.join(OUT, 'v5-03-find.png') })
+
+  log('== 4. TXT 导出 ==')
+  await page.locator('.of8-tabs2 .of8-tab2', { hasText: '第二章 夜行' }).click()
+  await sleep(800)
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 15000 }),
+    page.locator('header.of8-head button', { hasText: '导出 TXT' }).click(),
+  ])
+  const filename = download.suggestedFilename()
+  if (filename.endsWith('.txt')) log('EXPORT-OK ' + filename)
+  else fail('导出文件名异常: ' + filename)
+  await page.screenshot({ path: path.join(OUT, 'v5-04-export.png') })
+
+  log('== 5. AI 助手面板 ==')
+  await page.locator('button.of8-mini', { hasText: 'AI 助手' }).click()
+  await sleep(600)
+  const aiVisible = await page.locator('.of8-ai').isVisible().catch(() => false)
+  if (aiVisible) {
+    log('AI-PANEL-OK')
+    // 尝试真实生成一次（LLM 未配置时容忍错误提示）
+    await page.locator('.of8-ai select').selectOption({ label: '续写' })
+    await page.locator('.of8-ai button', { hasText: '生成' }).click()
+    await sleep(8000)
+    const aiText = await page.locator('.of8-ai').innerText().catch(() => '')
+    if (aiText.includes('生成中') || aiText.includes('LLM') || aiText.includes('失败') || aiText.length > 0) log('AI-CALL-ATTEMPTED')
+  } else fail('AI 面板未出现')
+  await page.screenshot({ path: path.join(OUT, 'v5-05-ai.png') })
+
+  await browser.close()
+  console.log(failures === 0 ? '== ALL PASS ==' : failures + ' FAILURES')
+  process.exit(failures === 0 ? 0 : 1)
+})().catch((e) => { console.error('SCRIPT ERROR: ' + (e && e.stack || e)); process.exit(2) })

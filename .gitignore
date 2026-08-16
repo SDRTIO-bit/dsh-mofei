@@ -1,4 +1,21 @@
-﻿*
-!.gitignore
-!.mofei/
-!.mofei/**
+# Dependencies and regenerated release packages
+node_modules/
+**/node_modules/
+/plugin/dist/
+
+# Local tooling, logs, and transient diagnostics
+/.codegraph/
+/.omo/
+*.log
+*.tmp
+/probe-*.cjs
+/verify-shots/*.png
+/verify-shots/*.json
+/verify-shots/*sample*.txt
+
+# Runtime state belongs to the local DSH instance, not source history.
+/.mofei-*.json
+/.openfic-*.json
+
+# Keep the existing .mofei/ writing history tracked. Source, presets, skills,
+# scripts, tests, and documentation are intentionally tracked from this point.

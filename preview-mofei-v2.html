@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨扉 · 布局定稿 v4（中=文字区，右=缩小版 dsh web）</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --panel: #101012;
+    --panel-2: #161619;
+    --line: rgba(255,255,255,.07);
+    --line-soft: rgba(255,255,255,.05);
+    --text: #f2f2f2;
+    --text-2: #a8a8b0;
+    --text-3: #6b6b74;
+    --accent: #4d8dff;
+    --accent-soft: rgba(77,141,255,.14);
+    --bubble: #1a1a1d;
+    --input-major: #141416;
+    --hover: rgba(255,255,255,.06);
+    --ok: #4ade80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.6 -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; }
+
+  /* 顶栏 */
+  .topbar { flex: none; height: 52px; display: flex; align-items: center; gap: 14px; padding: 0 18px; border-bottom: 1px solid var(--line); }
+  .topbar .logo { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 650; }
+  .topbar .logo .mark { width: 24px; height: 24px; border-radius: 8px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+  .topbar .logo small { color: var(--text-3); font-weight: 400; font-size: 11.5px; }
+  .topbar .spacer { flex: 1; }
+  .topbar .chip { border: 1px solid var(--line); background: transparent; color: var(--text-2); border-radius: 8px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .topbar .chip:hover { background: var(--hover); color: var(--text); }
+  .topbar .save { color: var(--text-3); font-size: 11.5px; }
+
+  .stage { flex: 1; min-height: 0; display: flex; gap: 14px; padding: 14px 16px; }
+  .bubble { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.45); display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ============ 中：墨菲文字展现与修改区（导航内嵌左栏） ============ */
+  .center { flex: 1; min-width: 0; display: flex; flex-direction: row; }
+  .center-nav { width: 250px; flex: none; border-right: 1px solid var(--line-soft); display: flex; flex-direction: column; }
+  .cn-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 12px 10px; }
+  .cn-head .t { font-size: 12px; font-weight: 650; color: var(--text-2); display: flex; align-items: center; gap: 5px; min-width: 0; }
+  .cn-head .t .back { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 13px; padding: 0 2px; }
+  .cn-head .t #proj-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cn-head .mini { border: 1px solid var(--line); background: transparent; color: var(--text-2); border-radius: 7px; padding: 2px 8px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .cn-head .mini:hover { background: var(--hover); color: var(--text); }
+  .search { margin: 0 10px 8px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--text); font: inherit; font-size: 12px; outline: none; }
+  .search::placeholder { color: var(--text-3); }
+  .search:focus { border-color: rgba(77,141,255,.45); }
+  .proj-list { flex: 1; min-height: 0; overflow: auto; padding: 2px 8px 8px; display: flex; flex-direction: column; gap: 4px; }
+  .proj { border: 1px solid transparent; border-radius: 11px; padding: 9px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; transition: all .12s ease; }
+  .proj:hover { background: rgba(255,255,255,.045); }
+  .proj.active { background: var(--accent-soft); border-color: rgba(77,141,255,.26); }
+  .proj .name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .proj .meta { font-size: 10.5px; color: var(--text-3); display: flex; gap: 8px; }
+  .proj .meta .dot { color: var(--ok); }
+  .chap-list { flex: 1; min-height: 0; overflow: auto; padding: 2px 8px 8px; display: flex; flex-direction: column; gap: 2px; }
+  .vol { font-size: 10.5px; color: var(--text-3); font-weight: 650; padding: 9px 10px 3px; }
+  .vol .count { font-weight: 400; }
+  .chap { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border-radius: 8px; cursor: pointer; font-size: 12px; color: var(--text-2); border: 1px solid transparent; transition: all .1s ease; }
+  .chap:hover { background: rgba(255,255,255,.045); color: var(--text); }
+  .chap.on { background: var(--accent-soft); border-color: rgba(77,141,255,.26); color: var(--text); }
+  .chap .rev { font-size: 9.5px; color: var(--text-3); margin-left: auto; }
+  .cn-foot { flex: none; padding: 8px 8px; border-top: 1px solid var(--line-soft); }
+  .mini-nav { display: flex; gap: 2px; }
+  .mini-nav button { flex: 1; border: 0; background: transparent; color: var(--text-3); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 9px; font-family: inherit; padding: 3px 0; border-radius: 7px; }
+  .mini-nav button .ic { font-size: 14px; }
+  .mini-nav button:hover { color: var(--text-2); background: rgba(255,255,255,.05); }
+  .mini-nav button.on { color: var(--accent); }
+
+  .center-editor { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .tabs { display: flex; gap: 4px; padding: 10px 14px 0; flex: none; }
+  .tab { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 9px 9px 0 0; color: var(--text-3); font-size: 12px; cursor: pointer; }
+  .tab.on { color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-bottom-color: transparent; }
+  .tab .x { opacity: 0; } .tab:hover .x { opacity: 1; }
+  .title-row { padding: 8px 22px 2px; flex: none; }
+  .title-row input { width: 100%; border: 0; background: transparent; color: var(--text); outline: none; font: 600 21px/1.4 ui-serif, Georgia, "Songti SC", serif; }
+  .toolbar { display: flex; align-items: center; gap: 2px; padding: 6px 20px; flex: none; border-top: 1px solid var(--line-soft); }
+  .toolbar .sep { width: 1px; height: 16px; background: var(--line); margin: 0 7px; }
+  .tbtn { height: 26px; min-width: 26px; padding: 0 6px; border-radius: 7px; border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 12.5px; font-family: inherit; }
+  .tbtn:hover { background: var(--hover); color: var(--text); }
+  .editor { flex: 1; min-height: 0; padding: 24px clamp(28px,7vw,80px); overflow: auto; font: 16.5px/1.95 ui-serif, Georgia, "Songti SC", serif; color: #e8e8ea; white-space: pre-wrap; }
+  .status-bar { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; border-top: 1px solid var(--line-soft); color: var(--text-3); font-size: 11.5px; }
+  .status-bar .right { display: flex; gap: 14px; }
+  .status-bar .saved { color: var(--text-2); }
+
+  /* ============ 右：缩小版 dsh web（侧边栏 + 对话 + 输入一体） ============ */
+  .right { width: 430px; flex: none; }
+
+  /* 内：官方侧边栏条（会话列表，选择会话后收起） */
+  .sider { flex: none; display: flex; flex-direction: column; border-bottom: 1px solid var(--line-soft); }
+  .sider-head { padding: 10px 12px 6px; display: flex; align-items: center; justify-content: space-between; }
+  .sider-head .brand { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 650; }
+  .sider-head .brand .logo { width: 19px; height: 19px; border-radius: 6px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 10.5px; font-weight: 700; }
+  .sider-head .mini { border: 1px solid var(--line); background: transparent; color: var(--text-2); border-radius: 7px; padding: 2px 8px; font-size: 10.5px; cursor: pointer; font-family: inherit; }
+  .sider-head .mini:hover { background: var(--hover); color: var(--text); }
+  .sider-list { display: flex; flex-direction: column; gap: 1px; padding: 0 6px 8px; max-height: 150px; overflow: auto; }
+  .sess { display: flex; align-items: center; gap: 7px; padding: 5px 7px; border-radius: 7px; cursor: pointer; font-size: 11.5px; color: var(--text-2); }
+  .sess:hover { background: rgba(255,255,255,.05); color: var(--text); }
+  .sess.on { background: var(--accent-soft); color: var(--text); }
+  .sess .ico { width: 20px; height: 20px; border-radius: 5px; background: var(--panel-2); border: 1px solid var(--line); display: grid; place-items: center; font-size: 10px; flex: none; }
+  .sess .name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sess .time { font-size: 9.5px; color: var(--text-3); flex: none; }
+  /* 退出会话方向键（默认显示；点击唤出会话列表，选择/新建后收起） */
+  .sider-exit { flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line-soft); }
+  .sider-exit button { border: 1px solid var(--line); background: transparent; color: var(--text-2); border-radius: 8px; padding: 4px 10px; font-size: 11.5px; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 6px; }
+  .sider-exit button:hover { background: var(--hover); color: var(--text); }
+  .sider-exit .hint { font-size: 10.5px; color: var(--text-3); }
+
+  /* 内：官方对话（质感同官方数值） */
+  .chat-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; }
+  .chat-head .t { font-size: 12.5px; font-weight: 650; display: flex; align-items: center; gap: 7px; }
+  .chat-head .t .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  .chat-head .t small { color: var(--text-3); font-weight: 400; font-size: 10.5px; }
+  .chat-actions { display: flex; gap: 5px; align-items: center; }
+  .preset { border: 1px solid var(--line); background: var(--panel-2); color: var(--text-2); border-radius: 7px; padding: 3px 7px; font-size: 10.5px; font-family: inherit; outline: none; }
+  .chat-list { flex: 1; min-height: 0; overflow: auto; padding: 2px 12px 10px; display: flex; flex-direction: column; gap: 9px; }
+  .msg { display: flex; flex-direction: column; max-width: 88%; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.assistant { align-self: flex-start; align-items: flex-start; }
+  .bub { padding: 9px 15px; border-radius: 22px; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; word-break: break-word; }
+  .msg.user .bub { background: var(--bubble); color: var(--text); border: 1px solid var(--line-soft); }
+  .msg.assistant .bub { background: var(--hover); color: var(--text); }
+  .tool-frame { margin-top: 4px; font-size: 10.5px; color: var(--text-3); border: 1px dashed var(--line); border-radius: 8px; padding: 3px 8px; display: inline-flex; align-items: center; gap: 6px; }
+
+  /* 内：官方 composer 缩小版 */
+  .composer-wrap { flex: none; padding: 6px 10px 12px; }
+  .composer { border: 1px solid var(--line); background: var(--input-major); border-radius: 22px; box-shadow: 0 8px 28px rgba(0,0,0,.35); padding: 10px 14px 8px; display: flex; flex-direction: column; gap: 8px; }
+  .composer textarea { width: 100%; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 13.5px; line-height: 1.6; resize: none; outline: none; min-height: 22px; }
+  .composer textarea::placeholder { color: var(--text-3); }
+  .composer-foot { display: flex; align-items: center; justify-content: space-between; }
+  .model-chip { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-2); }
+  .model-chip .full { color: var(--text-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; font-size: 9.5px; }
+  .send { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; cursor: pointer; font-size: 14px; display: grid; place-items: center; }
+  .send:hover { filter: brightness(1.12); }
+
+  .note { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); background: #161619; border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px; font-size: 11.5px; color: var(--text-3); white-space: nowrap; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+  .note b { color: var(--text-2); }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="logo"><span class="mark">墨</span>墨扉 <small>写作工作台 · 校园小说</small></div>
+    <div class="spacer"></div>
+    <span class="save">已保存</span>
+    <button class="chip">风格</button>
+    <button class="chip">命令</button>
+    <button class="chip">导入 TXT</button>
+    <button class="chip" style="background:var(--accent);color:#fff;border-color:transparent">＋ 新建</button>
+  </header>
+
+  <div class="stage">
+
+    <!-- ============ 中：墨菲文字展现与修改区 ============ -->
+    <main class="bubble center">
+
+      <!-- 左内栏：项目 → 章节 -->
+      <div class="center-nav">
+        <div id="view-projects" class="cn-view" style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div class="cn-head"><div class="t">▤ 项目</div><button class="mini">＋ 新建</button></div>
+          <input class="search" placeholder="搜索项目…">
+          <div class="proj-list">
+            <div class="proj" onclick="openProject(this)">
+              <div class="name">穿越魔法世界的拥有火影…</div>
+              <div class="meta"><span>70,715 字</span><span>24 章</span></div>
+            </div>
+            <div class="proj active" onclick="openProject(this)">
+              <div class="name">校园小说</div>
+              <div class="meta"><span>140,729 字</span><span>60 章</span><span class="dot">●</span></div>
+            </div>
+            <div class="proj" onclick="openProject(this)">
+              <div class="name">青城剑影</div>
+              <div class="meta"><span>8,237 字</span><span>3 章</span></div>
+            </div>
+            <div class="proj" onclick="openProject(this)">
+              <div class="name">未命名</div>
+              <div class="meta"><span>0 字</span><span>0 章</span></div>
+            </div>
+          </div>
+        </div>
+        <div id="view-chapters" class="cn-view" style="flex:1;min-height:0;display:none;flex-direction:column">
+          <div class="cn-head"><div class="t"><button class="back" onclick="backToProjects()">←</button><span id="proj-name">校园小说</span></div><button class="mini">＋ 章节</button></div>
+          <input class="search" placeholder="搜索章节…">
+          <div class="chap-list">
+            <div class="vol">第一卷 · 初入校园 <span class="count">12</span></div>
+            <div class="chap on">第一章 开学 <span class="rev">r3</span></div>
+            <div class="chap">第二章 同桌 <span class="rev">r2</span></div>
+            <div class="chap">第三章 社团招新 <span class="rev">r1</span></div>
+            <div class="vol">第二卷 · 风云渐起 <span class="count">48</span></div>
+            <div class="chap">第四章 月考 <span class="rev">r5</span></div>
+            <div class="chap">第五章 操场 <span class="rev">r2</span></div>
+            <div class="chap">第六章 图书馆之夜 <span class="rev">r4</span></div>
+          </div>
+        </div>
+        <div class="cn-foot"><div class="mini-nav">
+          <button class="on"><span class="ic">▤</span>项目</button>
+          <button><span class="ic">⌕</span>检索</button>
+          <button><span class="ic">☺</span>角色</button>
+          <button><span class="ic">◈</span>世界</button>
+          <button><span class="ic">☰</span>笔记</button>
+        </div></div>
+      </div>
+
+      <!-- 右内栏：编辑器 -->
+      <div class="center-editor">
+        <div class="tabs">
+          <span class="tab on">第一章 开学 <span class="x">✕</span></span>
+          <span class="tab">第三章 社团招新 <span class="x">✕</span></span>
+        </div>
+        <div class="title-row"><input value="第一章 开学" placeholder="章节标题"></div>
+        <div class="toolbar">
+          <button class="tbtn">H1</button><button class="tbtn">H2</button><button class="tbtn">H3</button>
+          <span class="sep"></span>
+          <button class="tbtn"><b>B</b></button><button class="tbtn"><i>I</i></button><button class="tbtn"><u>U</u></button><button class="tbtn"><s>S</s></button>
+          <span class="sep"></span>
+          <button class="tbtn">❝</button><button class="tbtn">&lt;/&gt;</button><button class="tbtn">🔗</button>
+          <span class="sep"></span>
+          <button class="tbtn">送章</button><button class="tbtn">AI</button><button class="tbtn">历史</button><button class="tbtn">⌕</button>
+        </div>
+        <div class="editor">九月一日，暑气未消。
+
+林知夏背着书包走进高一（三）班的教室时，窗外的蝉还在叫。
+
+她选了一个靠窗的位置坐下，把崭新的课本一本一本码在桌角，然后抬头，看见讲台前站着一个穿白衬衫的男生，正在黑板上写自己的名字——字很好看。</div>
+        <div class="status-bar">
+          <span>236 字 <span class="saved">· 已保存</span></span>
+          <span class="right"><span>今日 +1,240</span><span>连续 2 天</span><span>累计 8,237 字</span></span>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============ 右：缩小版 dsh web（官方侧边栏 + 对话 + 输入一体） ============ -->
+    <aside class="bubble right">
+
+      <!-- 官方侧边栏条（会话；默认收起，点方向键唤出） -->
+      <div id="sider-panel" class="sider" style="display:none">
+        <div class="sider-head">
+          <div class="brand"><span class="logo">D</span>会话</div>
+          <button class="mini" onclick="enterSession()">＋ 新会话</button>
+        </div>
+        <div class="sider-list">
+          <div class="sess" onclick="enterSession(this)"><span class="ico">✎</span><span class="name">SillyTavern-1.13.2</span><span class="time">18分</span></div>
+          <div class="sess" onclick="enterSession(this)"><span class="ico">✎</span><span class="name">SillyTavern-1.13.2</span><span class="time">17分</span></div>
+          <div class="sess" onclick="enterSession(this)"><span class="ico">✎</span><span class="name">SillyTavern-1.13.2</span><span class="time">16分</span></div>
+          <div class="sess" onclick="enterSession(this)"><span class="ico">◇</span><span class="name">设计</span><span class="time">2天</span></div>
+          <div class="sess" onclick="enterSession(this)"><span class="ico">▤</span><span class="name">未分组</span><span class="time">3天</span></div>
+        </div>
+      </div>
+      <!-- 退出会话方向键 -->
+      <div id="sider-exit" class="sider-exit">
+        <button onclick="exitSession()">‹ 会话列表</button>
+        <span class="hint">切换/退出当前会话</span>
+      </div>
+
+      <!-- 官方对话 -->
+      <div class="chat-head">
+        <div class="t"><span class="dot"></span>Agent 对话 <small>router-standard</small></div>
+        <div class="chat-actions">
+          <select class="preset"><option>mofei-writer</option><option>标准模式</option><option>极简模式</option></select>
+          <button class="tbtn" style="font-size:13px">＋</button>
+        </div>
+      </div>
+      <div class="chat-list">
+        <div class="msg user"><div class="bub">帮我把第一章润色一下，节奏太慢了。</div></div>
+        <div class="msg assistant">
+          <div class="bub">好的，我先读取第一章看看。</div>
+          <span class="tool-frame">⚙ mofei_read-chapter</span>
+        </div>
+        <div class="msg assistant"><div class="bub">已读完。开头两段写景略拖，我把第一段压缩了 22 字，让「白衬衫男生」提前出场。已更新正文（revision 2）。</div></div>
+        <div class="msg user"><div class="bub">把林知夏写进世界书。</div></div>
+        <div class="msg assistant">
+          <span class="tool-frame">⚙ mofei_update-world-entry</span>
+          <div class="bub">已写入「林知夏 · 转学生」条目（触发词：知夏 / 同桌）。</div>
+        </div>
+      </div>
+
+      <!-- 官方 composer 缩小版 -->
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea rows="1" placeholder="输入写作指令：续写 / 审稿 / 查设定…"></textarea>
+          <div class="composer-foot">
+            <span class="model-chip">DeepSeek V4 Flash Max <span class="full">Full access</span></span>
+            <button class="send" title="发送">↑</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <div class="note">v4 定稿：中＝<b>墨菲文字展现与修改区</b>（左内栏=项目→章节）｜ 右＝<b>缩小版 dsh web</b>（官方侧边栏+对话+输入一体）</div>
+
+<script>
+  function openProject(el) {
+    document.querySelectorAll('.proj').forEach((p) => p.classList.remove('active'))
+    el.classList.add('active')
+    document.getElementById('view-projects').style.display = 'none'
+    document.getElementById('view-chapters').style.display = 'flex'
+    document.getElementById('proj-name').textContent = el.querySelector('.name').textContent
+  }
+  function backToProjects() {
+    document.getElementById('view-projects').style.display = 'flex'
+    document.getElementById('view-chapters').style.display = 'none'
+  }
+  // 会话：默认收起列表（已在会话中）；点方向键唤出列表切换；选择/新建后再次收起
+  function enterSession(el) {
+    if (el) document.querySelectorAll('.sess').forEach((s) => s.classList.remove('on'))
+    if (el) el.classList.add('on')
+    document.getElementById('sider-panel').style.display = 'none'
+    document.getElementById('sider-exit').style.display = 'flex'
+  }
+  function exitSession() {
+    document.getElementById('sider-panel').style.display = 'flex'
+    document.getElementById('sider-exit').style.display = 'none'
+  }
+</script>
+</body>
+</html>
