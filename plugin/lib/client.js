@@ -1839,6 +1839,30 @@ function createClient(require2) {
       return j.value;
     });
   }
+  function timedCall(method, args, ms) {
+    return new Promise((resolve) => {
+      let done = false;
+      const timer = setTimeout(() => {
+        if (!done) {
+          done = true;
+          resolve(null);
+        }
+      }, ms);
+      call(method, args).then((value) => {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          resolve(value);
+        }
+      }, () => {
+        if (!done) {
+          done = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      });
+    });
+  }
   function dshCall(method, payload) {
     const rpcId = "mofei-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
     return fetch("/api/" + method, {
@@ -4367,6 +4391,44 @@ function createClient(require2) {
       }, 80);
       return cancel;
     }, [open, projectId, project && project.writerSessionId, chatSessionId, chatSnap]);
+    const reloadRef = React.useRef(reload);
+    reloadRef.current = reload;
+    const syncStoreRef = React.useRef(null);
+    const syncFileRef = React.useRef(null);
+    React.useEffect(() => {
+      if (mode !== "web") return void 0;
+      let alive = true;
+      let busy = false;
+      const sync = async () => {
+        if (busy || !alive) return;
+        busy = true;
+        try {
+          const result = await timedCall("sync-status", {}, 5e3);
+          if (!alive || !result) return;
+          const storeStamp = result && result.storeStamp || "";
+          const fileStamp = result && result.fileStamp || "";
+          const first = syncStoreRef.current === null && syncFileRef.current === null;
+          const storeChanged = storeStamp !== (syncStoreRef.current || "");
+          const fileChanged = fileStamp !== (syncFileRef.current || "");
+          syncStoreRef.current = storeStamp;
+          syncFileRef.current = fileStamp;
+          if (first || fileChanged && !storeChanged) {
+            const imported = await timedCall("reload-from-files", {}, 15e3);
+            if (!alive || !imported) return;
+          }
+          if (first || storeChanged || fileChanged) await reloadRef.current();
+        } catch (error2) {
+        } finally {
+          busy = false;
+        }
+      };
+      sync();
+      const timer = setInterval(sync, 2e3);
+      return () => {
+        alive = false;
+        clearInterval(timer);
+      };
+    }, [mode]);
     React.useEffect(() => {
       if (!open) return void 0;
       const api = dshClientConnection && dshClientConnection.api;

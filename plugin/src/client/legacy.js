@@ -29,6 +29,15 @@ export function createClient(require) {
     })
   }
 
+  // v0.15: 轮询用超时包装——fetch 悬挂时降级为 null（下轮再试），避免 busy 卡死轮询。
+  function timedCall(method, args, ms) {
+    return new Promise((resolve) => {
+      let done = false
+      const timer = setTimeout(() => { if (!done) { done = true; resolve(null) } }, ms)
+      call(method, args).then((value) => { if (!done) { done = true; clearTimeout(timer); resolve(value) } }, () => { if (!done) { done = true; clearTimeout(timer); resolve(null) } })
+    })
+  }
+
   // sessions.create() is a client-state action and drops agentPreset. Project writer
   // sessions must be created through DSH's native RPC so they start isolated.
   function dshCall(method, payload) {
@@ -1581,6 +1590,43 @@ export function createClient(require) {
       const cancel = later(() => { reload() }, 80)
       return cancel
     }, [open, projectId, project && project.writerSessionId, chatSessionId, chatSnap])
+    // v0.15: 文件同步轮询——AI/外部写入（无论会话绑定与否）在数秒内自动可见。
+    // storeStamp 变化 → 仅 UI reload（工具/UI 写入，内存已是最新）；
+    // fileStamp 变化而 storeStamp 未变 → 外部文件编辑，先 reload-from-files 文件优先导入再 reload；
+    // 首轮执行一次 catch-up：补上「气泡收起期间」发生的外部写入。
+    const reloadRef = React.useRef(reload)
+    reloadRef.current = reload
+    const syncStoreRef = React.useRef(null)
+    const syncFileRef = React.useRef(null)
+    React.useEffect(() => {
+      if (mode !== 'web') return undefined
+      let alive = true
+      let busy = false
+      const sync = async () => {
+        if (busy || !alive) return
+        busy = true
+        try {
+          const result = await timedCall('sync-status', {}, 5000)
+          if (!alive || !result) return
+          const storeStamp = (result && result.storeStamp) || ''
+          const fileStamp = (result && result.fileStamp) || ''
+          const first = syncStoreRef.current === null && syncFileRef.current === null
+          const storeChanged = storeStamp !== (syncStoreRef.current || '')
+          const fileChanged = fileStamp !== (syncFileRef.current || '')
+          syncStoreRef.current = storeStamp
+          syncFileRef.current = fileStamp
+          if (first || (fileChanged && !storeChanged)) {
+            const imported = await timedCall('reload-from-files', {}, 15000)
+            if (!alive || !imported) return
+          }
+          if (first || storeChanged || fileChanged) await reloadRef.current()
+        } catch (error) { /* 静默跳过，下轮再试 */ }
+        finally { busy = false }
+      }
+      sync()
+      const timer = setInterval(sync, 2000)
+      return () => { alive = false; clearInterval(timer) }
+    }, [mode])
     // v0.12.1: 拉取 agent 预设清单（供「＋」新建会话选择；只保留可用预设）
     React.useEffect(() => {
       if (!open) return undefined

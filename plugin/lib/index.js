@@ -1,6 +1,6 @@
 // 墨扉固定插件 Host 半体：fs 持久化 + /api/mofei HTTP RPC + /mofei 独立站点
 // 业务逻辑迁移自动态插件 pkg-23（v4 数据模型），通信从 harness.handle 改为 webServer 路由。
-import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { execFile } from 'node:child_process'
 import os from 'node:os'
 import path from 'node:path'
@@ -291,6 +291,9 @@ export default {
     async function writeMofeiFile(relative, content) {
       if (String(cwd).startsWith('virtual-root')) return
       const target = path.join(mofeiFileRoot, relative)
+      // v0.15: 内容相同不重写——否则每次镜像都会刷新全部文件 mtime，
+      // 触发 sync-status 轮询误判「外部编辑」→ reload-from-files → 镜像 → 无限 ping-pong。
+      try { if (await readFile(target, 'utf8') === content) return } catch (error) { /* 文件不存在 → 创建 */ }
       await mkdir(path.dirname(target), { recursive: true })
       await writeFile(target, content, 'utf8')
     }
@@ -374,6 +377,38 @@ export default {
       }
       await walk(relativeDir)
       return out.sort()
+    }
+    // v0.15: 轻量同步签名——客户端 2s 轮询据此检测「AI/外部写入」，不依赖聊天会话绑定。
+    // storeStamp：内存 store 的章节 revision 指纹（工具/UI 写入后内存已更新，只需 UI reload）。
+    // fileStamp：.mofei/projects/** 文件+目录 mtime 混合签名（外部直接改文件时需文件优先导入）。
+    function storeStamp() {
+      return store.projects.map((project) => project.id + ':' + (project.chapters || []).map((chapter) => chapter.id + ':' + chapter.revision).join(',')).join('|')
+    }
+    let fileStampCache = null
+    async function fileTreeStamp() {
+      if (isVirtualRoot()) return ''
+      const now = Date.now()
+      if (fileStampCache && now - fileStampCache.at < 1200) return fileStampCache.value
+      let count = 0
+      let max = 0
+      let sum = 0
+      const walk = async (relative) => {
+        let entries
+        try { entries = await readdir(path.join(mofeiFileRoot, relative), { withFileTypes: true }) } catch (error) { return }
+        for (const entry of entries) {
+          const child = path.posix.join(relative, entry.name)
+          try {
+            const info = await stat(path.join(mofeiFileRoot, child))
+            const mtime = info.mtimeMs || 0
+            count += 1; sum += mtime; if (mtime > max) max = mtime
+          } catch (error) { /* 文件刚被删除则忽略 */ }
+          if (entry.isDirectory()) await walk(child)
+        }
+      }
+      await walk('projects')
+      const value = count + ':' + max + ':' + sum
+      fileStampCache = { at: now, value }
+      return value
     }
     // 保证 allocate() 不会与文件树实体 id 冲突。
     function bumpNextId(id) {
@@ -1255,6 +1290,12 @@ export default {
         const summary = { total: entities.length, synced: 0, divergeFile: 0, divergeStore: 0, missingFile: 0 }
         entities.forEach((item) => { if (summary[item.status] !== undefined) summary[item.status] += 1 })
         return { projectId: project.id, entities, summary }
+      },
+      // v0.15: 变更检测轮询。storeStamp 变 → 工具/UI 写入（内存已新，UI 直接 reload）；
+      // fileStamp 变而 storeStamp 不变 → 外部文件编辑（需 reload-from-files 文件优先导入）。
+      'sync-status': async () => {
+        await load(); await queue
+        return { storeStamp: storeStamp(), fileStamp: await fileTreeStamp() }
       },
       'stats': async () => { await load(); await queue; return statsView() },
       'create-project': async (args) => mutate(async () => {
