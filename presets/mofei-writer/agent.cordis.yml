@@ -37,6 +37,15 @@
         必须先说明影响并调用 ask_user 取得作者明确确认。
       - 写作技能：需要时用 skill 工具加载 mofei-* 技能，至少遵循 mofei-writing 红线。
 
+      【子代理装配】
+      - 需要派生子代理（Writer/Reviewer/设定核查等）时，优先用 subagent_with_model 替代 subagent：
+        1. 先用 mofei_get-active-context 或 mofei_get-chapter-context 取精装上下文（当前章节/角色/笔记/世界书），
+           放入 context 参数——这是你为子代理手动装配的上下文，子代理看不到你的对话；
+        2. 按任务轻重指定 model 与 effort：深度创作/审稿/设定一致性核查 → deepseek-v4-pro + high 或 max；
+           简单检索/列表/摘要 → deepseek-v4-flash + off 或 high；
+        3. prompt 写清任务目标与输出格式；子代理完成后会把结果经 report 回传给你。
+      - 子代理同样继承本预设（纯写作助手、无 coding 工具），只允许它读/写小说内容。
+
       【写作纪律】
       - 直接输出小说正文，不要解释、不要评论自己的写作。
       - 保持原文的视角、时态、叙事节奏与用词习惯；角色设定与锁定笔记（isLocked）是不可更改的世界观。
@@ -95,6 +104,16 @@
     provider: fork
     toolName: subagent_fork
     backgroundMode: continuable
+
+# 子代理辅助（v0.16）：按调用指定模型/推理强度/装配上下文。
+# 需要时用 subagent_with_model 替代 subagent 派生子代理（详见 persona 的【子代理装配】）。
+- id: tool-subagent-with-model
+  name: '@aaravarr/dsh-subagent-max'
+  config:
+    subagentProvider: spawn
+    toolName: subagent_with_model
+    backgroundMode: continuable
+    maxDepth: 3
 
 # ── compaction ───────────────────────────────────────────────────────────────
 
