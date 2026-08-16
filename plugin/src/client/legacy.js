@@ -139,7 +139,7 @@ export function createClient(require) {
     '.mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:#0d0e11;overflow:hidden;box-shadow:none}',
     '@media(max-width:1140px){.mf-panel.mf-view .mf-col{width:228px}.mf-panel.mf-view .mf-text{padding-inline:30px}}',
     '.mf-head-main{display:flex;align-items:center;gap:10px;min-width:0}.mf-head-main strong{font-size:15px;font-weight:680;letter-spacing:0}.mf-head-context{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}.mf-head-actions .mf-btn{min-height:30px}.mf-head-actions .mf-primary{padding-inline:11px}.mf-action-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-action-icon:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-head-actions .mf-stylebar{margin-right:6px}.mf-head-actions .mf-stylebar select{max-width:104px;border:0;background:transparent;padding:4px;color:var(--dsw-alias-label-secondary)}',
-    '.mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}',
+    '.mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}.mf-writer-session-menu .mf-btn.danger{color:#f87171;border-color:rgba(248,113,113,.3)}.mf-writer-session-menu-sep{height:1px;margin:8px 2px;background:var(--dsw-alias-border-l1)}.mf-writer-session-item .badge{flex:none;width:18px;text-align:center;color:var(--dsw-alias-state-success-primary,#55c98d);font-size:12px}',
     // v0.13.1 预览对齐：迷你导航移入左内栏底部横排（此前为 col/editor 间竖向窄条）
     '.mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}',
     '.mf-panel.mf-view .mf-col > .mf-list{display:flex;flex-direction:column;gap:2px}',
@@ -631,6 +631,7 @@ export function createClient(require) {
     // 写作技能由 mofei-writer preset 隔离注册；这里仅提供作者可见的技能目录。
     const [skillsOpen, setSkillsOpen] = React.useState(false)
     const [writingSkills, setWritingSkills] = React.useState([])
+    const [skillSettings, setSkillSettings] = React.useState(null)
     const [skillsLoading, setSkillsLoading] = React.useState(false)
     const [skillsError, setSkillsError] = React.useState('')
     const [dashOpen, setDashOpen] = React.useState(false)
@@ -1129,13 +1130,40 @@ export function createClient(require) {
     }
     function openWritingSkills() {
       setSkillsOpen(true); setSkillsLoading(true); setSkillsError('')
-      call('list-writing-skills').then((result) => {
-        setWritingSkills(Array.isArray(result && result.skills) ? result.skills : [])
+      Promise.all([call('list-writing-skills'), call('list-skill-settings')]).then(([skillsResult, settingsResult]) => {
+        setWritingSkills(Array.isArray(skillsResult && skillsResult.skills) ? skillsResult.skills : [])
+        setSkillSettings(settingsResult || null)
         setSkillsLoading(false)
       }).catch((failure) => {
-        setWritingSkills([]); setSkillsLoading(false)
+        setWritingSkills([]); setSkillSettings(null); setSkillsLoading(false)
         setSkillsError('写作技能加载失败：' + String((failure && failure.message) || failure))
       })
+    }
+    function refreshSkillSettings() {
+      if (!skillsOpen) return
+      call('list-skill-settings').then((result) => { if (result) setSkillSettings(result) }).catch(() => { /* 下轮再试 */ })
+    }
+    function toggleSkill(skillId, enabled) {
+      call('set-skill-enabled', { skillId, enabled }).then((result) => {
+        if (result && result.error) { setSkillsError(String(result.error)); return }
+        setSkillSettings((current) => {
+          if (!current) return current
+          const next = new Set(Array.isArray(current.disabledSkills) ? current.disabledSkills : [])
+          if (enabled) next.delete(skillId); else next.add(skillId)
+          return { ...current, disabledSkills: [...next] }
+        })
+        setSkillsError('')
+      }).catch((failure) => { setSkillsError('技能开关失败：' + String((failure && failure.message) || failure)) })
+    }
+    function createCustomSkill(form) {
+      return call('create-custom-skill', form).then((result) => {
+        if (result && result.error) return result
+        refreshSkillSettings()
+        return result
+      }).catch((failure) => ({ error: String((failure && failure.message) || failure) }))
+    }
+    function deleteCustomSkill(name) {
+      call('delete-custom-skill', { name }).then(() => refreshSkillSettings()).catch(() => { /* noop */ })
     }
     function handleSaveChain(input) {
       if (!projectId || chainBusy) return
@@ -1726,6 +1754,41 @@ export function createClient(require) {
       const sessionId = await activateProjectWriterSession(projectId, false)
       if (sessionId) flashBridgeNotice('✍ 已打开《' + (project && project.title || '当前项目') + '》的专属写作会话')
     }
+    // v0.17: 退出当前对话（解除右侧 Agent 面板的会话绑定，回到会话选择态）
+    function exitCurrentChat() {
+      setChatSessionId('')
+      setChatSnap(null)
+      setChatSummary(null)
+      setAgentContextBound(false)
+      setChatError('')
+    }
+    // v0.17: 切换到指定 DSH 会话（任意历史会话；菜单里点击即打开）
+    function switchChatSession(sessionId) {
+      const sessions = dshClientSessions
+      if (!sessions || !sessionId) return
+      try {
+        if (typeof sessions.open === 'function') sessions.open(sessionId)
+      } catch (error) { /* noop */ }
+      const snap = sessions.list && typeof sessions.list.getSnapshot === 'function' ? sessions.list.getSnapshot() : null
+      setChatSessionId(sessionId)
+      setChatSummary(snap && snap.byId && snap.byId[sessionId] || null)
+      setChatSnap(null)
+      setChatError('')
+      setChatSessionsOpen(false)
+    }
+    function sessionMenuLabel(summary) {
+      if (!summary) return ''
+      if (typeof summary.title === 'string' && summary.title.trim()) return summary.title.trim()
+      return String(summary.id || '').slice(0, 16)
+    }
+    function sessionMenuBadge(summary) {
+      return summary && summary.agentPreset === 'mofei-writer' ? '✍' : '·'
+    }
+    function sessionMenuTime(summary) {
+      const at = summary && (summary.updatedAt || summary.lastActivityAt)
+      if (!at) return ''
+      try { return fmtTime(at) } catch (error) { return '' }
+    }
     // v7: 摘要维护面板
     function refreshSummaryPanel() {
       if (!projectId) return
@@ -2061,6 +2124,8 @@ export function createClient(require) {
       { id: 'open-chains', label: 'Prompt Chains', hint: '打开提示词链', run: () => { setChainsOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
       { id: 'open-dashboard', label: '写作记录', hint: '打开写作仪表盘', run: () => { setDashOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
       { id: 'open-heatmap', label: '写作热力图', hint: '打开最近 84 天写作热力图', run: () => { setStatsOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
+      { id: 'mofei-sessions', label: '/mofei:sessions', hint: '打开会话列表（切换历史会话 / 退出当前对话）', run: () => { setPaletteOpen(false); setPaletteQuery(''); setChatSessionsOpen(true) } },
+      { id: 'exit-chat', label: '退出当前对话', hint: '解除右侧 Agent 面板的会话绑定，回到会话选择态', run: () => { exitCurrentChat(); setPaletteOpen(false); setPaletteQuery('') } },
       { id: 'close-workbench', label: '退出墨扉', hint: '返回标准 DSH', run: () => { setPaletteOpen(false); setPaletteQuery(''); close() } },
     ]
     const filteredCommands = (mode === 'web' ? paletteCommands.filter((item) => item.id !== 'close-workbench') : paletteCommands).filter((item) => !paletteQuery.trim() || (item.label + ' ' + item.hint).toLowerCase().includes(paletteQuery.toLowerCase()))
@@ -2090,11 +2155,27 @@ export function createClient(require) {
           mode === 'web' ? h('button', { className: 'mf-btn mf-primary', type: 'button', title: project ? '在当前项目新建章节' : '新建项目', onClick: () => { if (project) { setChapterForm(true); setTab('projects') } else { setProjectForm(true); setTab('projects') } } }, '＋ 新建') : null,
           mode === 'web' && onCollapse ? h('button', { className: 'mf-action-icon', type: 'button', title: '收起墨扉，返回原版 web', onClick: onCollapse }, '×') : null,
           mode === 'web' ? null : h('button', { className: 'mf-close', type: 'button', onClick: close, title: '关闭' }, '×')),
-        mode === 'web' && chatSessionsOpen ? h('div', { className: 'mf-writer-session-menu', role: 'menu', 'aria-label': '墨扉写作会话' },
+        mode === 'web' && chatSessionsOpen ? h('div', { className: 'mf-writer-session-menu', role: 'menu', 'aria-label': '墨扉会话' },
           h('h3', null, project ? '《' + project.title + '》的写作会话' : '写作会话'),
           project ? h('div', { className: 'mf-writer-session-item on' }, h('span', { className: 'name' }, writingSession ? '项目专属写作会话已打开' : '项目专属写作会话'), h('span', { className: 'time' }, writingSession ? 'mofei-writer' : '正在关联')) : h('div', { className: 'mf-writer-session-empty' }, '先选择一本小说项目'),
           project ? h('button', { className: 'mf-btn', type: 'button', onClick: () => { enterWritingMode(); setChatSessionsOpen(false) } }, '打开项目会话') : null,
-          project ? h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => { newChatSession(); setChatSessionsOpen(false) } }, '＋ 新建本项目会话') : null) : null),
+          project ? h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => { newChatSession(); setChatSessionsOpen(false) } }, '＋ 新建本项目会话') : null,
+          h('div', { className: 'mf-writer-session-menu-sep' }),
+          h('h3', null, '全部会话（点击切换）'),
+          (Array.isArray(chatSessionList.ids) ? chatSessionList.ids : []).slice().sort((a, b) => {
+            const ta = (chatSessionList.byId[a] && (chatSessionList.byId[a].updatedAt || chatSessionList.byId[a].lastActivityAt)) || 0
+            const tb = (chatSessionList.byId[b] && (chatSessionList.byId[b].updatedAt || chatSessionList.byId[b].lastActivityAt)) || 0
+            return tb - ta
+          }).slice(0, 30).map((id) => {
+            const summary = chatSessionList.byId[id] || { id }
+            if (summary.origin === 'subagent') return null
+            const active = id === chatSessionId
+            return h('button', { key: id, className: 'mf-writer-session-item' + (active ? ' on' : ''), type: 'button', title: '切换到该会话（' + id + '）', onClick: () => switchChatSession(id) },
+              h('span', { className: 'badge' }, sessionMenuBadge(summary)),
+              h('span', { className: 'name' }, sessionMenuLabel(summary)),
+              h('span', { className: 'time' }, sessionMenuTime(summary)))
+          }),
+          chatSessionId ? h('button', { className: 'mf-btn danger', type: 'button', onClick: () => { exitCurrentChat(); setChatSessionsOpen(false) } }, '退出当前对话') : null) : null),
       h('div', { className: 'mf-body' + (dragAxis ? ' resizing' : '') + (chatOpen ? '' : ' no-chat'), style: { '--mf-left': layout.left + 'px', '--mf-middle': layout.middle + 'px' } },
         h('nav', { className: 'mf-activity', 'aria-label': '墨扉活动栏' },
           h('button', { className: 'mf-act' + (tab === 'projects' ? ' on' : ''), type: 'button', title: '项目', onClick: () => setTab('projects') }, '▤', h('span', null, '项目')),
@@ -2398,7 +2479,7 @@ export function createClient(require) {
           h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => setWorldImportOpen(false) }, '完成'))
       )) : null,
       summaryOpen ? h(SummaryPanel, { open: true, onClose: () => setSummaryOpen(false), projectTitle: project ? project.title : '', chapterRows: summaryRows, ranges: summaryRanges, loading: summaryLoading, error: summaryError, busy: summaryBusy, progress: summaryProgress, result: summaryResult, onRegenerateChapter: (row) => runSummary('chapters', { chapterIds: [row.chapterId], force: true }, 'chapter', row.chapterId), onRegenerateRange: (range) => runSummary('ranges', { rangeIds: [range.id], force: true }, 'range', range.id), onGenerateChapters: () => runSummary('chapters', {}, 'chapters', null), onGenerateRanges: () => runSummary('ranges', {}, 'ranges', null), onRefresh: refreshSummaryPanel }) : null,
-      skillsOpen ? h(WritingSkillsPanel, { open: true, onClose: () => setSkillsOpen(false), onOpenChains: projectId ? () => { setSkillsOpen(false); openPromptChains() } : null, skills: writingSkills, loading: skillsLoading, error: skillsError }) : null,
+      skillsOpen ? h(WritingSkillsPanel, { open: true, onClose: () => setSkillsOpen(false), onOpenChains: projectId ? () => { setSkillsOpen(false); openPromptChains() } : null, skills: writingSkills, settings: skillSettings, loading: skillsLoading, error: skillsError, onToggle: toggleSkill, onCreateSkill: createCustomSkill, onDeleteCustom: deleteCustomSkill, onRefresh: refreshSkillSettings }) : null,
       chainsOpen ? h(PromptChainsPanel, { open: true, onClose: () => setChainsOpen(false), chains, activeChainId: chainActiveId, onSelect: setChainActiveId, busy: chainBusy, error: chainError, result: chainResult, lastPrompt: chainLastPrompt, onSave: handleSaveChain, onDelete: handleDeleteChain, onRun: handleRunChain, onHistory: (chain) => { if (chain && chain.id) openGitHistory(chain.id) } }) : null,
       dashOpen ? h(WritingDashboard, { open: true, onClose: () => setDashOpen(false), days: stats && stats.calendar ? stats.calendar : {} }) : null,
       gitHistOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.stopPropagation(); if (event.target === event.currentTarget) setGitHistOpen(false) } }, h('div', { className: 'mf-import-card' },

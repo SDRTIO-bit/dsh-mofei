@@ -21,7 +21,7 @@ export default {
     const HISTORY_CAP = 20
     const ENTITY_HISTORY_MAX = 50
     const AI_MESSAGE_CAP = 80
-    let projectTarget, draftTarget, statsTarget, aiSessionsTarget, summaryTarget, chainsTarget, loading
+    let projectTarget, draftTarget, statsTarget, aiSessionsTarget, summaryTarget, chainsTarget, skillSettingsTarget, loading
     let queue = Promise.resolve()
     let store = { version: 4, nextId: 1, projects: [] }
     let draftStore = { version: 1, items: [] }
@@ -29,6 +29,8 @@ export default {
     let aiSessions = { version: 1, sessions: {} }
     let summaryStore = normalizeSummaryStore(undefined)
     let chainStore = normalizeChainStore(undefined)
+    // v0.17: 写作技能开关（禁用名单；自创技能直接写 ~/.dsh/skills/，由 DSH skill-filesystem 发现）。
+    let skillSettings = { version: 1, disabledSkills: [] }
     // 当前浏览器工作台与 DSH 写作会话之间的短生命周期关联；不写入小说数据。
     const agentContexts = new Map()
     function text(value, fallback) { const result = typeof value === 'string' ? value.trim() : ''; return result || fallback }
@@ -188,6 +190,11 @@ export default {
         aiSessionsTarget = aiResolved.target
         summaryTarget = await fs.resolve('.mofei-summaries.json', { cwd })
         chainsTarget = await fs.resolve('.mofei-chains.json', { cwd })
+        skillSettingsTarget = await fs.resolve('.mofei-skill-settings.json', { cwd })
+        const skillSettingsData = await readJson(skillSettingsTarget, skillSettings)
+        if (skillSettingsData && Array.isArray(skillSettingsData.disabledSkills)) {
+          skillSettings = { version: 1, disabledSkills: skillSettingsData.disabledSkills.filter((item) => typeof item === 'string') }
+        }
         const projects = await readJson(projectTarget, store)
         const drafts = await readJson(draftTarget, draftStore)
         const statsData = await readJson(statsTarget, stats)
@@ -282,6 +289,23 @@ export default {
     async function saveAiSessions() { await fs.writeText(aiSessionsTarget, JSON.stringify(aiSessions, null, 2), undefined, undefined, policy) }
     async function saveSummaries() { await fs.writeText(summaryTarget, JSON.stringify(summaryStore, null, 2), undefined, undefined, policy); await mirrorFileTree() }
     async function saveChains() { await fs.writeText(chainsTarget, JSON.stringify(chainStore, null, 2), undefined, undefined, policy); await mirrorFileTree() }
+    async function saveSkillSettings() { await fs.writeText(skillSettingsTarget, JSON.stringify(skillSettings, null, 2), undefined, undefined, policy) }
+    // v0.17: 自创技能目录 = DSH skill-filesystem 的用户技能根（~/.dsh/skills/*.md）。
+    function customSkillDir() { return path.join(os.homedir(), '.dsh', 'skills') }
+    async function listCustomSkills() {
+      const out = []
+      let names = []
+      try { names = await readdir(customSkillDir()) } catch (error) { return out }
+      for (const name of names.sort()) {
+        if (!name.endsWith('.md')) continue
+        try {
+          const parsed = parseFrontmatter(await readFile(path.join(customSkillDir(), name), 'utf8'))
+          if (typeof parsed.meta.name !== 'string' || !parsed.meta.name) continue
+          out.push({ name: parsed.meta.name, file: name, description: typeof parsed.meta.description === 'string' ? parsed.meta.description : '', whenToUse: typeof parsed.meta.whenToUse === 'string' ? parsed.meta.whenToUse : '' })
+        } catch (error) { /* 忽略坏文件 */ }
+      }
+      return out
+    }
 
     // v10: 文件优先镜像。JSON 仍是运行缓存/兼容层；文件树是用户可直接查看编辑、可 git 管理的正式形态。
     const mofeiFileRoot = path.join(cwd, '.mofei')
@@ -1164,6 +1188,45 @@ export default {
       // 技能只在 mofei-writer preset 中注册；此处仅向写作工作台提供可浏览的目录，
       // 让作者清楚当前写作助手实际具备哪些 OpenFic 写作能力。
       'list-writing-skills': async () => ({ skills: mofeiSkills.map((skill) => ({ name: skill.name, description: skill.description, whenToUse: skill.whenToUse, invocation: skill.invocation, provider: skill.provider, content: skill.content })) }),
+      // v0.17: 技能开关 + 自创技能（写入 ~/.dsh/skills/，DSH skill-filesystem 自动发现）。
+      'list-skill-settings': async () => {
+        await load(); await queue
+        const disabled = new Set(skillSettings.disabledSkills)
+        return {
+          skills: mofeiSkills.map((skill) => ({ name: skill.name, description: skill.description, whenToUse: skill.whenToUse, enabled: !disabled.has(skill.name) })),
+          disabledSkills: skillSettings.disabledSkills.slice(),
+          custom: await listCustomSkills(),
+        }
+      },
+      'set-skill-enabled': async (args) => mutate(async () => {
+        await load()
+        const skillId = typeof (args && args.skillId) === 'string' ? args.skillId : ''
+        if (!skillId || !mofeiSkills.some((skill) => skill.name === skillId)) return { error: 'SKILL_NOT_FOUND' }
+        const enabled = (args && args.enabled) === false ? false : true
+        skillSettings.disabledSkills = skillSettings.disabledSkills.filter((item) => item !== skillId)
+        if (!enabled) skillSettings.disabledSkills.push(skillId)
+        await saveSkillSettings()
+        return { skillId, enabled, note: '下次新建写作会话时生效' }
+      }),
+      'create-custom-skill': async (args) => mutate(async () => {
+        const name = typeof (args && args.name) === 'string' ? args.name.trim() : ''
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { error: 'INVALID_SKILL_NAME', hint: '技能名须为小写 kebab-case（如 my-style-check）' }
+        const description = typeof (args && args.description) === 'string' ? args.description.trim() : ''
+        if (!description) return { error: 'DESCRIPTION_REQUIRED' }
+        const whenToUse = typeof (args && args.whenToUse) === 'string' ? args.whenToUse.trim() : ''
+        const content = typeof (args && args.content) === 'string' ? args.content : ''
+        const dir = customSkillDir()
+        await mkdir(dir, { recursive: true })
+        const front = '---\nname: ' + name + '\ndescription: ' + JSON.stringify(description) + '\n' + (whenToUse ? 'whenToUse: ' + JSON.stringify(whenToUse) + '\n' : '') + '---\n\n'
+        await writeFile(path.join(dir, name + '.md'), front + content + '\n', 'utf8')
+        return { saved: true, name, file: name + '.md' }
+      }),
+      'delete-custom-skill': async (args) => mutate(async () => {
+        const name = typeof (args && args.name) === 'string' ? args.name.trim() : ''
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { error: 'INVALID_SKILL_NAME' }
+        try { await rm(path.join(customSkillDir(), name + '.md')); return { deleted: true, name } }
+        catch (error) { return { deleted: false, name } }
+      }),
       // v0.10.1: styles 列表支持项目级覆盖（projectId 提供时合并，项目级优先显示在全局之前）。
       'list-styles': async (args) => { await load(); await queue; const result = []; try { const { readdir } = await import('node:fs/promises'); const pushDir = async (dir, scope) => { let names = []; try { names = await readdir(dir) } catch (error) { return } for (const name of names.sort()) if (name.endsWith('.md')) { const item = parseStyle(await readFile(path.join(dir, name), 'utf8'), name.replace(/\.md$/, '')); if (scope === 'project' && result.some((existing) => existing.id === item.id)) continue; result.push({ id: item.id, name: item.name, description: item.description, tags: item.tags, file: name, content: item.content, scope }) } }; const projectId = args && args.projectId && projectBy(args.projectId) ? args.projectId : null; if (projectId) await pushDir(path.join(mofeiFileRoot, 'projects', safeFileSegment(projectId, 'project'), 'styles'), 'project'); await pushDir(path.join(cwd, '.mofei', 'styles'), 'global') } catch (error) { result.push({ id: 'default', name: '默认', file: 'default.md', content: '保持已有文风。', scope: 'global' }) } return { styles: result } },
       'get-style': async (args) => { await load(); await queue; const styleId = args && args.styleId; const projectId = args && args.projectId && projectBy(args.projectId) ? args.projectId : null; const textValue = await readStyle(styleId, projectId); if (!textValue) return { error: 'STYLE_NOT_FOUND', styleId: styleId || null }; const item = parseStyle(textValue, styleId); return { style: item, text: textValue, scope: projectId ? 'project' : 'global' } },
@@ -2263,6 +2326,8 @@ export default {
         return { bound: true, boundAt: binding.updatedAt, project: result.project, chapter: result.chapter, contextText: result.contextText || '' }
       },
       zone: async () => ({ active: true, workspaceRoot: cwd }),
+      // v0.17: 技能插件按此过滤禁用技能（skills-plugin.js 注册时调用）。
+      listSkillSettings: async () => { await load(); return { disabledSkills: skillSettings.disabledSkills.slice() } },
     }
     if (typeof ctx.provide === 'function') ctx.provide('mofei', mofeiService)
     // v0.10.2: 挂接 DSH jobs controller（使 unowned 后台任务可启动）；无 jobs 服务时忽略。

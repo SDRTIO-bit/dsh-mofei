@@ -1,6 +1,6 @@
 {
   "name": "mofei-dsh",
-  "version": "0.15.0",
+  "version": "0.17.0",
   "description": "墨扉（Mofei）写作内容平台（DSH 插件版）：MOFEI-SPEC 文件优先规范 + MOFEI-AGENT 写作 preset/技能 + MOFEI-STUDIO 全屏写作工作台（含内嵌 Agent 对话）；区间隔离，标准 DSH 零污染",
   "type": "module",
   "main": "lib/index.js",

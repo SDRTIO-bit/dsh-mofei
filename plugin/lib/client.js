@@ -1384,12 +1384,14 @@ function filterWritingSkills(skills, query) {
 }
 var WRITING_SKILLS_CSS = [
   ".mf-sk-overlay{position:fixed;inset:0;z-index:132;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.46)}",
-  ".mf-sk{width:min(920px,calc(100vw - 48px));height:min(720px,calc(100vh - 72px));display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.4)}",
-  ".mf-sk-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 18px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-sk-title{display:flex;align-items:baseline;gap:8px;min-width:0}.mf-sk-title strong{font-size:14px;font-weight:650}.mf-sk-title small{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-sk-head-actions{display:flex;align-items:center;gap:4px}.mf-sk-link{border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px 8px;cursor:pointer;font:12px/1.2 sans-serif}.mf-sk-link:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}",
-  ".mf-sk-close{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-sk-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}",
-  ".mf-sk-body{display:grid;grid-template-columns:278px minmax(0,1fr);min-height:0}.mf-sk-list{min-height:0;overflow:auto;border-right:1px solid var(--dsw-alias-border-l1);padding:10px}.mf-sk-search{box-sizing:border-box;width:100%;height:32px;margin:0 0 8px;padding:0 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1 sans-serif;outline:0}.mf-sk-search:focus{border-color:var(--dsw-alias-state-business-primary)}",
-  ".mf-sk-item{display:block;width:100%;padding:9px 10px;border:0;border-radius:5px;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit}.mf-sk-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-sk-item.on{background:var(--dsw-alias-state-business-tertiary)}.mf-sk-item strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;text-transform:none}.mf-sk-item small{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:10.5px}",
-  ".mf-sk-detail{min-width:0;min-height:0;overflow:auto;padding:26px 30px}.mf-sk-empty{display:grid;place-items:center;height:100%;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-sk-kicker{font-size:11px;color:var(--dsw-alias-state-success-primary);font-weight:600}.mf-sk-detail h2{margin:7px 0 8px;font-size:20px;line-height:1.3;font-weight:680;text-transform:none}.mf-sk-desc{max-width:660px;margin:0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.7}.mf-sk-rule{height:1px;margin:22px 0;background:var(--dsw-alias-border-l1)}.mf-sk-section-label{margin:0 0 7px;color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:650}.mf-sk-when{margin:0;white-space:pre-wrap;font-size:13px;line-height:1.75}.mf-sk-content{margin:18px 0 0;padding:14px 16px;border-left:2px solid var(--dsw-alias-state-business-primary);background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-elevated));white-space:pre-wrap;font:12px/1.72 ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;color:var(--dsw-alias-label-secondary)}",
+  ".mf-sk{width:min(980px,calc(100vw - 48px));height:min(760px,calc(100vh - 72px));display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.4)}",
+  ".mf-sk-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 18px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-sk-title{display:flex;align-items:baseline;gap:8px;min-width:0}.mf-sk-title strong{font-size:14px;font-weight:650}.mf-sk-title small{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-sk-head-actions{display:flex;align-items:center;gap:4px}.mf-sk-link{border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px 8px;cursor:pointer;font:12px/1.2 sans-serif}.mf-sk-link:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-sk-link.primary{color:var(--dsw-alias-state-business-primary)}.mf-sk-close{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-sk-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}",
+  ".mf-sk-body{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:0}.mf-sk-list{min-height:0;overflow:auto;border-right:1px solid var(--dsw-alias-border-l1);padding:10px}.mf-sk-search{box-sizing:border-box;width:100%;height:32px;margin:0 0 8px;padding:0 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1 sans-serif;outline:0}.mf-sk-search:focus{border-color:var(--dsw-alias-state-business-primary)}",
+  ".mf-sk-item{display:block;width:100%;padding:8px 10px;border:0;border-radius:5px;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit}.mf-sk-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-sk-item.on{background:var(--dsw-alias-state-business-tertiary)}.mf-sk-item strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;text-transform:none}.mf-sk-item small{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:10.5px}.mf-sk-item-off{opacity:.45}",
+  ".mf-sk-toggle{display:inline-flex;align-items:center;gap:5px;margin-top:6px;border:1px solid var(--dsw-alias-border-l1);border-radius:999px;background:transparent;color:var(--dsw-alias-label-tertiary);padding:2px 9px;cursor:pointer;font:11px/1.3 sans-serif}.mf-sk-toggle:hover{border-color:var(--dsw-alias-state-business-primary);color:var(--dsw-alias-label-primary)}.mf-sk-toggle.on{color:var(--dsw-alias-state-success-primary);border-color:rgba(74,222,128,.35);background:var(--dsw-alias-state-success-tertiary)}.mf-sk-toggle.off{color:var(--dsw-alias-label-tertiary)}",
+  ".mf-sk-section{margin:12px 2px 6px;color:var(--dsw-alias-label-tertiary);font-size:10.5px;font-weight:650;letter-spacing:.4px}",
+  ".mf-sk-detail{min-width:0;min-height:0;overflow:auto;padding:26px 30px}.mf-sk-empty{display:grid;place-items:center;height:100%;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-sk-kicker{font-size:11px;color:var(--dsw-alias-state-success-primary);font-weight:600}.mf-sk-kicker.off{color:var(--dsw-alias-label-tertiary)}.mf-sk-detail h2{margin:7px 0 8px;font-size:20px;line-height:1.3;font-weight:680;text-transform:none}.mf-sk-desc{max-width:660px;margin:0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.7}.mf-sk-rule{height:1px;margin:22px 0;background:var(--dsw-alias-border-l1)}.mf-sk-section-label{margin:0 0 7px;color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:650}.mf-sk-when{margin:0;white-space:pre-wrap;font-size:13px;line-height:1.75}.mf-sk-content{margin:18px 0 0;padding:14px 16px;border-left:2px solid var(--dsw-alias-state-business-primary);background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-elevated));white-space:pre-wrap;font:12px/1.72 ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;color:var(--dsw-alias-label-secondary)}",
+  ".mf-sk-form{position:fixed;inset:0;z-index:140;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.52)}.mf-sk-form-card{width:min(620px,calc(100vw - 40px));max-height:84vh;overflow:auto;display:grid;gap:10px;padding:20px 22px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 24px 70px rgba(0,0,0,.45)}.mf-sk-form-card h3{margin:0;font-size:14px}.mf-sk-form-card label{display:grid;gap:5px;font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-sk-form-card input,.mf-sk-form-card textarea{box-sizing:border-box;width:100%;padding:8px 10px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1.6 sans-serif;outline:0}.mf-sk-form-card input:focus,.mf-sk-form-card textarea:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-sk-form-card textarea{min-height:130px;resize:vertical;font:12px/1.7 ui-monospace,Consolas,monospace}.mf-sk-form-actions{display:flex;gap:8px;justify-content:flex-end}.mf-sk-form-msg{font-size:11px;color:var(--dsw-alias-state-warn-primary)}",
   "@media(max-width:760px){.mf-sk{width:100vw;height:100vh;border:0;border-radius:0}.mf-sk-body{grid-template-columns:1fr}.mf-sk-list{max-height:40vh;border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-sk-detail{padding:20px}.mf-sk-content{max-height:180px}}"
 ].join("\n");
 function ensureStyles() {
@@ -1410,8 +1412,21 @@ function WritingSkillsPanel(props) {
   const error = props && props.error ? String(props.error) : "";
   const onClose = props && props.onClose;
   const onOpenChains = props && props.onOpenChains;
+  const onToggle = props && props.onToggle;
+  const onCreateSkill = props && props.onCreateSkill;
+  const onDeleteCustom = props && props.onDeleteCustom;
+  const settings = props && props.settings || null;
+  const disabled = new Set(settings && Array.isArray(settings.disabledSkills) ? settings.disabledSkills : []);
+  const custom = Array.isArray(settings && settings.custom) ? settings.custom : [];
   const [query, setQuery] = useState("");
   const [selectedName, setSelectedName] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formWhen, setFormWhen] = useState("");
+  const [formContent, setFormContent] = useState("");
+  const [formBusy, setFormBusy] = useState(false);
+  const [formMsg, setFormMsg] = useState("");
   const filtered = useMemo(() => filterWritingSkills(skills, query), [skills, query]);
   const selected = filtered.find((skill) => skill && skill.name === selectedName) || filtered[0] || null;
   useEffect(() => {
@@ -1419,18 +1434,104 @@ function WritingSkillsPanel(props) {
     if (!selectedName && skills[0]) setSelectedName(skills[0].name);
   }, [open, selectedName, skills]);
   if (!open) return null;
-  const list = loading ? h("div", { className: "mf-sk-empty" }, "\u6B63\u5728\u8BFB\u53D6\u5199\u4F5C\u6280\u80FD\u2026") : error ? h("div", { className: "mf-sk-empty" }, error) : filtered.length ? filtered.map((skill) => h("button", { key: skill.name, className: "mf-sk-item" + (selected && selected.name === skill.name ? " on" : ""), type: "button", onClick: () => setSelectedName(skill.name) }, h("strong", null, writingSkillLabel(skill.name)), h("small", null, skill.description || "\u5199\u4F5C\u6280\u80FD"))) : h("div", { className: "mf-sk-empty" }, "\u6CA1\u6709\u5339\u914D\u7684\u5199\u4F5C\u6280\u80FD");
+  const toggleFor = (name) => {
+    if (typeof onToggle !== "function") return null;
+    const enabled = !disabled.has(name);
+    return h("button", { className: "mf-sk-toggle" + (enabled ? " on" : " off"), type: "button", title: enabled ? "\u70B9\u51FB\u7981\u7528\uFF08\u4E0B\u6B21\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD\u751F\u6548\uFF09" : "\u70B9\u51FB\u542F\u7528\uFF08\u4E0B\u6B21\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD\u751F\u6548\uFF09", onClick: (event) => {
+      event.stopPropagation();
+      onToggle(name, !enabled);
+    } }, enabled ? "\u2713 \u5DF2\u542F\u7528" : "\u25CB \u5DF2\u7981\u7528");
+  };
+  const list = loading ? h("div", { className: "mf-sk-empty" }, "\u6B63\u5728\u8BFB\u53D6\u5199\u4F5C\u6280\u80FD\u2026") : error ? h("div", { className: "mf-sk-empty" }, error) : filtered.length ? filtered.map((skill) => {
+    const off = disabled.has(skill.name);
+    return h(
+      "button",
+      { key: skill.name, className: "mf-sk-item" + (selected && selected.name === skill.name ? " on" : "") + (off ? " mf-sk-item-off" : ""), type: "button", onClick: () => setSelectedName(skill.name) },
+      h("strong", null, writingSkillLabel(skill.name)),
+      h("small", null, skill.description || "\u5199\u4F5C\u6280\u80FD"),
+      toggleFor(skill.name)
+    );
+  }) : h("div", { className: "mf-sk-empty" }, "\u6CA1\u6709\u5339\u914D\u7684\u5199\u4F5C\u6280\u80FD");
   const detail = selected ? h(
     "article",
     { className: "mf-sk-detail" },
-    h("div", { className: "mf-sk-kicker" }, "\u5DF2\u52A0\u8F7D\u81F3 mofei-writer \u5199\u4F5C\u52A9\u624B"),
+    h("div", { className: "mf-sk-kicker" + (disabled.has(selected.name) ? " off" : "") }, disabled.has(selected.name) ? "\u5DF2\u7981\u7528\uFF08\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD\u540E AI \u4E0D\u53EF\u89C1\uFF09" : "\u5DF2\u52A0\u8F7D\u81F3 mofei-writer \u5199\u4F5C\u52A9\u624B"),
     h("h2", null, writingSkillLabel(selected.name)),
     h("p", { className: "mf-sk-desc" }, selected.description || ""),
     h("div", { className: "mf-sk-rule" }),
     h("p", { className: "mf-sk-section-label" }, "\u9002\u7528\u573A\u666F"),
     h("p", { className: "mf-sk-when" }, selected.whenToUse || "\u5199\u4F5C\u52A9\u624B\u4F1A\u5728\u76F8\u5173\u4EFB\u52A1\u4E2D\u6309\u9700\u52A0\u8F7D\u3002"),
-    selected.content ? h("pre", { className: "mf-sk-content" }, selected.content) : null
+    selected.content ? h("pre", { className: "mf-sk-content" }, selected.content) : null,
+    toggleFor(selected.name)
   ) : h("div", { className: "mf-sk-empty" }, loading ? "\u6B63\u5728\u8BFB\u53D6\u5199\u4F5C\u6280\u80FD\u2026" : "\u9009\u62E9\u4E00\u9879\u6280\u80FD\u67E5\u770B\u8BE6\u60C5");
+  const customBlock = custom.length ? h(
+    "div",
+    null,
+    h("div", { className: "mf-sk-section" }, "\u81EA\u521B\u6280\u80FD\uFF08~/.dsh/skills/\uFF0CAI \u53EF\u76F4\u63A5\u52A0\u8F7D\uFF09"),
+    custom.map((item) => h(
+      "div",
+      { key: item.name, className: "mf-sk-item" + (selected && selected.name === item.name ? " on" : "") },
+      h("strong", null, item.name),
+      h("small", null, item.description || ""),
+      h("span", { className: "mf-sk-toggle off", style: { pointerEvents: "none" } }, "\u81EA\u521B")
+    ))
+  ) : null;
+  const submitForm = () => {
+    if (!formName.trim() || !formDesc.trim()) {
+      setFormMsg("\u540D\u79F0\u4E0E\u63CF\u8FF0\u5FC5\u586B");
+      return;
+    }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formName.trim())) {
+      setFormMsg("\u6280\u80FD\u540D\u987B\u4E3A\u5C0F\u5199 kebab-case\uFF08\u5982 my-style-check\uFF09");
+      return;
+    }
+    setFormBusy(true);
+    setFormMsg("");
+    const result = onCreateSkill({ name: formName.trim(), description: formDesc.trim(), whenToUse: formWhen.trim(), content: formContent });
+    if (result && typeof result.then === "function") {
+      result.then((value) => {
+        setFormBusy(false);
+        if (value && value.error) {
+          setFormMsg(String(value.error));
+        } else {
+          setFormOpen(false);
+          setFormName("");
+          setFormDesc("");
+          setFormWhen("");
+          setFormContent("");
+          if (props && props.onRefresh) props.onRefresh();
+        }
+      }).catch((failure) => {
+        setFormBusy(false);
+        setFormMsg("\u521B\u5EFA\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+      });
+    } else {
+      setFormBusy(false);
+      setFormOpen(false);
+      setFormName("");
+      setFormDesc("");
+      setFormWhen("");
+      setFormContent("");
+      if (props && props.onRefresh) props.onRefresh();
+    }
+  };
+  const form = formOpen ? h(
+    "div",
+    { className: "mf-sk-form", role: "presentation", onClick: () => {
+      if (!formBusy) setFormOpen(false);
+    } },
+    h(
+      "div",
+      { className: "mf-sk-form-card", role: "dialog", "aria-label": "\u65B0\u5EFA\u81EA\u521B\u6280\u80FD", onClick: (event) => event.stopPropagation() },
+      h("h3", null, "\u65B0\u5EFA\u81EA\u521B\u6280\u80FD\uFF08\u5199\u5165 ~/.dsh/skills/\uFF0CDSH \u81EA\u52A8\u53D1\u73B0\uFF09"),
+      h("label", null, "\u6280\u80FD\u540D\uFF08\u5C0F\u5199 kebab-case\uFF0C\u5982 my-style-check\uFF09", h("input", { value: formName, placeholder: "my-style-check", onChange: (event) => setFormName(event.target.value) })),
+      h("label", null, "\u63CF\u8FF0\uFF08\u5FC5\u586B\uFF09", h("input", { value: formDesc, placeholder: "\u4E00\u53E5\u8BDD\u8BF4\u660E\u8FD9\u4E2A\u6280\u80FD\u505A\u4EC0\u4E48", onChange: (event) => setFormDesc(event.target.value) })),
+      h("label", null, "\u9002\u7528\u573A\u666F\uFF08whenToUse\uFF09", h("input", { value: formWhen, placeholder: "\u4F55\u65F6\u4F7F\u7528\uFF08\u5982\uFF1A\u5BA1\u7A3F\u65F6\u68C0\u67E5\u2026\uFF09", onChange: (event) => setFormWhen(event.target.value) })),
+      h("label", null, "\u6280\u80FD\u6B63\u6587\uFF08\u5199\u4F5C\u52A9\u624B\u52A0\u8F7D\u540E\u9075\u5FAA\u7684\u89C4\u5219\uFF09", h("textarea", { value: formContent, placeholder: "\u5199\u6280\u80FD\u89C4\u5219/\u7EA2\u7EBF/\u6B65\u9AA4\u2026", onChange: (event) => setFormContent(event.target.value) })),
+      formMsg ? h("div", { className: "mf-sk-form-msg" }, formMsg) : null,
+      h("div", { className: "mf-sk-form-actions" }, h("button", { className: "mf-sk-link", type: "button", onClick: () => setFormOpen(false) }, "\u53D6\u6D88"), h("button", { className: "mf-sk-link primary", type: "button", disabled: formBusy, onClick: submitForm }, formBusy ? "\u521B\u5EFA\u4E2D\u2026" : "\u521B\u5EFA\u6280\u80FD"))
+    )
+  ) : null;
   return h(
     "div",
     { className: "mf-sk-overlay", role: "presentation", onClick: () => {
@@ -1439,10 +1540,14 @@ function WritingSkillsPanel(props) {
     h(
       "section",
       { className: "mf-sk", role: "dialog", "aria-label": "\u58A8\u6249\u5199\u4F5C\u6280\u80FD", onClick: (event) => event.stopPropagation() },
-      h("header", { className: "mf-sk-head" }, h("div", { className: "mf-sk-title" }, h("strong", null, "\u5199\u4F5C\u6280\u80FD"), h("small", null, String(skills.length) + " \u9879\u5DF2\u542F\u7528\u80FD\u529B")), h("div", { className: "mf-sk-head-actions" }, onOpenChains ? h("button", { className: "mf-sk-link", type: "button", onClick: onOpenChains }, "\u63D0\u793A\u8BCD\u94FE") : null, h("button", { className: "mf-sk-close", type: "button", title: "\u5173\u95ED\u5199\u4F5C\u6280\u80FD", onClick: () => {
+      h("header", { className: "mf-sk-head" }, h("div", { className: "mf-sk-title" }, h("strong", null, "\u5199\u4F5C\u6280\u80FD"), h("small", null, String(skills.length) + " \u9879\u5185\u7F6E\u80FD\u529B \xB7 " + String(custom.length) + " \u9879\u81EA\u521B")), h("div", { className: "mf-sk-head-actions" }, onOpenChains ? h("button", { className: "mf-sk-link", type: "button", onClick: onOpenChains }, "\u63D0\u793A\u8BCD\u94FE") : null, h("button", { className: "mf-sk-link primary", type: "button", onClick: () => {
+        setFormOpen(true);
+        setFormMsg("");
+      } }, "\uFF0B \u65B0\u5EFA\u6280\u80FD"), h("button", { className: "mf-sk-close", type: "button", title: "\u5173\u95ED\u5199\u4F5C\u6280\u80FD", onClick: () => {
         if (onClose) onClose();
       } }, "\xD7"))),
-      h("div", { className: "mf-sk-body" }, h("aside", { className: "mf-sk-list" }, h("input", { className: "mf-sk-search", value: query, placeholder: "\u641C\u7D22\u6280\u80FD\u2026", onChange: (event) => setQuery(event.target.value) }), list), detail)
+      h("div", { className: "mf-sk-body" }, h("aside", { className: "mf-sk-list" }, h("input", { className: "mf-sk-search", value: query, placeholder: "\u641C\u7D22\u6280\u80FD\u2026", onChange: (event) => setQuery(event.target.value) }), list, customBlock), detail),
+      form
     )
   );
 }
@@ -1961,7 +2066,7 @@ function createClient(require2) {
     ".mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:#0d0e11;overflow:hidden;box-shadow:none}",
     "@media(max-width:1140px){.mf-panel.mf-view .mf-col{width:228px}.mf-panel.mf-view .mf-text{padding-inline:30px}}",
     ".mf-head-main{display:flex;align-items:center;gap:10px;min-width:0}.mf-head-main strong{font-size:15px;font-weight:680;letter-spacing:0}.mf-head-context{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}.mf-head-actions .mf-btn{min-height:30px}.mf-head-actions .mf-primary{padding-inline:11px}.mf-action-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-action-icon:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-head-actions .mf-stylebar{margin-right:6px}.mf-head-actions .mf-stylebar select{max-width:104px;border:0;background:transparent;padding:4px;color:var(--dsw-alias-label-secondary)}",
-    ".mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}",
+    ".mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}.mf-writer-session-menu .mf-btn.danger{color:#f87171;border-color:rgba(248,113,113,.3)}.mf-writer-session-menu-sep{height:1px;margin:8px 2px;background:var(--dsw-alias-border-l1)}.mf-writer-session-item .badge{flex:none;width:18px;text-align:center;color:var(--dsw-alias-state-success-primary,#55c98d);font-size:12px}",
     // v0.13.1 预览对齐：迷你导航移入左内栏底部横排（此前为 col/editor 间竖向窄条）
     ".mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}",
     ".mf-panel.mf-view .mf-col > .mf-list{display:flex;flex-direction:column;gap:2px}",
@@ -2511,6 +2616,7 @@ function createClient(require2) {
     const [chainLastPrompt, setChainLastPrompt] = React.useState("");
     const [skillsOpen, setSkillsOpen] = React.useState(false);
     const [writingSkills, setWritingSkills] = React.useState([]);
+    const [skillSettings, setSkillSettings] = React.useState(null);
     const [skillsLoading, setSkillsLoading] = React.useState(false);
     const [skillsError, setSkillsError] = React.useState("");
     const [dashOpen, setDashOpen] = React.useState(false);
@@ -3612,13 +3718,51 @@ function createClient(require2) {
       setSkillsOpen(true);
       setSkillsLoading(true);
       setSkillsError("");
-      call("list-writing-skills").then((result) => {
-        setWritingSkills(Array.isArray(result && result.skills) ? result.skills : []);
+      Promise.all([call("list-writing-skills"), call("list-skill-settings")]).then(([skillsResult, settingsResult]) => {
+        setWritingSkills(Array.isArray(skillsResult && skillsResult.skills) ? skillsResult.skills : []);
+        setSkillSettings(settingsResult || null);
         setSkillsLoading(false);
       }).catch((failure) => {
         setWritingSkills([]);
+        setSkillSettings(null);
         setSkillsLoading(false);
         setSkillsError("\u5199\u4F5C\u6280\u80FD\u52A0\u8F7D\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+      });
+    }
+    function refreshSkillSettings() {
+      if (!skillsOpen) return;
+      call("list-skill-settings").then((result) => {
+        if (result) setSkillSettings(result);
+      }).catch(() => {
+      });
+    }
+    function toggleSkill(skillId, enabled) {
+      call("set-skill-enabled", { skillId, enabled }).then((result) => {
+        if (result && result.error) {
+          setSkillsError(String(result.error));
+          return;
+        }
+        setSkillSettings((current) => {
+          if (!current) return current;
+          const next = new Set(Array.isArray(current.disabledSkills) ? current.disabledSkills : []);
+          if (enabled) next.delete(skillId);
+          else next.add(skillId);
+          return { ...current, disabledSkills: [...next] };
+        });
+        setSkillsError("");
+      }).catch((failure) => {
+        setSkillsError("\u6280\u80FD\u5F00\u5173\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+      });
+    }
+    function createCustomSkill(form) {
+      return call("create-custom-skill", form).then((result) => {
+        if (result && result.error) return result;
+        refreshSkillSettings();
+        return result;
+      }).catch((failure) => ({ error: String(failure && failure.message || failure) }));
+    }
+    function deleteCustomSkill(name) {
+      call("delete-custom-skill", { name }).then(() => refreshSkillSettings()).catch(() => {
       });
     }
     function handleSaveChain(input) {
@@ -4580,6 +4724,44 @@ function createClient(require2) {
       const sessionId = await activateProjectWriterSession(projectId, false);
       if (sessionId) flashBridgeNotice("\u270D \u5DF2\u6253\u5F00\u300A" + (project && project.title || "\u5F53\u524D\u9879\u76EE") + "\u300B\u7684\u4E13\u5C5E\u5199\u4F5C\u4F1A\u8BDD");
     }
+    function exitCurrentChat() {
+      setChatSessionId("");
+      setChatSnap(null);
+      setChatSummary(null);
+      setAgentContextBound(false);
+      setChatError("");
+    }
+    function switchChatSession(sessionId) {
+      const sessions = dshClientSessions;
+      if (!sessions || !sessionId) return;
+      try {
+        if (typeof sessions.open === "function") sessions.open(sessionId);
+      } catch (error2) {
+      }
+      const snap = sessions.list && typeof sessions.list.getSnapshot === "function" ? sessions.list.getSnapshot() : null;
+      setChatSessionId(sessionId);
+      setChatSummary(snap && snap.byId && snap.byId[sessionId] || null);
+      setChatSnap(null);
+      setChatError("");
+      setChatSessionsOpen(false);
+    }
+    function sessionMenuLabel(summary) {
+      if (!summary) return "";
+      if (typeof summary.title === "string" && summary.title.trim()) return summary.title.trim();
+      return String(summary.id || "").slice(0, 16);
+    }
+    function sessionMenuBadge(summary) {
+      return summary && summary.agentPreset === "mofei-writer" ? "\u270D" : "\xB7";
+    }
+    function sessionMenuTime(summary) {
+      const at = summary && (summary.updatedAt || summary.lastActivityAt);
+      if (!at) return "";
+      try {
+        return fmtTime(at);
+      } catch (error2) {
+        return "";
+      }
+    }
     function refreshSummaryPanel() {
       if (!projectId) return;
       setSummaryLoading(true);
@@ -5132,6 +5314,16 @@ function createClient(require2) {
         setPaletteOpen(false);
         setPaletteQuery("");
       } },
+      { id: "mofei-sessions", label: "/mofei:sessions", hint: "\u6253\u5F00\u4F1A\u8BDD\u5217\u8868\uFF08\u5207\u6362\u5386\u53F2\u4F1A\u8BDD / \u9000\u51FA\u5F53\u524D\u5BF9\u8BDD\uFF09", run: () => {
+        setPaletteOpen(false);
+        setPaletteQuery("");
+        setChatSessionsOpen(true);
+      } },
+      { id: "exit-chat", label: "\u9000\u51FA\u5F53\u524D\u5BF9\u8BDD", hint: "\u89E3\u9664\u53F3\u4FA7 Agent \u9762\u677F\u7684\u4F1A\u8BDD\u7ED1\u5B9A\uFF0C\u56DE\u5230\u4F1A\u8BDD\u9009\u62E9\u6001", run: () => {
+        exitCurrentChat();
+        setPaletteOpen(false);
+        setPaletteQuery("");
+      } },
       { id: "close-workbench", label: "\u9000\u51FA\u58A8\u6249", hint: "\u8FD4\u56DE\u6807\u51C6 DSH", run: () => {
         setPaletteOpen(false);
         setPaletteQuery("");
@@ -5240,7 +5432,7 @@ function createClient(require2) {
           ),
           mode === "web" && chatSessionsOpen ? h(
             "div",
-            { className: "mf-writer-session-menu", role: "menu", "aria-label": "\u58A8\u6249\u5199\u4F5C\u4F1A\u8BDD" },
+            { className: "mf-writer-session-menu", role: "menu", "aria-label": "\u58A8\u6249\u4F1A\u8BDD" },
             h("h3", null, project ? "\u300A" + project.title + "\u300B\u7684\u5199\u4F5C\u4F1A\u8BDD" : "\u5199\u4F5C\u4F1A\u8BDD"),
             project ? h("div", { className: "mf-writer-session-item on" }, h("span", { className: "name" }, writingSession ? "\u9879\u76EE\u4E13\u5C5E\u5199\u4F5C\u4F1A\u8BDD\u5DF2\u6253\u5F00" : "\u9879\u76EE\u4E13\u5C5E\u5199\u4F5C\u4F1A\u8BDD"), h("span", { className: "time" }, writingSession ? "mofei-writer" : "\u6B63\u5728\u5173\u8054")) : h("div", { className: "mf-writer-session-empty" }, "\u5148\u9009\u62E9\u4E00\u672C\u5C0F\u8BF4\u9879\u76EE"),
             project ? h("button", { className: "mf-btn", type: "button", onClick: () => {
@@ -5250,7 +5442,29 @@ function createClient(require2) {
             project ? h("button", { className: "mf-btn mf-primary", type: "button", onClick: () => {
               newChatSession();
               setChatSessionsOpen(false);
-            } }, "\uFF0B \u65B0\u5EFA\u672C\u9879\u76EE\u4F1A\u8BDD") : null
+            } }, "\uFF0B \u65B0\u5EFA\u672C\u9879\u76EE\u4F1A\u8BDD") : null,
+            h("div", { className: "mf-writer-session-menu-sep" }),
+            h("h3", null, "\u5168\u90E8\u4F1A\u8BDD\uFF08\u70B9\u51FB\u5207\u6362\uFF09"),
+            (Array.isArray(chatSessionList.ids) ? chatSessionList.ids : []).slice().sort((a, b) => {
+              const ta = chatSessionList.byId[a] && (chatSessionList.byId[a].updatedAt || chatSessionList.byId[a].lastActivityAt) || 0;
+              const tb = chatSessionList.byId[b] && (chatSessionList.byId[b].updatedAt || chatSessionList.byId[b].lastActivityAt) || 0;
+              return tb - ta;
+            }).slice(0, 30).map((id) => {
+              const summary = chatSessionList.byId[id] || { id };
+              if (summary.origin === "subagent") return null;
+              const active = id === chatSessionId;
+              return h(
+                "button",
+                { key: id, className: "mf-writer-session-item" + (active ? " on" : ""), type: "button", title: "\u5207\u6362\u5230\u8BE5\u4F1A\u8BDD\uFF08" + id + "\uFF09", onClick: () => switchChatSession(id) },
+                h("span", { className: "badge" }, sessionMenuBadge(summary)),
+                h("span", { className: "name" }, sessionMenuLabel(summary)),
+                h("span", { className: "time" }, sessionMenuTime(summary))
+              );
+            }),
+            chatSessionId ? h("button", { className: "mf-btn danger", type: "button", onClick: () => {
+              exitCurrentChat();
+              setChatSessionsOpen(false);
+            } }, "\u9000\u51FA\u5F53\u524D\u5BF9\u8BDD") : null
           ) : null
         ),
         h(
@@ -5889,7 +6103,7 @@ function createClient(require2) {
       skillsOpen ? h(WritingSkillsPanel, { open: true, onClose: () => setSkillsOpen(false), onOpenChains: projectId ? () => {
         setSkillsOpen(false);
         openPromptChains();
-      } : null, skills: writingSkills, loading: skillsLoading, error: skillsError }) : null,
+      } : null, skills: writingSkills, settings: skillSettings, loading: skillsLoading, error: skillsError, onToggle: toggleSkill, onCreateSkill: createCustomSkill, onDeleteCustom: deleteCustomSkill, onRefresh: refreshSkillSettings }) : null,
       chainsOpen ? h(PromptChainsPanel, { open: true, onClose: () => setChainsOpen(false), chains, activeChainId: chainActiveId, onSelect: setChainActiveId, busy: chainBusy, error: chainError, result: chainResult, lastPrompt: chainLastPrompt, onSave: handleSaveChain, onDelete: handleDeleteChain, onRun: handleRunChain, onHistory: (chain) => {
         if (chain && chain.id) openGitHistory(chain.id);
       } }) : null,
