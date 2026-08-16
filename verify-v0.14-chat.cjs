@@ -24,8 +24,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   if (!disabledDefault) ok('默认态：官方输入框可用')
   else fail('默认态官方输入框不可用')
   const placeholder = await ta.getAttribute('placeholder')
-  if (placeholder === '输入写作指令：续写 / 审稿 / 查设定…') ok('官方 composer 使用写作导向占位符')
-  else fail('composer 占位符异常: ' + placeholder)
+  if (placeholder && placeholder !== '输入写作指令：续写 / 审稿 / 查设定…') ok('默认态保留原版 DSH composer 占位符')
+  else fail('默认态不应被写作占位符污染: ' + placeholder)
 
   // 2. 变形后官方 composer 仍在右侧窄条且可用
   await page.locator('.mf-orb').click()
@@ -36,21 +36,18 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   const disabledTransformed = await ta.isDisabled()
   if (!disabledTransformed) ok('变形后：官方输入框仍可用（官方对话全程可用）')
   else fail('变形后官方输入框不可用')
+  const writingPlaceholder = await ta.getAttribute('placeholder')
+  if (writingPlaceholder === '输入写作指令：续写 / 审稿 / 查设定…') ok('变形后：官方 composer 切换为写作导向占位符')
+  else fail('变形后 composer 占位符异常: ' + writingPlaceholder)
 
-  // 3. 墨扉写作联动按钮（打开章节后可见）
+  // 3. 打开章节后的正文区保持纯粹：上下文改由后台绑定，不再靠显性“送章/送选中”按钮。
   await page.locator('.mf-proj').first().click()
   await sleep(500)
   const chap = page.locator('.mf-item .mf-title').first()
   if (await chap.count()) { await chap.click(); await sleep(600) }
-  const sendChapter = await page.locator('.mf-eh button', { hasText: '送章' }).count()
-  const sendSelection = await page.locator('.mf-eh button', { hasText: '送选中' }).count()
-  if (sendChapter === 1 && sendSelection === 1) ok('编辑器头部保留「送章/送选中」（写进官方会话）')
-  else fail('送章按钮异常: ' + sendChapter + '/' + sendSelection)
-  const insertReply = await page.locator('.mf-eh button', { hasText: '插入回复' }).count()
-  const jumpMention = await page.locator('.mf-eh button', { hasText: '跳转提及' }).count()
-  if (jumpMention === 1) ok('「📄 跳转提及」按钮存在')
-  else fail('跳转提及按钮缺失: ' + jumpMention)
-  ok('「⌄ 插入回复」按钮按需出现（有回复才显示），当前 count=' + insertReply)
+  const noisyEditorControls = await page.locator('.mf-editor .mf-eh, .mf-editor .mf-mdtoolbar').count()
+  if (noisyEditorControls === 0) ok('编辑器无送章、送选中、历史/技能/摘要/链或 Markdown 工具栏')
+  else fail('编辑器仍有显性控制: ' + noisyEditorControls)
 
   // 4. 官方侧栏会话列表仍可用（折叠窄条图标在）
   const sidebarIcons = await page.evaluate(() => {
@@ -61,7 +58,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   else fail('官方窄条图标缺失: ' + sidebarIcons)
 
   // 还原
-  await page.locator('.mf-head button', { hasText: '收起' }).click()
+  await page.locator('.mf-head button[title="收起墨扉，返回原版 web"]').click()
   await sleep(700)
   const boxBack = await ta.boundingBox()
   // 空态时官方输入是居中引导卡（~778px），有会话时才是全宽卡；还原后应回到中心区域而非右侧窄条

@@ -1,7 +1,7 @@
 // v0.14 验收：原版 DSH web 完整保留 + 右下角 orb 按钮 + 变形金刚式墨扉工作台。
 // 默认态：官方侧栏 280 / 官方对话区 / 官方 composer 全可见，墨扉面板屏幕外。
-// 点 orb → 平滑变形：官方侧栏原生折叠 55px 窄条、官方对话+composer 收至约 500px、
-// 墨扉工作台（左内栏+编辑器）从左侧滑入。点「✕ 收起」→ 还原原版 web。
+// 点 orb → 平滑变形：墨扉工作台从左侧滑入、官方对话+composer 收至约 500px、
+// 官方侧栏原生折叠成位于助手右侧的 55px 窄轨。点「✕」→ 还原原版 web。
 const { chromium } = require('C:/Users/zhao/AppData/Roaming/npm/node_modules/@playwright/mcp/node_modules/playwright')
 const BASE = process.env.MOFEI_BASE || 'http://127.0.0.1:3088'
 let failures = 0
@@ -45,11 +45,11 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   await page.locator('.mf-orb').click()
   await sleep(900)
   g = await geom()
-  if (g.sidebar && g.collapsed && g.sidebar.w < 100) ok('变形后：官方侧栏原生折叠成窄条（' + g.sidebar.w + 'px）')
+  if (g.sidebar && g.collapsed && g.sidebar.w < 100 && g.sidebar.x > 1450) ok('变形后：官方侧栏在助手右侧折叠成窄轨（' + g.sidebar.w + 'px @ x' + g.sidebar.x + '）')
   else fail('侧栏折叠异常: ' + JSON.stringify(g.sidebar))
   if (g.composer && g.composer.w > 380 && g.composer.w < 520 && g.composer.x > 1000) ok('变形后：官方 composer 挤到右侧窄条（' + g.composer.w + 'px @ x' + g.composer.x + '）')
   else fail('composer 挤右异常: ' + JSON.stringify(g.composer))
-  if (g.panel && g.panel.x >= 0 && g.panel.w > 800) ok('变形后：墨扉工作台滑入（w' + g.panel.w + '）')
+  if (g.panel && g.panel.x === 0 && g.panel.w > 800) ok('变形后：墨扉工作台从左缘滑入（w' + g.panel.w + '）')
   else fail('墨扉面板滑入异常: ' + JSON.stringify(g.panel))
   if (g.transform) ok('body.mf-transform 类生效')
   else fail('body 类缺失')
@@ -58,13 +58,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   if (projCount > 0) ok('工作台左内栏项目行可见（' + projCount + ' 个）')
   else fail('项目行为空')
   const miniNav = await page.locator('.mf-mininav button').count()
-  if (miniNav === 5) ok('左内栏底部迷你导航 5 个 tab')
+  if (miniNav === 6) ok('左内栏底部迷你导航含写作技能入口（6 个 tab）')
   else fail('迷你导航异常: ' + miniNav)
 
-  // 变形后 orb 退场、顶栏出现「✕ 收起」
+  // 变形后 orb 退场、顶栏提供带语义 title 的收起图标。
   const orbOpacity = await page.evaluate(() => { const el = document.querySelector('.mf-orb'); return el ? Number(getComputedStyle(el).opacity) : 1 })
-  const collapseBtn = await page.locator('.mf-head button', { hasText: '收起' }).count()
-  if (orbOpacity === 0 && collapseBtn === 1) ok('变形后 orb 退场，顶栏提供「✕ 收起」')
+  const collapseBtn = await page.locator('.mf-head button[title="收起墨扉，返回原版 web"]').count()
+  if (orbOpacity === 0 && collapseBtn === 1) ok('变形后 orb 退场，顶栏提供收起图标')
   else fail('orb/收起按钮状态异常: orbOpacity=' + orbOpacity + ' collapseBtn=' + collapseBtn)
 
   // ===== 3. 用户点官方侧栏展开 → 先退出墨扉，再展开 DSH =====
@@ -94,7 +94,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   await sleep(500)
 
   // ===== 5. 点「✕ 收起」→ 还原 =====
-  await page.locator('.mf-head button', { hasText: '收起' }).click()
+  await page.locator('.mf-head button[title="收起墨扉，返回原版 web"]').click()
   await sleep(900)
   g = await geom()
   if (g.sidebar && g.sidebar.w > 250 && !g.collapsed) ok('还原后：官方侧栏展开')
@@ -115,7 +115,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     g = await geom()
     if (g.transform && g.panel && g.panel.x >= 0) ok('官方侧栏「墨扉」入口同样触发变形')
     else fail('侧栏入口变形失败: ' + JSON.stringify(g))
-    await page.locator('.mf-head button', { hasText: '收起' }).click()
+    await page.locator('.mf-head button[title="收起墨扉，返回原版 web"]').click()
     await sleep(700)
   } else {
     ok('侧栏「墨扉」入口未渲染（可接受）')

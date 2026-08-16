@@ -17,6 +17,9 @@ function buildTools(mofei) {
   // v0.10.3: 工具写入标记 _source='agent'，实体/章节 history 条目记录来源（审计）。
   const run = (method) => async (args) => mofei.run(method, { ...(args || {}), _source: 'agent' })
   const defs = [
+    tool('mofei_get-active-context', '读取作者当前在墨扉工作台打开的项目和章节的精装上下文。处理续写、改写、审稿或查设定请求时，先调用本工具；bound 为 true 时必须以返回的 project/chapter/revision/contextText 为准。',
+      obj({}), obj({ bound: bool(), contextText: str(), project: any(), chapter: { oneOf: [{ type: 'object' }, { type: 'null' }] }, boundAt: num(), error: str() }, ['bound', 'contextText']),
+      async (_args, exec) => mofei.activeAgentContext(exec && exec.agent && exec.agent.id)),
     tool('mofei_list-projects', '列出全部 墨扉小说项目及其章节数。', obj({}), obj({ projects: arr({ type: 'object' }) }, ['projects']), async () => mofei.listProjects()),
     tool('mofei_read-chapter', '读取 墨扉项目某个章节的完整内容与修订号。',
       obj({ projectId: str('项目 id（用 mofei_list-projects 获取）'), chapterId: str('章节 id') }, ['projectId', 'chapterId']),
@@ -141,7 +144,39 @@ function buildTools(mofei) {
       obj({ projectId: str(), noteId: str(), title: str(), content: str() }, ['projectId', 'noteId']),
       obj({ note: any() }, ['note']), run('update-note')),
   ]
-  defs.push(...legacy)
+  // OpenFic 的 Agent 不是只能写正文的聊天框：它可在当前小说项目内维护全部创作资产。
+  // 删除和改写类工具要求 Agent 先向作者确认目标；普通读取和新建由写作任务直接驱动。
+  const authoring = [
+    tool('mofei_create-project', '新建一本墨扉小说项目。只在作者明确要求创建新书时使用。', obj({ title: str(), description: str() }, ['title']), any(), run('create-project')),
+    tool('mofei_update-project', '更新当前小说项目名称、简介或字数目标。', obj({ projectId: str(), title: str(), description: str(), goal: num() }, ['projectId']), any(), run('update-project')),
+    tool('mofei_delete-project', '删除整本小说项目及其实体。高风险：必须先说明影响并取得作者明确确认。', obj({ projectId: str() }, ['projectId']), any(), run('delete-project')),
+    tool('mofei_update-chapter-meta', '更新章节标题，不改正文。', obj({ projectId: str(), chapterId: str(), title: str() }, ['projectId', 'chapterId', 'title']), any(), run('update-chapter-meta')),
+    tool('mofei_delete-chapter', '删除一个章节。高风险：必须先取得作者明确确认。', obj({ projectId: str(), chapterId: str() }, ['projectId', 'chapterId']), any(), run('delete-chapter')),
+    tool('mofei_move-chapter', '在章节列表中上移或下移章节。', obj({ projectId: str(), chapterId: str(), direction: str('up|down') }, ['projectId', 'chapterId', 'direction']), any(), run('move-chapter')),
+    tool('mofei_set-chapter-volume', '把章节移入指定卷，或传 null 移至未分卷。', obj({ projectId: str(), chapterId: str(), volumeId: { oneOf: [{ type: 'string' }, { type: 'null' }] } }, ['projectId', 'chapterId']), any(), run('set-chapter-volume')),
+    tool('mofei_create-volume', '新建卷。', obj({ projectId: str(), title: str(), description: str() }, ['projectId', 'title']), any(), run('create-volume')),
+    tool('mofei_update-volume', '更新卷标题或简介。', obj({ projectId: str(), volumeId: str(), title: str(), description: str() }, ['projectId', 'volumeId']), any(), run('update-volume')),
+    tool('mofei_delete-volume', '删除卷及其中章节。高风险：必须先取得作者明确确认。', obj({ projectId: str(), volumeId: str() }, ['projectId', 'volumeId']), any(), run('delete-volume')),
+    tool('mofei_move-volume', '在卷列表中上移或下移卷。', obj({ projectId: str(), volumeId: str(), direction: str('up|down') }, ['projectId', 'volumeId', 'direction']), any(), run('move-volume')),
+    tool('mofei_read-character', '读取一个角色的完整资料。', obj({ projectId: str(), characterId: str() }, ['projectId', 'characterId']), any(), run('read-character')),
+    tool('mofei_delete-character', '删除角色。高风险：必须先取得作者明确确认。', obj({ projectId: str(), characterId: str() }, ['projectId', 'characterId']), any(), run('delete-character')),
+    tool('mofei_create-note', '新建笔记，可指定笔记分类。', obj({ projectId: str(), title: str(), categoryId: { oneOf: [{ type: 'string' }, { type: 'null' }] } }, ['projectId', 'title']), any(), run('create-note')),
+    tool('mofei_read-note', '读取一个可见笔记的完整内容；隐藏笔记不可读取。', obj({ projectId: str(), noteId: str() }, ['projectId', 'noteId']), any(), run('read-note')),
+    tool('mofei_delete-note', '删除笔记。高风险：必须先取得作者明确确认。', obj({ projectId: str(), noteId: str() }, ['projectId', 'noteId']), any(), run('delete-note')),
+    tool('mofei_move-note', '把笔记移到分类，或传 null 移到根目录。', obj({ projectId: str(), noteId: str(), categoryId: { oneOf: [{ type: 'string' }, { type: 'null' }] } }, ['projectId', 'noteId']), any(), run('move-note')),
+    tool('mofei_create-note-category', '新建笔记分类，可指定一级父分类。', obj({ projectId: str(), title: str(), parentId: { oneOf: [{ type: 'string' }, { type: 'null' }] } }, ['projectId', 'title']), any(), run('create-note-category')),
+    tool('mofei_update-note-category', '重命名笔记分类。', obj({ projectId: str(), categoryId: str(), title: str() }, ['projectId', 'categoryId', 'title']), any(), run('rename-note-category')),
+    tool('mofei_delete-note-category', '删除笔记分类并把其中笔记移回根目录。高风险：必须先取得作者明确确认。', obj({ projectId: str(), categoryId: str() }, ['projectId', 'categoryId']), any(), run('delete-note-category')),
+    tool('mofei_read-world-entry', '读取一个世界书条目的完整内容与开关状态。', obj({ projectId: str(), entryId: str() }, ['projectId', 'entryId']), any(), run('read-world-entry')),
+    tool('mofei_move-world-entry', '在世界书条目列表中上移或下移条目。', obj({ projectId: str(), entryId: str(), direction: str('up|down') }, ['projectId', 'entryId', 'direction']), any(), run('move-world-entry')),
+    tool('mofei_update-world-entries', '批量更新世界书条目的启用或常驻状态。', obj({ projectId: str(), entryIds: arr(str()), patch: any() }, ['projectId', 'entryIds', 'patch']), any(), run('update-world-entries')),
+    tool('mofei_delete-world-entries', '批量删除世界书条目。高风险：必须先取得作者明确确认。', obj({ projectId: str(), entryIds: arr(str()) }, ['projectId', 'entryIds']), any(), run('delete-world-entries')),
+    tool('mofei_list-prompt-chains', '列出这本小说的提示词链。', obj({ projectId: str() }, ['projectId']), any(), run('list-prompt-chains')),
+    tool('mofei_save-prompt-chain', '创建或更新项目提示词链。', obj({ projectId: str(), chainId: str(), name: str(), content: str() }, ['projectId', 'name', 'content']), any(), run('save-prompt-chain')),
+    tool('mofei_delete-prompt-chain', '删除提示词链。高风险：必须先取得作者明确确认。', obj({ projectId: str(), chainId: str() }, ['projectId', 'chainId']), any(), run('delete-prompt-chain')),
+    tool('mofei_compile-prompt-chain', '以当前项目与可选章节编译提示词链，先预览再运行。', obj({ projectId: str(), chainId: str(), chapterId: str(), instruction: str() }, ['projectId', 'chainId']), any(), run('compile-prompt-chain')),
+  ]
+  defs.push(...legacy, ...authoring)
   return defs
 }
 

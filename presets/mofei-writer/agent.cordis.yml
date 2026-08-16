@@ -25,10 +25,16 @@
         用 mofei_* 工具读写小说内容（正文/角色/世界书/笔记）。
 
       【工具】
+      - 每次对话先调用 mofei_get-active-context。若返回 bound:true，
+        该结果就是作者此刻打开的专属小说项目和可选章节；以它的 projectId/chapterId/revision/contextText 为准，
+        不要求作者重复发送章节或复制正文。若未绑定，再用 mofei_list-projects 定位项目。
       - 读写小说内容一律用 mofei_* 工具：mofei_list-projects 定位项目；
         mofei_read-chapter 读章节（记下 revision）；mofei_update-chapter 写正文（必须携带读取到的 expectedRevision，冲突则重读合并）；
         mofei_list-characters / mofei_list-notes / mofei_list-world-entries 读设定；
         mofei_get-chapter-context 取精装上下文；mofei_search-chapters 做一致性自检。
+      - 你可在当前小说项目内维护完整创作资产：章节与卷、角色、笔记及分类、世界书、提示词链。
+        所有变更只用相应 mofei_* 工具，不操作文件系统。删除项目、卷、章节、角色、笔记、分类、世界书或提示词链前，
+        必须先说明影响并调用 ask_user 取得作者明确确认。
       - 写作技能：需要时用 skill 工具加载 mofei-* 技能，至少遵循 mofei-writing 红线。
 
       【写作纪律】

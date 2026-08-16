@@ -29,6 +29,8 @@ export default {
     let aiSessions = { version: 1, sessions: {} }
     let summaryStore = normalizeSummaryStore(undefined)
     let chainStore = normalizeChainStore(undefined)
+    // 当前浏览器工作台与 DSH 写作会话之间的短生命周期关联；不写入小说数据。
+    const agentContexts = new Map()
     function text(value, fallback) { const result = typeof value === 'string' ? value.trim() : ''; return result || fallback }
     function slice200(value) { const result = typeof value === 'string' ? value : ''; return result.length > 200 ? result.slice(0, 200) : result }
     function pad(value) { return value < 10 ? '0' + String(value) : String(value) }
@@ -39,7 +41,8 @@ export default {
     function categoryView(item) { return { id: item.id, title: item.title, parentId: item.parentId || null } }
     function noteView(item) { return { id: item.id, title: item.title, content: item.content, categoryId: item.categoryId || null, isLocked: !!item.isLocked, isHidden: !!item.isHidden } }
     function worldEntryView(item, index) { return { id: item.id, name: cleanText(item.name, '未命名条目'), keys: normalizeKeys(item.keys), content: item.content, isEnabled: item.isEnabled !== false, constant: !!item.constant, order: typeof item.order === 'number' ? item.order : index } }
-    function projectView(item) { return { id: item.id, title: item.title, description: item.description, goal: typeof item.goal === 'number' ? item.goal : 0, currentStyle: item.currentStyle || 'default', chapters: item.chapters.map(chapterView), volumes: (item.volumes || []).map((v) => volumeView(v, item.chapters)), characters: (item.characters || []).map(characterView), notes: (item.notes || []).map(noteView), noteCategories: (item.noteCategories || []).map(categoryView), worldEntries: (item.worldEntries || []).map(worldEntryView) } }
+    function projectWriterSessionId(project) { return project && typeof project.writerSessionId === 'string' ? project.writerSessionId.trim() : '' }
+    function projectView(item) { return { id: item.id, title: item.title, description: item.description, goal: typeof item.goal === 'number' ? item.goal : 0, currentStyle: item.currentStyle || 'default', writerSessionId: projectWriterSessionId(item), chapters: item.chapters.map(chapterView), volumes: (item.volumes || []).map((v) => volumeView(v, item.chapters)), characters: (item.characters || []).map(characterView), notes: (item.notes || []).map(noteView), noteCategories: (item.noteCategories || []).map(categoryView), worldEntries: (item.worldEntries || []).map(worldEntryView) } }
     function draftView(item) { return { projectId: item.projectId, chapterId: item.chapterId, content: item.content, baseRevision: item.baseRevision } }
     function projectBy(id) { return store.projects.find((item) => item.id === id) }
     function chapterBy(project, id) { return project && project.chapters.find((item) => item.id === id) }
@@ -48,6 +51,27 @@ export default {
     function categoryBy(project, id) { return project && (project.noteCategories || []).find((item) => item.id === id) }
     function noteBy(project, id) { return project && (project.notes || []).find((item) => item.id === id) }
     function worldEntryBy(project, id) { return project && (project.worldEntries || []).find((item) => item.id === id) }
+    function boundAgentContext(args) {
+      const sessionId = typeof (args && args.sessionId) === 'string' ? args.sessionId.trim() : ''
+      const projectId = typeof (args && args.projectId) === 'string' ? args.projectId.trim() : ''
+      const chapterId = typeof (args && args.chapterId) === 'string' ? args.chapterId.trim() : ''
+      if (!sessionId || sessionId.length > 512 || !projectId) return null
+      return { sessionId, projectId, chapterId }
+    }
+    function projectAgentContext(project) {
+      const take = (items, format, limit) => (items || []).slice(0, limit).map(format).filter(Boolean).join('\n')
+      const characters = take(project.characters, (item) => '【角色】' + item.name + (item.description ? '：' + slice200(item.description) : ''), 20)
+      const notes = take((project.notes || []).filter((item) => !item.isHidden), (item) => '【笔记】' + item.title + (item.content ? '：' + slice200(item.content) : ''), 20)
+      const world = take((project.worldEntries || []).filter((item) => item.isEnabled !== false), (item) => '【世界书】' + item.name + (item.content ? '：' + slice200(item.content) : ''), 20)
+      return [
+        '【当前墨扉小说项目】《' + project.title + '》',
+        'projectId: ' + project.id,
+        '当前未选中章节。你仍处于这本小说的写作项目中；可创建、读取或整理章节、卷、角色、笔记和世界书。',
+        characters,
+        notes,
+        world,
+      ].filter(Boolean).join('\n\n')
+    }
     function worldEntryNameConflict(project, name, excludeId) {
       const cleaned = cleanText(name, '')
       if (!cleaned) return null
@@ -263,7 +287,7 @@ export default {
     const mofeiFileRoot = path.join(cwd, '.mofei')
     function safeFileSegment(value, fallback) { const raw = String(value || fallback).replace(/[\\/:*?"<>|#%&{}$!'@+`=]/g, '-').replace(/\s+/g, '-').slice(0, 80); return raw || fallback }
     function frontmatter(meta) { return '---\n' + Object.entries(meta).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join('\n') + '\n---\n' }
-    function styleMeta(project) { return { id: project.id, title: project.title || '未命名项目', description: project.description || '', goal: project.goal || 0, currentStyle: project.currentStyle || 'default' } }
+    function styleMeta(project) { return { id: project.id, title: project.title || '未命名项目', description: project.description || '', goal: project.goal || 0, currentStyle: project.currentStyle || 'default', writerSessionId: projectWriterSessionId(project) || null } }
     async function writeMofeiFile(relative, content) {
       if (String(cwd).startsWith('virtual-root')) return
       const target = path.join(mofeiFileRoot, relative)
@@ -375,7 +399,7 @@ export default {
         bumpNextId(projectId)
         let project = projectBy(projectId)
         if (!project) {
-          project = { id: projectId, title: text(projectMeta.title, '未命名项目'), description: typeof projectMeta.description === 'string' ? projectMeta.description : '', goal: typeof projectMeta.goal === 'number' && isFinite(projectMeta.goal) ? projectMeta.goal : 0, currentStyle: typeof projectMeta.currentStyle === 'string' && projectMeta.currentStyle ? projectMeta.currentStyle : 'default', chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
+          project = { id: projectId, title: text(projectMeta.title, '未命名项目'), description: typeof projectMeta.description === 'string' ? projectMeta.description : '', goal: typeof projectMeta.goal === 'number' && isFinite(projectMeta.goal) ? projectMeta.goal : 0, currentStyle: typeof projectMeta.currentStyle === 'string' && projectMeta.currentStyle ? projectMeta.currentStyle : 'default', writerSessionId: typeof projectMeta.writerSessionId === 'string' ? projectMeta.writerSessionId.trim() : '', chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
           store.projects.push(project)
           report.projects.push({ id: projectId, added: true })
           report.changed = true
@@ -384,11 +408,13 @@ export default {
           const titleChanged = typeof projectMeta.title === 'string' && projectMeta.title && projectMeta.title !== project.title
           const descriptionChanged = typeof projectMeta.description === 'string' && projectMeta.description !== (project.description || '')
           const goalChanged = typeof projectMeta.goal === 'number' && isFinite(projectMeta.goal) && projectMeta.goal !== (project.goal || 0)
+          const writerSessionChanged = typeof projectMeta.writerSessionId === 'string' && projectMeta.writerSessionId.trim() !== projectWriterSessionId(project)
           if (styleChanged) project.currentStyle = projectMeta.currentStyle
           if (titleChanged) project.title = projectMeta.title
           if (descriptionChanged) project.description = projectMeta.description
           if (goalChanged) project.goal = projectMeta.goal
-          if (styleChanged || titleChanged || descriptionChanged || goalChanged) report.changed = true
+          if (writerSessionChanged) project.writerSessionId = projectMeta.writerSessionId.trim()
+          if (styleChanged || titleChanged || descriptionChanged || goalChanged || writerSessionChanged) report.changed = true
           report.projects.push({ id: projectId, added: false })
         }
         // 章节：chapters/**/*.md（卷目录或平铺），frontmatter.id 为准，文件名仅作可读标签。
@@ -1069,7 +1095,40 @@ export default {
     }    const handlers = {
       'bootstrap': async () => snapshot(),
       'list-projects': async () => ({ projects: (await snapshot()).projects }),
+      // 每本小说拥有一个专属 mofei-writer 会话。DSH 的标准开发会话绝不被复用或切换。
+      'writer-session': async (args) => {
+        await load(); await queue
+        const project = projectBy(args && args.projectId)
+        if (!project) return { error: 'PROJECT_NOT_FOUND' }
+        return { projectId: project.id, sessionId: projectWriterSessionId(project) || null }
+      },
+      'bind-writer-session': async (args) => mutate(async () => {
+        const project = projectBy(args && args.projectId)
+        if (!project) return { error: 'PROJECT_NOT_FOUND' }
+        const sessionId = typeof (args && args.sessionId) === 'string' ? args.sessionId.trim() : ''
+        if (!sessionId || sessionId.length > 512) return { error: 'INVALID_SESSION_ID' }
+        project.writerSessionId = sessionId
+        await saveProjects()
+        return { projectId: project.id, sessionId }
+      }),
+      // UI 仅绑定当前项目及可选章节；写作 Agent 在实际执行前读取最新上下文。
+      'bind-agent-context': async (args) => {
+        await load(); await queue
+        const binding = boundAgentContext(args)
+        if (!binding) return { bound: false, error: 'INVALID_AGENT_CONTEXT' }
+        const project = projectBy(binding.projectId)
+        const chapter = binding.chapterId ? chapterBy(project, binding.chapterId) : null
+        if (!project || (binding.chapterId && !chapter)) { agentContexts.delete(binding.sessionId); return { bound: false, error: project ? 'CHAPTER_NOT_FOUND' : 'PROJECT_NOT_FOUND' } }
+        agentContexts.set(binding.sessionId, { projectId: binding.projectId, chapterId: binding.chapterId, updatedAt: Date.now() })
+        return { bound: true, project: { id: project.id, title: project.title }, chapter: chapter ? { id: chapter.id, title: chapter.title, revision: chapter.revision } : null }
+      },
       'list-entities': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const kind = args && args.kind; if (!project) return { error: 'PROJECT_NOT_FOUND' }; if (kind === 'volumes') return { items: (project.volumes || []).map((item) => volumeView(item, project.chapters)) }; if (kind === 'chapters') return { items: project.chapters.map(chapterView) }; if (kind === 'characters') return { items: (project.characters || []).map(characterView) }; if (kind === 'notes') return { items: (project.notes || []).map(noteView) }; if (kind === 'world') return { items: (project.worldEntries || []).map(worldEntryView) }; if (kind === 'summaries') return { items: summaryStore.ranges || [] }; if (kind === 'chains') return { items: (chainStore.projects && chainStore.projects[project.id] || []) }; return { error: 'INVALID_KIND' } },
+      'read-character': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const character = characterBy(project, args && args.characterId); if (!character) return { error: project ? 'CHARACTER_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; return { character: characterView(character) } },
+      'read-note': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const note = noteBy(project, args && args.noteId); if (!note) return { error: project ? 'NOTE_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; if (note.isHidden) return { error: 'NOTE_HIDDEN' }; return { note: noteView(note) } },
+      'read-world-entry': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const entry = worldEntryBy(project, args && args.entryId); if (!entry) return { error: project ? 'WORLD_ENTRY_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; return { entry: worldEntryView(entry) } },
+      // 技能只在 mofei-writer preset 中注册；此处仅向写作工作台提供可浏览的目录，
+      // 让作者清楚当前写作助手实际具备哪些 OpenFic 写作能力。
+      'list-writing-skills': async () => ({ skills: mofeiSkills.map((skill) => ({ name: skill.name, description: skill.description, whenToUse: skill.whenToUse, invocation: skill.invocation, provider: skill.provider, content: skill.content })) }),
       // v0.10.1: styles 列表支持项目级覆盖（projectId 提供时合并，项目级优先显示在全局之前）。
       'list-styles': async (args) => { await load(); await queue; const result = []; try { const { readdir } = await import('node:fs/promises'); const pushDir = async (dir, scope) => { let names = []; try { names = await readdir(dir) } catch (error) { return } for (const name of names.sort()) if (name.endsWith('.md')) { const item = parseStyle(await readFile(path.join(dir, name), 'utf8'), name.replace(/\.md$/, '')); if (scope === 'project' && result.some((existing) => existing.id === item.id)) continue; result.push({ id: item.id, name: item.name, description: item.description, tags: item.tags, file: name, content: item.content, scope }) } }; const projectId = args && args.projectId && projectBy(args.projectId) ? args.projectId : null; if (projectId) await pushDir(path.join(mofeiFileRoot, 'projects', safeFileSegment(projectId, 'project'), 'styles'), 'project'); await pushDir(path.join(cwd, '.mofei', 'styles'), 'global') } catch (error) { result.push({ id: 'default', name: '默认', file: 'default.md', content: '保持已有文风。', scope: 'global' }) } return { styles: result } },
       'get-style': async (args) => { await load(); await queue; const styleId = args && args.styleId; const projectId = args && args.projectId && projectBy(args.projectId) ? args.projectId : null; const textValue = await readStyle(styleId, projectId); if (!textValue) return { error: 'STYLE_NOT_FOUND', styleId: styleId || null }; const item = parseStyle(textValue, styleId); return { style: item, text: textValue, scope: projectId ? 'project' : 'global' } },
@@ -1199,7 +1258,7 @@ export default {
       },
       'stats': async () => { await load(); await queue; return statsView() },
       'create-project': async (args) => mutate(async () => {
-        const project = { id: allocate('project'), title: text(args && args.title, '未命名项目'), description: text(args && args.description, ''), goal: 0, chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
+        const project = { id: allocate('project'), title: text(args && args.title, '未命名项目'), description: text(args && args.description, ''), goal: 0, writerSessionId: '', chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
         store.projects.push(project); await saveProjects(); return { project: projectView(project) }
       }),
       'create-chapter': async (args) => mutate(async () => {
@@ -1221,6 +1280,7 @@ export default {
         const project = projectBy(args && args.projectId)
         if (!project) return { error: 'PROJECT_NOT_FOUND' }
         const removedChapterIds = project.chapters.map((item) => item.id)
+        for (const [sessionId, binding] of agentContexts) if (binding.projectId === project.id) agentContexts.delete(sessionId)
         store.projects = store.projects.filter((item) => item.id !== project.id)
         const before = draftStore.items.length
         draftStore.items = draftStore.items.filter((item) => item.projectId !== project.id)
@@ -2149,6 +2209,18 @@ export default {
       listNotes: async (projectId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return { notes: (project.notes || []).filter((item) => !item.isHidden).map((item) => ({ id: item.id, title: item.title, categoryId: item.categoryId || null, isLocked: !!item.isLocked })) } },
       listWorldEntries: async (projectId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return { entries: (project.worldEntries || []).map(worldEntryView) } },
       projectBy: async (projectId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return project },
+      activeAgentContext: async (sessionId) => {
+        const id = typeof sessionId === 'string' ? sessionId.trim() : ''
+        const binding = id ? agentContexts.get(id) : null
+        if (!binding) return { bound: false, contextText: '' }
+        const project = projectBy(binding.projectId)
+        if (!project) { agentContexts.delete(id); return { bound: false, contextText: '', error: 'PROJECT_NOT_FOUND' } }
+        if (!binding.chapterId) return { bound: true, boundAt: binding.updatedAt, project: { id: project.id, title: project.title }, chapter: null, contextText: projectAgentContext(project) }
+        let result
+        try { result = await runMethod('chapter-context', { projectId: binding.projectId, chapterId: binding.chapterId }) }
+        catch (error) { agentContexts.delete(id); return { bound: false, contextText: '', error: String((error && error.message) || error) } }
+        return { bound: true, boundAt: binding.updatedAt, project: result.project, chapter: result.chapter, contextText: result.contextText || '' }
+      },
       zone: async () => ({ active: true, workspaceRoot: cwd }),
     }
     if (typeof ctx.provide === 'function') ctx.provide('mofei', mofeiService)

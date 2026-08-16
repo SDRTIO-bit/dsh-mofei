@@ -1333,6 +1333,120 @@ function WritingDashboard(props) {
   );
 }
 
+// src/client/skills-library.js
+var reactBinding5 = null;
+var reactResolved5 = false;
+var WRITING_SKILL_LABELS = {
+  "character-design": "\u89D2\u8272\u8BBE\u8BA1",
+  "character-relationship": "\u89D2\u8272\u5173\u7CFB",
+  "deslop-lexicon": "\u53BB\u5957\u8BDD\u8BCD\u5E93",
+  "deslop-writing": "\u53BB\u6A21\u677F\u5316\u5199\u4F5C",
+  "dialogue-design": "\u5BF9\u767D\u8BBE\u8BA1",
+  "emotional-arc": "\u60C5\u611F\u5F27\u7EBF",
+  "opening-design": "\u5F00\u7BC7\u8BBE\u8BA1",
+  "prose-format": "\u884C\u6587\u683C\u5F0F",
+  "reader-contract": "\u8BFB\u8005\u5951\u7EA6",
+  "reversal-design": "\u53CD\u8F6C\u8BBE\u8BA1",
+  "short-submission": "\u77ED\u7BC7\u6295\u7A3F",
+  "story-deconstruction": "\u6545\u4E8B\u62C6\u89E3",
+  "story-hooks": "\u6545\u4E8B\u94A9\u5B50",
+  "story-quality": "\u6545\u4E8B\u8D28\u91CF",
+  "story-state-tracking": "\u72B6\u6001\u8FFD\u8E2A",
+  "villain-reveal": "\u53CD\u6D3E\u63ED\u793A",
+  writing: "\u58A8\u6249\u5199\u4F5C"
+};
+function resolveReact5() {
+  if (reactResolved5) return reactBinding5;
+  reactResolved5 = true;
+  const g = typeof globalThis !== "undefined" ? globalThis : null;
+  let React = g && g.React;
+  if (!React && typeof window !== "undefined") React = window.React;
+  if (!React) {
+    try {
+      const req = typeof require === "function" ? require : g && g.__mfRequire;
+      if (req) React = req("react");
+    } catch (error) {
+    }
+  }
+  if (!React && g && g.__mofeiReact) React = g.__mofeiReact;
+  reactBinding5 = React && typeof React.createElement === "function" ? { h: React.createElement, useState: React.useState, useEffect: React.useEffect, useMemo: React.useMemo } : null;
+  return reactBinding5;
+}
+function writingSkillLabel(name) {
+  const normalized = String(name || "").replace(/^(mofei|openfic)-/, "");
+  return WRITING_SKILL_LABELS[normalized] || normalized.replace(/-/g, " ");
+}
+function filterWritingSkills(skills, query) {
+  const term = String(query || "").trim().toLowerCase();
+  const list = Array.isArray(skills) ? skills : [];
+  if (!term) return list;
+  return list.filter((skill) => [skill && skill.name, skill && skill.description, skill && skill.whenToUse].join(" ").toLowerCase().includes(term));
+}
+var WRITING_SKILLS_CSS = [
+  ".mf-sk-overlay{position:fixed;inset:0;z-index:132;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.46)}",
+  ".mf-sk{width:min(920px,calc(100vw - 48px));height:min(720px,calc(100vh - 72px));display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.4)}",
+  ".mf-sk-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 18px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-sk-title{display:flex;align-items:baseline;gap:8px;min-width:0}.mf-sk-title strong{font-size:14px;font-weight:650}.mf-sk-title small{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-sk-head-actions{display:flex;align-items:center;gap:4px}.mf-sk-link{border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px 8px;cursor:pointer;font:12px/1.2 sans-serif}.mf-sk-link:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}",
+  ".mf-sk-close{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-sk-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}",
+  ".mf-sk-body{display:grid;grid-template-columns:278px minmax(0,1fr);min-height:0}.mf-sk-list{min-height:0;overflow:auto;border-right:1px solid var(--dsw-alias-border-l1);padding:10px}.mf-sk-search{box-sizing:border-box;width:100%;height:32px;margin:0 0 8px;padding:0 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1 sans-serif;outline:0}.mf-sk-search:focus{border-color:var(--dsw-alias-state-business-primary)}",
+  ".mf-sk-item{display:block;width:100%;padding:9px 10px;border:0;border-radius:5px;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit}.mf-sk-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-sk-item.on{background:var(--dsw-alias-state-business-tertiary)}.mf-sk-item strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;text-transform:none}.mf-sk-item small{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:10.5px}",
+  ".mf-sk-detail{min-width:0;min-height:0;overflow:auto;padding:26px 30px}.mf-sk-empty{display:grid;place-items:center;height:100%;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-sk-kicker{font-size:11px;color:var(--dsw-alias-state-success-primary);font-weight:600}.mf-sk-detail h2{margin:7px 0 8px;font-size:20px;line-height:1.3;font-weight:680;text-transform:none}.mf-sk-desc{max-width:660px;margin:0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.7}.mf-sk-rule{height:1px;margin:22px 0;background:var(--dsw-alias-border-l1)}.mf-sk-section-label{margin:0 0 7px;color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:650}.mf-sk-when{margin:0;white-space:pre-wrap;font-size:13px;line-height:1.75}.mf-sk-content{margin:18px 0 0;padding:14px 16px;border-left:2px solid var(--dsw-alias-state-business-primary);background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-elevated));white-space:pre-wrap;font:12px/1.72 ui-monospace,Consolas,monospace;max-height:280px;overflow:auto;color:var(--dsw-alias-label-secondary)}",
+  "@media(max-width:760px){.mf-sk{width:100vw;height:100vh;border:0;border-radius:0}.mf-sk-body{grid-template-columns:1fr}.mf-sk-list{max-height:40vh;border-right:0;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-sk-detail{padding:20px}.mf-sk-content{max-height:180px}}"
+].join("\n");
+function ensureStyles() {
+  if (typeof document === "undefined" || document.querySelector("style[data-mf-writing-skills]")) return;
+  const style = document.createElement("style");
+  style.setAttribute("data-mf-writing-skills", "");
+  style.textContent = WRITING_SKILLS_CSS;
+  document.head.appendChild(style);
+}
+function WritingSkillsPanel(props) {
+  ensureStyles();
+  const resolved = resolveReact5();
+  if (!resolved) throw new Error("\u58A8\u6249 WritingSkillsPanel \u65E0\u6CD5\u89E3\u6790 React");
+  const { h, useState, useEffect, useMemo } = resolved;
+  const open = !!(props && props.open);
+  const skills = Array.isArray(props && props.skills) ? props.skills : [];
+  const loading = !!(props && props.loading);
+  const error = props && props.error ? String(props.error) : "";
+  const onClose = props && props.onClose;
+  const onOpenChains = props && props.onOpenChains;
+  const [query, setQuery] = useState("");
+  const [selectedName, setSelectedName] = useState("");
+  const filtered = useMemo(() => filterWritingSkills(skills, query), [skills, query]);
+  const selected = filtered.find((skill) => skill && skill.name === selectedName) || filtered[0] || null;
+  useEffect(() => {
+    if (!open) return;
+    if (!selectedName && skills[0]) setSelectedName(skills[0].name);
+  }, [open, selectedName, skills]);
+  if (!open) return null;
+  const list = loading ? h("div", { className: "mf-sk-empty" }, "\u6B63\u5728\u8BFB\u53D6\u5199\u4F5C\u6280\u80FD\u2026") : error ? h("div", { className: "mf-sk-empty" }, error) : filtered.length ? filtered.map((skill) => h("button", { key: skill.name, className: "mf-sk-item" + (selected && selected.name === skill.name ? " on" : ""), type: "button", onClick: () => setSelectedName(skill.name) }, h("strong", null, writingSkillLabel(skill.name)), h("small", null, skill.description || "\u5199\u4F5C\u6280\u80FD"))) : h("div", { className: "mf-sk-empty" }, "\u6CA1\u6709\u5339\u914D\u7684\u5199\u4F5C\u6280\u80FD");
+  const detail = selected ? h(
+    "article",
+    { className: "mf-sk-detail" },
+    h("div", { className: "mf-sk-kicker" }, "\u5DF2\u52A0\u8F7D\u81F3 mofei-writer \u5199\u4F5C\u52A9\u624B"),
+    h("h2", null, writingSkillLabel(selected.name)),
+    h("p", { className: "mf-sk-desc" }, selected.description || ""),
+    h("div", { className: "mf-sk-rule" }),
+    h("p", { className: "mf-sk-section-label" }, "\u9002\u7528\u573A\u666F"),
+    h("p", { className: "mf-sk-when" }, selected.whenToUse || "\u5199\u4F5C\u52A9\u624B\u4F1A\u5728\u76F8\u5173\u4EFB\u52A1\u4E2D\u6309\u9700\u52A0\u8F7D\u3002"),
+    selected.content ? h("pre", { className: "mf-sk-content" }, selected.content) : null
+  ) : h("div", { className: "mf-sk-empty" }, loading ? "\u6B63\u5728\u8BFB\u53D6\u5199\u4F5C\u6280\u80FD\u2026" : "\u9009\u62E9\u4E00\u9879\u6280\u80FD\u67E5\u770B\u8BE6\u60C5");
+  return h(
+    "div",
+    { className: "mf-sk-overlay", role: "presentation", onClick: () => {
+      if (onClose) onClose();
+    } },
+    h(
+      "section",
+      { className: "mf-sk", role: "dialog", "aria-label": "\u58A8\u6249\u5199\u4F5C\u6280\u80FD", onClick: (event) => event.stopPropagation() },
+      h("header", { className: "mf-sk-head" }, h("div", { className: "mf-sk-title" }, h("strong", null, "\u5199\u4F5C\u6280\u80FD"), h("small", null, String(skills.length) + " \u9879\u5DF2\u542F\u7528\u80FD\u529B")), h("div", { className: "mf-sk-head-actions" }, onOpenChains ? h("button", { className: "mf-sk-link", type: "button", onClick: onOpenChains }, "\u63D0\u793A\u8BCD\u94FE") : null, h("button", { className: "mf-sk-close", type: "button", title: "\u5173\u95ED\u5199\u4F5C\u6280\u80FD", onClick: () => {
+        if (onClose) onClose();
+      } }, "\xD7"))),
+      h("div", { className: "mf-sk-body" }, h("aside", { className: "mf-sk-list" }, h("input", { className: "mf-sk-search", value: query, placeholder: "\u641C\u7D22\u6280\u80FD\u2026", onChange: (event) => setQuery(event.target.value) }), list), detail)
+    )
+  );
+}
+
 // src/client/editor-limits.js
 var MAX_EDITOR_CONTENT_LINES = 2e3;
 var MAX_EDITOR_CONTENT_CHARACTERS = 1e5;
@@ -1725,6 +1839,19 @@ function createClient(require2) {
       return j.value;
     });
   }
+  function dshCall(method, payload) {
+    const rpcId = "mofei-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    return fetch("/api/" + method, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type: "client-request", rpcId, method, payload: payload || {} })
+    }).then(async (response) => {
+      const body = await response.json();
+      const result = body && body.result;
+      if (!response.ok || !result || result.ok !== true) throw new Error(result && result.error || "DSH_RPC_FAILED:" + method);
+      return result.value;
+    });
+  }
   const css = [
     ".mf-open{pointer-events:auto;border:0;border-radius:6px;background:var(--dsw-alias-state-business-primary);color:#fff;padding:8px 12px;cursor:pointer;font:600 13px/1.2 sans-serif}",
     ".mf-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}.mf-card span{font-size:12px;color:var(--dsw-alias-label-secondary)}",
@@ -1754,18 +1881,17 @@ function createClient(require2) {
     ".mf-form{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-input{box-sizing:border-box;width:100%;padding:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit}.mf-rename{min-width:0;padding:4px 6px;font-size:12px}",
     ".mf-goal{padding:6px 9px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-goal-btn{width:100%;border:1px dashed var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px;cursor:pointer;font:inherit;font-size:11px}",
     ".mf-empty{padding:18px 14px;color:var(--dsw-alias-label-secondary);font-size:12.5px;line-height:1.8}",
-    ".mf-editor{display:flex;min-width:0;min-height:0;flex-direction:column}.mf-status{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-status.unsaved{color:#b45309}.mf-status.saving{color:#2563eb}.mf-status.error{color:#dc2626}",
+    ".mf-editor{display:flex;min-width:0;min-height:0;height:100%;flex-direction:column}.mf-editor-pane{display:flex;flex:1 1 auto;min-width:0;min-height:0;flex-direction:column}.mf-status{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-status.unsaved{color:#b45309}.mf-status.saving{color:#2563eb}.mf-status.error{color:#dc2626}",
     ".mf-title-input{box-sizing:border-box;width:100%;padding:12px 18px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:700 17px/1.4 ui-serif,Georgia,serif;outline:0}",
     ".mf-alert{padding:10px 14px;border-bottom:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.08);color:#dc2626;font-size:12px}.mf-actions{display:flex;gap:7px;margin-top:8px}",
     ".mf-text{box-sizing:border-box;width:100%;flex:1;min-height:0;resize:none;border:0;outline:0;background:var(--dsw-alias-bg-base);color:inherit;padding:28px clamp(20px,6vw,72px);font:16px/1.85 ui-serif,Georgia,serif}",
     ".mf-hist{max-height:240px;overflow:auto;border-bottom:1px solid var(--dsw-alias-border-l1);padding:8px}.mf-hist-head{display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px;font-size:12px;font-weight:650}.mf-hist-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 8px;border-radius:5px}.mf-hist-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-hist-meta{display:flex;align-items:center;gap:10px;min-width:0}.mf-hist-meta strong{font-size:12px}.mf-hist-meta span{color:var(--dsw-alias-label-secondary);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
-    ".mf-foot{min-height:50px;padding:0 14px;border-top:1px solid var(--dsw-alias-border-l1);border-bottom:0;color:var(--dsw-alias-label-secondary);font-size:11.5px}.mf-stat{display:inline-flex;gap:12px;flex-wrap:wrap}",
+    ".mf-foot{flex:0 0 38px;height:38px;min-height:38px;padding:0 14px;border-top:1px solid var(--dsw-alias-border-l1);border-bottom:0;color:var(--dsw-alias-label-secondary);font-size:11.5px;overflow:hidden}.mf-stat{display:inline-flex;gap:12px;min-width:0;white-space:nowrap}.mf-context-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary)}",
     ".mf-search{padding:8px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-search input{box-sizing:border-box;width:100%;padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit;font-size:12px}.mf-sr-item{padding:6px 4px;border-bottom:1px dashed var(--dsw-alias-border-l1)}.mf-sr-item strong{font-size:12px}.mf-sr-line{color:var(--dsw-alias-label-secondary);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
     ".mf-sel{font:inherit;font-size:11px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;max-width:110px}",
     ".mf-import{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}.mf-import-card{width:min(560px,calc(100vw - 32px));max-height:82vh;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:16px;display:grid;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.mf-import-card h3{margin:0;font-size:14px}.mf-imp-vol{padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;font-size:12px}.mf-import-card small{color:var(--dsw-alias-label-secondary);font-size:11px}.mf-import-actions{display:flex;gap:8px;justify-content:flex-end}",
     ".mf-tabs2{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--dsw-alias-border-l1);overflow-x:auto}.mf-tab2{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:inherit;padding:3px 8px;font-size:12px;cursor:pointer;white-space:nowrap}.mf-tab2.on{background:var(--dsw-alias-interactive-bg-hover)}.mf-tab2.dragging{opacity:.45}.mf-tab2.drop-target{outline:1px dashed var(--dsw-alias-state-business-primary)}.mf-tab2 .mf-tabx{border:0;background:transparent;color:inherit;cursor:pointer;font-size:11px;padding:0 2px;border-radius:3px}.mf-tab2 .mf-tabx:hover{background:rgba(220,38,38,.25)}.mf-tab2 .mf-tab-kind{font-size:9px;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l1);border-radius:3px;padding:0 3px}.mf-tab2 .mf-tab-pin{font-size:10px;color:var(--dsw-alias-state-warn-primary)}.mf-tabmenu{position:absolute;z-index:140;min-width:150px;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:6px;box-shadow:0 12px 36px rgba(0,0,0,.3);padding:4px;display:grid;gap:2px}.mf-tabmenu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:6px 10px;border-radius:4px;cursor:pointer;font:inherit;font-size:12px}.mf-tabmenu button:hover{background:var(--dsw-alias-interactive-bg-hover)}",
     ".mf-findbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap}.mf-findbar input{box-sizing:border-box;width:170px;padding:5px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit;font-size:12px}.mf-findbar input.mf-find-repl{width:150px}.mf-findbar span{font-size:11px;color:var(--dsw-alias-label-secondary);min-width:34px;text-align:center}",
-    ".mf-mdtoolbar{display:flex;align-items:center;gap:5px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap}.mf-mdtoolbar .mf-mini{min-width:28px;height:24px}.mf-mdtoolbar .mf-sep{width:1px;height:16px;background:var(--dsw-alias-border-l1);margin:0 5px}",
     ".mf-heat{padding:8px 14px;border-top:1px solid var(--dsw-alias-border-l1);display:grid;gap:8px}.mf-heat-grid{display:grid;grid-template-columns:repeat(12,12px);grid-auto-rows:12px;gap:3px;justify-content:start}.mf-hm-cell{width:12px;height:12px;border-radius:3px;background:var(--dsw-alias-interactive-bg-hover);border:1px solid var(--dsw-alias-border-l1)}.mf-hm-cell.l1{background:rgba(67,160,71,.35)}.mf-hm-cell.l2{background:rgba(67,160,71,.55)}.mf-hm-cell.l3{background:rgba(67,160,71,.75)}.mf-hm-cell.l4{background:rgba(67,160,71,.95)}.mf-heat small{color:var(--dsw-alias-label-secondary);font-size:11px}",
     ".mf-ai{display:grid;gap:8px;padding:10px 14px;border-top:1px solid var(--dsw-alias-border-l1);max-height:280px;overflow:auto}.mf-ai-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.mf-ai select{font:inherit;font-size:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;padding:4px 6px}.mf-ai textarea{box-sizing:border-box;width:100%;min-height:56px;padding:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1.6 sans-serif;resize:vertical}.mf-ai-result{white-space:pre-wrap;font:13px/1.7 ui-serif,Georgia,serif;padding:8px 10px;border:1px dashed var(--dsw-alias-border-l1);border-radius:5px;max-height:140px;overflow:auto;color:var(--dsw-alias-label-primary)}",
     ".mf-panel.mf-focus .mf-body{grid-template-columns:minmax(0,1fr)}.mf-panel.mf-focus .mf-col,.mf-panel.mf-focus .mf-activity,.mf-panel.mf-focus .mf-gutter,.mf-panel.mf-focus .mf-chat{display:none}",
@@ -1778,32 +1904,39 @@ function createClient(require2) {
     // v0.12.1 对话面板：pending 审批/提问卡片
     ".mf-pends{display:grid;gap:8px;padding:8px 10px}.mf-pend{border:1px solid var(--dsw-alias-state-warn-secondary);background:var(--dsw-specific-input-major);border-radius:14px;padding:10px 12px;display:grid;gap:8px;color:var(--dsw-alias-label-primary);box-shadow:var(--dsw-shadow-lv2,0 4px 16px rgba(0,0,0,.2))}.mf-pend-head{font-size:12px;font-weight:650;color:var(--dsw-alias-state-warn-primary)}.mf-pend-body,.mf-pend-q{font-size:13px;line-height:1.6;display:grid;gap:4px;min-width:0}.mf-pend-qtext{font-weight:600}.mf-pend-reason{font-size:12px;color:var(--dsw-alias-label-tertiary);white-space:pre-wrap}.mf-pend-actions{display:flex;gap:6px;justify-content:flex-end}.mf-pend-opts{display:flex;flex-wrap:wrap;gap:6px}.mf-pend-opt{border:1px solid var(--dsw-alias-border-l2);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:inherit}.mf-pend-opt:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-pend-opt.on{border-color:var(--dsw-alias-state-business-primary);background:var(--dsw-specific-bubble-highlight);color:var(--dsw-alias-label-primary)}.mf-pend-custom{box-sizing:border-box;width:100%;padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit;font-size:12px}",
     ".mf-chat-jump{align-self:flex-end;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 10px;font-size:11px;cursor:pointer;font-family:inherit}.mf-chat-jump:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-state-business-primary)}",
-    // v0.14 变形金刚形态：原版 web 完整保留；墨扉 = 右下角 orb 按钮 + 左侧滑入工作台
+    // v0.14 变形工作态：原版 web 完整保留；墨扉 = 右下角 orb 按钮 + 左侧滑入工作台。
+    // 工作态的阅读顺序固定为「墨扉工作台 | DSH 写作助手 | DSH 窄轨」。
     ".mf-bubble{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}",
-    ".mf-bubble-panel{position:absolute;top:0;left:55px;bottom:0;width:calc(100% - 55px - clamp(460px,31vw,520px));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:#0b0b0d;border-right:1px solid rgba(255,255,255,.08);transform:translateX(calc(-100% - 55px));transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 42px rgba(0,0,0,.38)}",
+    // 宽屏让原生 DSH composer 留在最右；空间不足时，优先完整保住写作区，只留下 DSH 窄轨供切回。
+    ".mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:min(calc(100% - 55px),max(920px,calc(100% - 55px - clamp(460px,31vw,520px))));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:#0d0e11;border-right:1px solid rgba(255,255,255,.08);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}",
     ".mf-bubble.on .mf-bubble-panel{transform:translateX(0)}",
     ".mf-orb{position:fixed;right:18px;bottom:18px;width:46px;height:46px;border:0;border-radius:50%;background:var(--dsw-alias-state-business-primary,#4d8dff);color:#fff;cursor:pointer;font:700 17px/1 sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:auto;z-index:95;transition:transform .2s ease,background .2s ease,opacity .2s ease}",
     ".mf-orb:hover{transform:scale(1.08)}.mf-orb.on{background:var(--dsw-alias-label-secondary,#6b6b74)}",
-    // 变形后 orb 退场（收起走墨扉顶栏「✕ 收起」），避免悬在官方 composer 上方挡操作
+    // 变形后 orb 退场（收起走工作台顶栏），避免悬在官方 composer 上方挡操作。
     ".mf-bubble.on .mf-orb{opacity:0;pointer-events:none}",
-    // 变形时：官方侧栏由官方折叠机制收成窄条（click toggle），右侧保留舒适宽度的写作助手栏。
-    // （centerCol 与对话根之间隔着一个 display:contents 包装层，故用后代选择器而非直接子选择器）
-    'body.mf-transform [class*="hHd-Xa_root"]{width:55px !important;min-width:55px !important;max-width:55px !important;overflow:hidden !important}',
+    // 变形时：官方侧栏由官方机制收成窄条，并显式放到 DSH 助手右侧。
+    // 不能隐藏官方 grid 列：这样会触发 grid 自动排版，反而会压扁整页。
+    'body.mf-transform [class*="_frame"]{grid-template-columns:minmax(0,1fr) 55px 0 !important}',
+    'body.mf-transform [class*="centerCol"]{grid-column:1 !important;grid-row:1 !important}',
+    'body.mf-transform [class*="hHd-Xa_root"]{grid-column:2 !important;grid-row:1 !important;width:55px !important;min-width:55px !important;max-width:55px !important;overflow:hidden !important}',
+    // centerCol 与对话根之间隔着 display:contents 包装层，故用后代选择器而非直接子选择器。
     'body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:calc(100% - clamp(460px,31vw,520px)) !important;transition:padding-left .32s cubic-bezier(.22,.61,.36,1)}',
-    // 变形后右侧官方空态改作紧凑的写作助手栏；composer 仍是官方组件，只调整它的容器质感。
-    'body.mf-transform [class*="scrollBody"]{background:#0d0d0f;border-left:1px solid rgba(255,255,255,.08)}',
-    'body.mf-transform [class*="composerSeat"]{padding:0 14px 18px !important}',
+    // 右侧仍是官方 composer，只收紧容器并用同一套分隔线把它收为助手栏。
+    'body.mf-transform [class*="scrollBody"]{background:#101115;border-left:1px solid rgba(255,255,255,.08)}',
+    'body.mf-transform [class*="composerSeat"]{padding:0 16px 18px !important}',
     'body.mf-transform [class*="composerHero"]{box-sizing:border-box;width:100%;max-width:100%;overflow:hidden;padding:20px 0 0}',
     'body.mf-transform [class*="composerHero"]>svg{display:none}',
     'body.mf-transform [class*="composerHero"] [class*="headline"]{font-size:21px !important;line-height:1.35 !important;letter-spacing:0 !important}',
     'body.mf-transform [class*="composerHero"] [class*="heroWorkspaceRow"]{margin-top:4px;padding:0 4px}',
     'body.mf-transform [class*="composerHero"] [class*="card"]{border-radius:8px !important;box-shadow:0 10px 28px rgba(0,0,0,.28)}',
     'body.mf-transform [class*="composerHero"] [class*="card"],body.mf-transform [class*="composerHero"] [class*="row"]{width:100%;max-width:100%}',
-    // v0.13 布局定稿：中 = 墨菲文字展现与修改区（左内栏导航 + 编辑器）；右 = 缩小版 dsh web 气泡（会话条+对话+输入）
-    ".mf-panel.mf-view{background:#0b0b0d}.mf-panel.mf-view .mf-head{position:relative;height:52px;padding:0 16px;background:#0d0d0f;border-bottom-color:rgba(255,255,255,.07)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:#0b0b0d}",
+    // 墨扉工作台：扁平的目录、编辑器与 DSH 助手三栏，不使用悬浮卡片来分区。
+    ".mf-panel.mf-view{background:#0d0e11}.mf-panel.mf-view .mf-head{position:relative;height:56px;padding:0 20px;background:#111217;border-bottom-color:rgba(255,255,255,.08)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:#0d0e11}",
     ".mf-panel.mf-view .mf-activity,.mf-panel.mf-view .mf-gutter,.mf-panel.mf-view .mf-col.mf-mid{display:none}",
-    ".mf-panel.mf-view .mf-col{width:280px;flex:none;border:0;border-right:1px solid rgba(255,255,255,.08);border-radius:0;background:#0d0d0f;overflow:hidden;box-shadow:none}",
-    ".mf-panel.mf-view .mf-editor{flex:1;border:0;border-radius:0;background:#101012;overflow:hidden;box-shadow:none}",
+    ".mf-panel.mf-view .mf-col{width:286px;flex:none;border:0;border-right:1px solid rgba(255,255,255,.08);border-radius:0;background:#101115;overflow:hidden;box-shadow:none}",
+    ".mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:#0d0e11;overflow:hidden;box-shadow:none}",
+    "@media(max-width:1140px){.mf-panel.mf-view .mf-col{width:228px}.mf-panel.mf-view .mf-text{padding-inline:30px}}",
+    ".mf-head-main{display:flex;align-items:center;gap:10px;min-width:0}.mf-head-main strong{font-size:15px;font-weight:680;letter-spacing:0}.mf-head-context{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}.mf-head-actions .mf-btn{min-height:30px}.mf-head-actions .mf-primary{padding-inline:11px}.mf-action-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-action-icon:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-head-actions .mf-stylebar{margin-right:6px}.mf-head-actions .mf-stylebar select{max-width:104px;border:0;background:transparent;padding:4px;color:var(--dsw-alias-label-secondary)}",
     ".mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}",
     // v0.13.1 预览对齐：迷你导航移入左内栏底部横排（此前为 col/editor 间竖向窄条）
     ".mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}",
@@ -1811,10 +1944,10 @@ function createClient(require2) {
     ".mf-panel.mf-view .mf-mininav{flex:none;border-top:1px solid var(--dsw-alias-border-l1);padding:8px 10px}",
     ".mf-proj-list{display:flex;flex-direction:column;gap:4px;padding:0 2px 8px}",
     // v0.14.1 预览对齐：编辑区空态垂直居中、占位符对比度
-    ".mf-panel.mf-view .mf-editor > .mf-empty{display:grid;place-items:center;height:100%;padding:24px}",
+    ".mf-panel.mf-view .mf-editor-pane > .mf-empty{display:grid;flex:1;place-items:center;min-height:0;padding:24px;color:var(--dsw-alias-label-tertiary)}",
     ".mf-panel.mf-view input::placeholder,.mf-panel.mf-view textarea::placeholder{color:var(--dsw-alias-label-tertiary)}",
-    // v0.14.1: 写作状态徽标
-    ".mf-wstate{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--dsw-alias-border-l1);border-radius:999px;background:transparent;color:var(--dsw-alias-label-tertiary);padding:3px 10px;cursor:pointer;font:11px/1.2 sans-serif;white-space:nowrap}.mf-wstate:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.mf-wstate.on{color:var(--dsw-alias-state-success-primary);border-color:rgba(74,222,128,.35);background:var(--dsw-alias-state-success-tertiary)}",
+    // 写作助手入口兼作会话隔离器：只展开 mofei-writer 会话，减少顶栏重复状态。
+    '.mf-wstate{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px 8px;cursor:pointer;font:12px/1.2 sans-serif;white-space:nowrap}.mf-wstate::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-label-tertiary)}.mf-wstate:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.mf-wstate.on{color:var(--dsw-alias-label-primary)}.mf-wstate.on::before{background:var(--dsw-alias-state-success-primary,#55c98d);box-shadow:0 0 0 3px rgba(85,201,141,.12)}',
     // v0.13.1 预览对齐：左栏行操作 hover 才显现（静止态 = 极简，功能不丢）
     ".mf-panel.mf-view .mf-col .mf-minis{opacity:0;pointer-events:none;transition:opacity .12s ease}",
     ".mf-panel.mf-view .mf-col .mf-item:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-vol-head:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-proj:hover .mf-minis{opacity:1;pointer-events:auto}",
@@ -1833,7 +1966,7 @@ function createClient(require2) {
     ".mf-panel.mf-view .mf-chat-input{padding:8px 12px 12px;border-top:0}.mf-panel.mf-view .mf-chat-input textarea{border-radius:16px;background:var(--dsw-alias-bg-base);font-size:13px}"
   ].join("\n");
   let styleEl = null;
-  function ensureStyles() {
+  function ensureStyles2() {
     if (!styleEl && typeof document !== "undefined") {
       styleEl = document.createElement("style");
       styleEl.textContent = css;
@@ -1880,7 +2013,8 @@ function createClient(require2) {
       ta.dataset.mofeiPh = "1";
       ta.dataset.mofeiOriginalPlaceholder = ta.placeholder;
     }
-    ta.placeholder = "\u8F93\u5165\u5199\u4F5C\u6307\u4EE4\uFF1A\u7EED\u5199 / \u5BA1\u7A3F / \u67E5\u8BBE\u5B9A\u2026";
+    const writing = document.body.classList.contains("mf-transform");
+    ta.placeholder = writing ? "\u8F93\u5165\u5199\u4F5C\u6307\u4EE4\uFF1A\u7EED\u5199 / \u5BA1\u7A3F / \u67E5\u8BBE\u5B9A\u2026" : ta.dataset.mofeiOriginalPlaceholder || ta.placeholder;
   }
   const panel = { open: false, listeners: [] };
   let dshClientSessions = null;
@@ -1901,7 +2035,7 @@ function createClient(require2) {
   }
   function OpenButton(props) {
     return h("button", { className: props && props.float ? "mf-open mf-float" : "mf-open", type: "button", onClick: () => {
-      ensureStyles();
+      ensureStyles2();
       setOpen(true);
     } }, "\u6253\u5F00 \u58A8\u6249");
   }
@@ -1923,7 +2057,7 @@ function createClient(require2) {
   }
   function SideAction(props) {
     return h("button", { className: "mf-side", type: "button", onClick: () => {
-      ensureStyles();
+      ensureStyles2();
       setBubbleOn(true);
     }, title: "\u6253\u5F00 \u58A8\u6249" }, h("span", { className: "mf-mark" }, "\u58A8"), props && props.wide ? h("span", null, "\u58A8\u6249") : null);
   }
@@ -1978,9 +2112,12 @@ function createClient(require2) {
     }
   }
   function MofeiBubble() {
-    ensureStyles();
+    ensureStyles2();
     const on = useBubbleOn();
     const previousOn = React.useRef(on);
+    React.useEffect(() => {
+      return later(applyWritingComposerPlaceholder, 340);
+    }, []);
     React.useEffect(() => {
       const wasOn = previousOn.current;
       previousOn.current = on;
@@ -1990,8 +2127,12 @@ function createClient(require2) {
         return later(applyWritingComposerPlaceholder, 340);
       } else {
         if (typeof document !== "undefined") document.body.classList.remove("mf-transform");
-        if (wasOn) return later(() => syncOfficialSidebar(false), 300);
+        if (wasOn) return later(() => {
+          syncOfficialSidebar(false);
+          applyWritingComposerPlaceholder();
+        }, 300);
         syncOfficialSidebar(false);
+        return later(applyWritingComposerPlaceholder, 0);
       }
       return void 0;
     }, [on]);
@@ -2283,7 +2424,7 @@ function createClient(require2) {
     const open = mode === "web" ? true : openState;
     React.useEffect(() => {
       if (mode !== "web") return void 0;
-      ensureStyles();
+      ensureStyles2();
       later(applyWritingComposerPlaceholder, 300);
       return () => {
         removeStyles();
@@ -2344,6 +2485,10 @@ function createClient(require2) {
     const [chainError, setChainError] = React.useState("");
     const [chainResult, setChainResult] = React.useState("");
     const [chainLastPrompt, setChainLastPrompt] = React.useState("");
+    const [skillsOpen, setSkillsOpen] = React.useState(false);
+    const [writingSkills, setWritingSkills] = React.useState([]);
+    const [skillsLoading, setSkillsLoading] = React.useState(false);
+    const [skillsError, setSkillsError] = React.useState("");
     const [dashOpen, setDashOpen] = React.useState(false);
     const [paletteOpen, setPaletteOpen] = React.useState(false);
     const [paletteQuery, setPaletteQuery] = React.useState("");
@@ -2382,6 +2527,7 @@ function createClient(require2) {
     const [chatPresetId, setChatPresetId] = React.useState("mofei-writer");
     const [chatSessionsOpen, setChatSessionsOpen] = React.useState(false);
     const [chatSessionList, setChatSessionList] = React.useState({ ids: [], byId: {} });
+    const [agentContextBound, setAgentContextBound] = React.useState(false);
     const chatBodyRef = React.useRef(null);
     const [tabMenu, setTabMenu] = React.useState(null);
     const [tabDragId, setTabDragId] = React.useState("");
@@ -2508,6 +2654,7 @@ function createClient(require2) {
     const [worldImportError, setWorldImportError] = React.useState("");
     const [worldImportResult, setWorldImportResult] = React.useState("");
     const locks = React.useRef({});
+    const agentMutationRefreshRef = React.useRef("");
     const project = projects.find((item) => item.id === projectId);
     const chapter = project && project.chapters.find((item) => item.id === chapterId);
     const character = project && project.characters.find((item) => item.id === selChar);
@@ -2592,6 +2739,22 @@ function createClient(require2) {
           setStatus("saved");
           setError("");
           setConflict(null);
+        } else {
+          const latest = chapterId && nextProjects.find((item) => item.id === projectId) && nextProjects.find((item) => item.id === projectId).chapters.find((item) => item.id === chapterId);
+          if (latest && latest.revision !== revision) {
+            if (changed) {
+              setConflict(latest);
+              setStatus("error");
+              setError("\u5199\u4F5C Agent \u5DF2\u66F4\u65B0\u8FDC\u7AEF\u6B63\u6587\uFF0C\u5F53\u524D\u8349\u7A3F\u6CA1\u6709\u88AB\u8986\u76D6\u3002");
+            } else {
+              setDraft(latest.content);
+              setSaved(latest.content);
+              setRevision(latest.revision);
+              setStatus("saved");
+              setError("");
+              setConflict(null);
+            }
+          }
         }
         return result;
       }).catch((failure) => {
@@ -2647,7 +2810,7 @@ function createClient(require2) {
       });
     }
     function updateView(next) {
-      setProjects((items) => items.map((item) => item.id !== projectId ? item : { id: item.id, title: item.title, description: item.description, goal: item.goal, chapters: item.chapters.map((current) => current.id === next.id ? next : current), volumes: item.volumes, characters: item.characters, notes: item.notes, noteCategories: item.noteCategories, worldEntries: item.worldEntries }));
+      setProjects((items) => items.map((item) => item.id !== projectId ? item : { ...item, chapters: item.chapters.map((current) => current.id === next.id ? next : current) }));
     }
     function accept(next) {
       updateView(next);
@@ -2836,7 +2999,7 @@ function createClient(require2) {
       return d + "\u5929";
     }
     function selectChatSession(sessionId) {
-      if (!sessionId) return;
+      if (!sessionId || !project || project.writerSessionId !== sessionId) return;
       const sessions = dshClientSessions;
       setChatSessionId(sessionId);
       try {
@@ -2932,7 +3095,7 @@ function createClient(require2) {
         if (result && result.chapter) {
           setNewChapter("");
           setChapterForm(false);
-          setProjects((items) => items.map((item) => item.id !== projectId ? item : { id: item.id, title: item.title, description: item.description, goal: item.goal, chapters: item.chapters.concat([result.chapter]), volumes: item.volumes, characters: item.characters, notes: item.notes, noteCategories: item.noteCategories, worldEntries: item.worldEntries }));
+          setProjects((items) => items.map((item) => item.id !== projectId ? item : { ...item, chapters: item.chapters.concat([result.chapter]) }));
           pickChapter(result.chapter);
         }
       }).catch((failure) => {
@@ -2968,7 +3131,7 @@ function createClient(require2) {
         return;
       }
       call("update-chapter-meta", { projectId, chapterId, title: value }).then(() => {
-        setProjects((items) => items.map((item) => item.id !== projectId ? item : { id: item.id, title: item.title, description: item.description, goal: item.goal, chapters: item.chapters.map((current) => current.id === chapterId ? { ...current, title: value } : current), volumes: item.volumes, characters: item.characters, notes: item.notes, noteCategories: item.noteCategories, worldEntries: item.worldEntries }));
+        setProjects((items) => items.map((item) => item.id !== projectId ? item : { ...item, chapters: item.chapters.map((current) => current.id === chapterId ? { ...current, title: value } : current) }));
         setOpenTabs((tabs) => tabs.map((t) => t.id === chapterId ? { ...t, title: value } : t));
         setTitleDraft(value);
       }).catch((failure) => {
@@ -3420,6 +3583,19 @@ function createClient(require2) {
       setChainResult("");
       setChainLastPrompt("");
       loadPromptChains();
+    }
+    function openWritingSkills() {
+      setSkillsOpen(true);
+      setSkillsLoading(true);
+      setSkillsError("");
+      call("list-writing-skills").then((result) => {
+        setWritingSkills(Array.isArray(result && result.skills) ? result.skills : []);
+        setSkillsLoading(false);
+      }).catch((failure) => {
+        setWritingSkills([]);
+        setSkillsLoading(false);
+        setSkillsError("\u5199\u4F5C\u6280\u80FD\u52A0\u8F7D\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+      });
     }
     function handleSaveChain(input) {
       if (!projectId || chainBusy) return;
@@ -4119,25 +4295,20 @@ function createClient(require2) {
         setChatHint("DSH \u4F1A\u8BDD\u670D\u52A1\u4E0D\u53EF\u7528");
         return void 0;
       }
-      const syncCurrent = () => {
+      const syncList = () => {
         try {
           const snap = sessions.list.getSnapshot();
-          const current = snap && snap.current;
-          if (current) {
-            setChatSessionId(current);
-            const summary = snap.byId && snap.byId[current];
-            if (summary) setChatSummary(summary);
-          }
           setChatSessionList({ ids: snap && snap.ids || [], byId: snap && snap.byId || {} });
+          if (chatSessionId) setChatSummary(snap && snap.byId && snap.byId[chatSessionId] || null);
         } catch (error2) {
         }
       };
-      syncCurrent();
-      const unsub = sessions.list.subscribe(syncCurrent);
+      syncList();
+      const unsub = sessions.list.subscribe(syncList);
       return () => {
         if (unsub && typeof unsub === "function") unsub();
       };
-    }, [open]);
+    }, [open, chatSessionId]);
     React.useEffect(() => {
       if (!open || !chatSessionId) return void 0;
       const sessions = dshClientSessions;
@@ -4170,6 +4341,32 @@ function createClient(require2) {
         if (unsub && typeof unsub === "function") unsub();
       };
     }, [open, chatSessionId]);
+    React.useEffect(() => {
+      let alive = true;
+      if (!open || !chatSessionId || !projectId) {
+        setAgentContextBound(false);
+        return void 0;
+      }
+      call("bind-agent-context", { sessionId: chatSessionId, projectId, ...chapterId ? { chapterId } : {} }).then((result) => {
+        if (alive) setAgentContextBound(!!(result && result.bound));
+      }).catch(() => {
+        if (alive) setAgentContextBound(false);
+      });
+      return () => {
+        alive = false;
+      };
+    }, [open, chatSessionId, projectId, chapterId]);
+    React.useEffect(() => {
+      if (!open || !project || !chatSessionId || project.writerSessionId !== chatSessionId || !chatSnap) return void 0;
+      const writes = normalizeChatItems(chatSnap).filter((item) => item.kind === "tool" && !item.running && item.ok !== false && /^(?:mofei|openfic)_(?:write|edit|update|create|delete|move|set|reorder|save|revert|rollback)-/.test(String(item.name || "")));
+      const token = writes.map((item) => item.key || item.name).join("|");
+      if (!token || token === agentMutationRefreshRef.current) return void 0;
+      agentMutationRefreshRef.current = token;
+      const cancel = later(() => {
+        reload();
+      }, 80);
+      return cancel;
+    }, [open, projectId, project && project.writerSessionId, chatSessionId, chatSnap]);
     React.useEffect(() => {
       if (!open) return void 0;
       const api = dshClientConnection && dshClientConnection.api;
@@ -4220,92 +4417,106 @@ function createClient(require2) {
         }
       }
     }
-    async function newChatSession() {
+    function createdSessionId(created, sessions, before) {
+      let sessionId = created && (created.value && created.value.sessionId || created.sessionId) || null;
+      if (sessionId) return sessionId;
+      const after = sessions && sessions.list && sessions.list.getSnapshot ? sessions.list.getSnapshot() : {};
+      return (after.ids || []).find((id) => !before.has(id)) || null;
+    }
+    async function activateProjectWriterSession(targetProjectId, forceNew) {
       const sessions = dshClientSessions;
-      if (!sessions || typeof sessions.create !== "function") {
+      if (!targetProjectId) {
+        setChatError("\u8BF7\u5148\u9009\u62E9\u4E00\u672C\u5C0F\u8BF4\u9879\u76EE");
+        return null;
+      }
+      if (!sessions || !sessions.list || typeof sessions.create !== "function") {
         setChatError("DSH \u4F1A\u8BDD\u670D\u52A1\u4E0D\u53EF\u7528");
-        return;
+        return null;
       }
       setChatBusy(true);
       setChatError("");
       try {
-        const before = new Set(sessions.list.getSnapshot().ids || []);
-        const created = await sessions.create({});
-        let sessionId = created && (created.value && created.value.sessionId || created.sessionId) || null;
-        if (!sessionId) {
-          const after = sessions.list.getSnapshot();
-          sessionId = (after.ids || []).find((id) => !before.has(id)) || null;
-        }
-        if (!sessionId) {
-          setChatError("\u521B\u5EFA\u4F1A\u8BDD\u5931\u8D25");
-          setChatBusy(false);
-          return;
-        }
-        try {
-          const connection = dshClientConnection;
-          const api = connection && connection.api;
-          if (api && api.agentPresets && typeof api.agentPresets.select === "function") {
-            await api.agentPresets.select({ sessionId, agentPreset: chatPresetId || "mofei-writer" });
+        if (!forceNew) {
+          const bound2 = await call("writer-session", { projectId: targetProjectId });
+          const assignedId = bound2 && bound2.sessionId;
+          const snapshot2 = sessions.list.getSnapshot();
+          const summary = assignedId && snapshot2 && snapshot2.byId && snapshot2.byId[assignedId];
+          if (assignedId && summary && summary.agentPreset === "mofei-writer") {
+            if (typeof sessions.open === "function") {
+              try {
+                sessions.open(assignedId);
+              } catch (error2) {
+              }
+            }
+            setChatSessionId(assignedId);
+            setChatSummary(summary);
+            setChatBusy(false);
+            return assignedId;
           }
-        } catch (error2) {
         }
+        const before = new Set(sessions.list.getSnapshot().ids || []);
+        const created = await dshCall("session.create", { agentPreset: "mofei-writer" });
+        const sessionId = createdSessionId(created, sessions, before);
+        if (!sessionId) {
+          setChatError("\u521B\u5EFA\u9879\u76EE\u5199\u4F5C\u4F1A\u8BDD\u5931\u8D25");
+          setChatBusy(false);
+          return null;
+        }
+        const bound = await call("bind-writer-session", { projectId: targetProjectId, sessionId });
+        if (!bound || bound.error) {
+          setChatError("\u5199\u4F5C\u4F1A\u8BDD\u5F52\u5C5E\u4FDD\u5B58\u5931\u8D25");
+          setChatBusy(false);
+          return null;
+        }
+        setProjects((items) => items.map((item) => item.id === targetProjectId ? { ...item, writerSessionId: sessionId } : item));
         if (typeof sessions.open === "function") {
           try {
             sessions.open(sessionId);
           } catch (error2) {
           }
         }
+        const snapshot = sessions.list.getSnapshot();
+        setChatSessionId(sessionId);
+        setChatSummary(snapshot && snapshot.byId && snapshot.byId[sessionId] || { agentPreset: "mofei-writer" });
         setChatBusy(false);
+        return sessionId;
       } catch (failure) {
         setChatBusy(false);
-        setChatError("\u65B0\u5EFA\u4F1A\u8BDD\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+        setChatError("\u6253\u5F00\u9879\u76EE\u5199\u4F5C\u4F1A\u8BDD\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+        return null;
       }
     }
+    React.useEffect(() => {
+      let alive = true;
+      if (!open || !projectId) {
+        setChatSessionId("");
+        setChatSummary(null);
+        setChatSnap(null);
+        setAgentContextBound(false);
+        return void 0;
+      }
+      activateProjectWriterSession(projectId, false).then((sessionId) => {
+        if (!alive || !sessionId) return;
+        setChatHint("");
+      });
+      return () => {
+        alive = false;
+      };
+    }, [open, projectId]);
+    async function newChatSession() {
+      if (!projectId) {
+        setChatError("\u8BF7\u5148\u9009\u62E9\u4E00\u672C\u5C0F\u8BF4\u9879\u76EE");
+        return;
+      }
+      await activateProjectWriterSession(projectId, true);
+    }
     async function enterWritingMode() {
-      const sessions = dshClientSessions;
-      const connection = dshClientConnection;
-      const api = connection && connection.api;
-      if (!sessions || typeof sessions.create !== "function" || !api || !api.agentPresets || typeof api.agentPresets.select !== "function") {
-        flashBridgeNotice("DSH \u4F1A\u8BDD/\u9884\u8BBE\u670D\u52A1\u4E0D\u53EF\u7528");
+      if (!projectId) {
+        flashBridgeNotice("\u8BF7\u5148\u5728\u58A8\u6249\u9009\u62E9\u6216\u65B0\u5EFA\u4E00\u672C\u5C0F\u8BF4\u9879\u76EE");
         return;
       }
-      const summary = chatSummary || {};
-      if (summary.agentPreset === "mofei-writer") {
-        flashBridgeNotice("\u5F53\u524D\u5DF2\u662F\u5199\u4F5C\u4F1A\u8BDD\uFF08mofei-writer\uFF09\u270D");
-        return;
-      }
-      if (chatSessionId && summary.blank) {
-        try {
-          await api.agentPresets.select({ sessionId: chatSessionId, agentPreset: "mofei-writer" });
-          setChatSummary((prev) => ({ ...prev || {}, agentPreset: "mofei-writer" }));
-          flashBridgeNotice("\u270D \u5DF2\u8FDB\u5165\u5199\u4F5C\u72B6\u6001\uFF1A\u5F53\u524D\u4F1A\u8BDD\u5207\u6362\u4E3A \u58A8\u6249\u5199\u4F5C\uFF08mofei-writer\uFF09\uFF0C\u53F3\u7A84\u6761\u91CC\u76F4\u63A5\u4E0B\u5199\u4F5C\u6307\u4EE4");
-          return;
-        } catch (failure) {
-          flashBridgeNotice("\u5F53\u524D\u4F1A\u8BDD\u5DF2\u5F00\u804A\u4E0D\u80FD\u5207\u6362\u9884\u8BBE\uFF0C\u6539\u4E3A\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD\u2026");
-        }
-      }
-      try {
-        const before = new Set(sessions.list.getSnapshot().ids || []);
-        const created = await sessions.create({ agentPreset: "mofei-writer" });
-        let sessionId = created && (created.value && created.value.sessionId || created.sessionId) || null;
-        if (!sessionId) {
-          const after = sessions.list.getSnapshot();
-          sessionId = (after.ids || []).find((id) => !before.has(id)) || null;
-        }
-        if (!sessionId) {
-          flashBridgeNotice("\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD\u5931\u8D25");
-          return;
-        }
-        if (typeof sessions.open === "function") {
-          try {
-            sessions.open(sessionId);
-          } catch (error2) {
-          }
-        }
-        flashBridgeNotice("\u270D \u5DF2\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD\uFF08mofei-writer\uFF09\u5E76\u6253\u5F00\u2014\u2014\u53F3\u7A84\u6761\u91CC\u548C\u5199\u4F5C Agent \u5BF9\u8BDD\u5427");
-      } catch (failure) {
-        flashBridgeNotice("\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
-      }
+      const sessionId = await activateProjectWriterSession(projectId, false);
+      if (sessionId) flashBridgeNotice("\u270D \u5DF2\u6253\u5F00\u300A" + (project && project.title || "\u5F53\u524D\u9879\u76EE") + "\u300B\u7684\u4E13\u5C5E\u5199\u4F5C\u4F1A\u8BDD");
     }
     function refreshSummaryPanel() {
       if (!projectId) return;
@@ -4814,6 +5025,11 @@ function createClient(require2) {
         setPaletteOpen(false);
         setPaletteQuery("");
       } },
+      { id: "mofei-skills", label: "/mofei:skills", hint: "\u6D4F\u89C8\u5DF2\u542F\u7528\u7684 OpenFic \u5199\u4F5C\u6280\u80FD", run: () => {
+        openWritingSkills();
+        setPaletteOpen(false);
+        setPaletteQuery("");
+      } },
       { id: "mofei-style", label: "/mofei:style", hint: "\u6253\u5F00\u98CE\u683C\u89C6\u56FE\uFF08\u65B0\u5EFA/\u7F16\u8F91/\u9884\u89C8/\u5220\u9664\uFF09", run: () => {
         setTab("styles");
         setPaletteOpen(false);
@@ -4861,9 +5077,7 @@ function createClient(require2) {
       } }
     ];
     const filteredCommands = (mode === "web" ? paletteCommands.filter((item) => item.id !== "close-workbench") : paletteCommands).filter((item) => !paletteQuery.trim() || (item.label + " " + item.hint).toLowerCase().includes(paletteQuery.toLowerCase()));
-    const writingSession = !!(chatSummary && chatSummary.agentPreset === "mofei-writer");
-    const blankSession = !chatSessionId || !!(chatSummary && chatSummary.blank);
-    const writerSessions = chatSessionList.ids.map((id) => ({ id, summary: chatSessionList.byId[id] || {} })).filter((item) => item.summary.agentPreset === "mofei-writer").slice(0, 30);
+    const writingSession = !!(project && project.writerSessionId && project.writerSessionId === chatSessionId && chatSummary && chatSummary.agentPreset === "mofei-writer");
     if (!open) return null;
     const label = status === "saving" ? "\u6B63\u5728\u4FDD\u5B58" : status === "unsaved" ? "\u672A\u4FDD\u5B58" : status === "error" ? "\u9700\u8981\u5904\u7406" : "\u5DF2\u4FDD\u5B58";
     const volumesSorted = volumes;
@@ -4944,16 +5158,12 @@ function createClient(require2) {
         h(
           "header",
           { className: "mf-head" },
-          h("div", null, h("strong", null, "\u58A8\u6249"), h("small", null, project ? project.title + " \xB7 " + (project.currentStyle || currentStyle) : "\u5199\u4F5C\u5DE5\u4F5C\u53F0")),
+          h("div", { className: "mf-head-main" }, h("strong", null, "\u58A8\u6249"), h("span", { className: "mf-head-context", title: project ? project.title : "\u5199\u4F5C\u5DE5\u4F5C\u53F0" }, project ? project.title : "\u5199\u4F5C\u5DE5\u4F5C\u53F0")),
           h(
             "span",
-            { className: "mf-eh-actions" },
-            mode === "web" ? h("button", { className: "mf-wstate" + (writingSession ? " on" : ""), type: "button", title: "\u53EA\u663E\u793A\u5E76\u5207\u6362\u58A8\u6249\u5199\u4F5C\u4F1A\u8BDD", onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, writingSession ? "\u270D \u5199\u4F5C\u4E2D" : blankSession ? "\u25CB \u7A7A\u767D\u4F1A\u8BDD" : "\xB7 \u6807\u51C6\u4F1A\u8BDD") : null,
-            mode === "web" ? h("button", { className: "mf-btn" + (writingSession ? "" : " mf-primary"), type: "button", title: writingSession ? "\u5F53\u524D\u5DF2\u662F\u5199\u4F5C\u4F1A\u8BDD\uFF08mofei-writer\uFF09" : "\u8BA9 AI \u4F1A\u8BDD\u8FDB\u5165\u5199\u4F5C\u72B6\u6001\uFF1A\u7A7A\u767D\u4F1A\u8BDD\u539F\u5730\u5207\u6362\uFF1B\u5DF2\u5F00\u804A\u5219\u65B0\u5EFA mofei-writer \u5199\u4F5C\u4F1A\u8BDD", onClick: enterWritingMode }, writingSession ? "\u270D \u5199\u4F5C\u4E2D" : "\u270D \u8FDB\u5165\u5199\u4F5C\u72B6\u6001") : null,
-            styles.length ? h("label", { className: "mf-stylebar" }, "\u98CE\u683C", h("select", { value: project && project.currentStyle || currentStyle, onChange: (event) => changeStyle(event.target.value) }, styles.map((item) => h("option", { key: item.id, value: item.id }, item.name)))) : null,
-            h("button", { className: "mf-btn", type: "button", title: "\u547D\u4EE4\u9762\u677F\uFF08Ctrl+Shift+P\uFF09", onClick: () => setPaletteOpen(true) }, "\u547D\u4EE4"),
-            h("button", { className: "mf-btn", type: "button", onClick: () => setImportOpen(true) }, "\u5BFC\u5165 TXT"),
-            project ? h("button", { className: "mf-btn", type: "button", onClick: exportProjectTxt }, "\u5BFC\u51FA TXT") : null,
+            { className: "mf-head-actions" },
+            mode === "web" ? h("button", { className: "mf-wstate" + (writingSession ? " on" : ""), type: "button", title: "\u53EA\u663E\u793A\u3001\u5207\u6362\u6216\u65B0\u5EFA\u58A8\u6249\u5199\u4F5C\u4F1A\u8BDD", onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, "\u5199\u4F5C\u52A9\u624B") : null,
+            h("button", { className: "mf-action-icon", type: "button", title: "\u547D\u4EE4\u9762\u677F\uFF08Ctrl+Shift+P\uFF09", onClick: () => setPaletteOpen(true) }, "\u22EF"),
             mode === "web" ? h("button", { className: "mf-btn mf-primary", type: "button", title: project ? "\u5728\u5F53\u524D\u9879\u76EE\u65B0\u5EFA\u7AE0\u8282" : "\u65B0\u5EFA\u9879\u76EE", onClick: () => {
               if (project) {
                 setChapterForm(true);
@@ -4963,23 +5173,22 @@ function createClient(require2) {
                 setTab("projects");
               }
             } }, "\uFF0B \u65B0\u5EFA") : null,
-            mode === "web" && onCollapse ? h("button", { className: "mf-btn", type: "button", title: "\u6536\u8D77\u58A8\u6249\uFF0C\u8FD4\u56DE\u539F\u7248 web", onClick: onCollapse }, "\u2715 \u6536\u8D77") : null,
+            mode === "web" && onCollapse ? h("button", { className: "mf-action-icon", type: "button", title: "\u6536\u8D77\u58A8\u6249\uFF0C\u8FD4\u56DE\u539F\u7248 web", onClick: onCollapse }, "\xD7") : null,
             mode === "web" ? null : h("button", { className: "mf-close", type: "button", onClick: close, title: "\u5173\u95ED" }, "\xD7")
           ),
           mode === "web" && chatSessionsOpen ? h(
             "div",
             { className: "mf-writer-session-menu", role: "menu", "aria-label": "\u58A8\u6249\u5199\u4F5C\u4F1A\u8BDD" },
-            h("h3", null, "\u5199\u4F5C\u4F1A\u8BDD"),
-            writerSessions.length ? writerSessions.map((item) => h(
-              "button",
-              { key: item.id, className: "mf-writer-session-item" + (item.id === chatSessionId ? " on" : ""), type: "button", role: "menuitem", onClick: () => selectChatSession(item.id) },
-              h("span", { className: "name" }, item.summary.title || "\u672A\u547D\u540D\u5199\u4F5C\u4F1A\u8BDD"),
-              h("span", { className: "time" }, fmtAgo(item.summary.updatedAt))
-            )) : h("div", { className: "mf-writer-session-empty" }, "\u6682\u65E0\u5199\u4F5C\u4F1A\u8BDD"),
-            h("button", { className: "mf-btn mf-primary", type: "button", onClick: () => {
+            h("h3", null, project ? "\u300A" + project.title + "\u300B\u7684\u5199\u4F5C\u4F1A\u8BDD" : "\u5199\u4F5C\u4F1A\u8BDD"),
+            project ? h("div", { className: "mf-writer-session-item on" }, h("span", { className: "name" }, writingSession ? "\u9879\u76EE\u4E13\u5C5E\u5199\u4F5C\u4F1A\u8BDD\u5DF2\u6253\u5F00" : "\u9879\u76EE\u4E13\u5C5E\u5199\u4F5C\u4F1A\u8BDD"), h("span", { className: "time" }, writingSession ? "mofei-writer" : "\u6B63\u5728\u5173\u8054")) : h("div", { className: "mf-writer-session-empty" }, "\u5148\u9009\u62E9\u4E00\u672C\u5C0F\u8BF4\u9879\u76EE"),
+            project ? h("button", { className: "mf-btn", type: "button", onClick: () => {
+              enterWritingMode();
+              setChatSessionsOpen(false);
+            } }, "\u6253\u5F00\u9879\u76EE\u4F1A\u8BDD") : null,
+            project ? h("button", { className: "mf-btn mf-primary", type: "button", onClick: () => {
               newChatSession();
               setChatSessionsOpen(false);
-            } }, "\uFF0B \u65B0\u5199\u4F5C\u4F1A\u8BDD")
+            } }, "\uFF0B \u65B0\u5EFA\u672C\u9879\u76EE\u4F1A\u8BDD") : null
           ) : null
         ),
         h(
@@ -5211,7 +5420,8 @@ function createClient(require2) {
             mode === "web" ? h(
               "div",
               { className: "mf-mininav" },
-              [["projects", "\u25A4", "\u9879\u76EE"], ["retrieve", "\u2315", "\u68C0\u7D22"], ["characters", "\u263A", "\u89D2\u8272"], ["world", "\u25C8", "\u4E16\u754C"], ["notes", "\u2630", "\u7B14\u8BB0"]].map((item) => h("button", { key: item[0], type: "button", className: tab === item[0] ? "on" : "", onClick: () => setTab(item[0]) }, h("span", { className: "ic" }, item[1]), item[2]))
+              [["projects", "\u25A4", "\u9879\u76EE"], ["retrieve", "\u2315", "\u68C0\u7D22"], ["characters", "\u263A", "\u89D2\u8272"], ["world", "\u25C8", "\u4E16\u754C"], ["notes", "\u2630", "\u7B14\u8BB0"]].map((item) => h("button", { key: item[0], type: "button", className: tab === item[0] ? "on" : "", onClick: () => setTab(item[0]) }, h("span", { className: "ic" }, item[1]), item[2])),
+              h("button", { type: "button", className: skillsOpen ? "on" : "", title: "\u5199\u4F5C\u6280\u80FD\u4E0E\u5DE5\u4F5C\u6D41", onClick: openWritingSkills }, h("span", { className: "ic" }, "\u2726"), "\u6280\u80FD")
             ) : null
           ),
           h("div", { className: "mf-gutter" + (dragAxis === "left" ? " dragging" : ""), "data-axis": "left", role: "separator", title: "\u62D6\u52A8\u8C03\u6574\u5BBD\u5EA6", onPointerDown: startGutterDrag, onPointerMove: moveGutterDrag, onPointerUp: endGutterDrag, onPointerCancel: cancelGutterDrag, onDoubleClick: resetGutter }),
@@ -5378,8 +5588,7 @@ function createClient(require2) {
               ) : h("div", { className: "mf-empty" }, "\u5728\u5DE6\u4FA7\u9009\u62E9\u98CE\u683C\u6587\u4EF6\u7F16\u8F91\uFF0C\u6216\u70B9\u300C+ \u65B0\u5EFA\u300D\u3002")
             ) : h(
               "div",
-              null,
-              h("div", { className: "mf-eh" }, h("span", null, chapter ? chapter.title : "\u6B63\u6587\u7F16\u8F91\u5668"), h("span", { className: "mf-eh-actions" }, chapter ? h(MiniButton, { label: showHistory ? "\u6536\u8D77\u5386\u53F2" : "\u5386\u53F2", title: "\u7AE0\u8282\u5386\u53F2\u7248\u672C", onClick: () => setShowHistory(!showHistory) }) : null, project ? h(MiniButton, { label: "\u6458\u8981", title: "\u6458\u8981\u7EF4\u62A4\u9762\u677F", on: summaryOpen, onClick: () => summaryOpen ? setSummaryOpen(false) : openSummaryPanel() }) : null, project ? h(MiniButton, { label: "\u94FE", title: "Prompt Chains \u63D0\u793A\u8BCD\u94FE", on: chainsOpen, onClick: () => chainsOpen ? setChainsOpen(false) : openPromptChains() }) : null, chapter ? h(MiniButton, { label: "\u9001\u7AE0", title: "\u628A\u672C\u7AE0\u63D0\u53CA\u53D1\u9001\u5230\u5F53\u524D DSH \u4F1A\u8BDD", onClick: () => bridgeMention("chapter") }) : null, chapter ? h(MiniButton, { label: "\u9001\u9009\u4E2D", title: "\u628A\u9009\u4E2D\u6587\u672C\u63D0\u53CA\u53D1\u9001\u5230\u5F53\u524D DSH \u4F1A\u8BDD", onClick: () => bridgeMention("selection") }) : null, mode === "web" && latestAssistantText() ? h(MiniButton, { label: "\u2304 \u63D2\u5165\u56DE\u590D", title: "\u628A Agent \u6700\u65B0\u56DE\u590D\u63D2\u5165\u6B63\u6587\u5149\u6807\u5904", onClick: insertLatestReply }) : null, mode === "web" && chatSnap ? h(MiniButton, { label: "\u{1F4C4} \u8DF3\u8F6C\u63D0\u53CA", title: "\u8DF3\u5230 Agent \u6700\u65B0\u56DE\u590D\u63D0\u53CA\u7684\u7AE0\u8282", onClick: jumpLatestMention }) : null, chapter ? h(MiniButton, { label: aiOpen ? "\u6536\u8D77\u52A9\u624B" : "AI \u52A9\u624B", title: "AI \u5199\u4F5C\u52A9\u624B", on: aiOpen, onClick: () => setAiOpen(!aiOpen) }) : null, bridgeNotice ? h("span", { className: "mf-bridge-note", title: bridgeNotice }, bridgeNotice) : null, h(MiniButton, { label: focus ? "\u9000\u51FA\u4E13\u6CE8" : "\u4E13\u6CE8", title: "\u4E13\u6CE8\u6A21\u5F0F", onClick: () => setFocus(!focus) }), h("span", { className: "mf-status " + status }, chapter ? label : ""))),
+              { className: "mf-editor-pane" },
               findOpen ? h(
                 "div",
                 { className: "mf-findbar" },
@@ -5403,21 +5612,6 @@ function createClient(require2) {
                   event.target.blur();
                 }
               }, onBlur: () => commitTitle(), title: "\u7AE0\u8282\u6807\u9898" }) : null,
-              chapter ? h(
-                "div",
-                { className: "mf-mdtoolbar" },
-                h(MiniButton, { label: "H2", title: "\u4E8C\u7EA7\u6807\u9898\uFF08\u9009\u4E2D\u591A\u884C\u6216\u5149\u6807\u6240\u5728\u884C\uFF09", onClick: () => applyMarkdown("h2") }),
-                h(MiniButton, { label: "H3", title: "\u4E09\u7EA7\u6807\u9898", onClick: () => applyMarkdown("h3") }),
-                h(MiniButton, { label: "B", title: "\u52A0\u7C97\uFF08\u9009\u4E2D\u6587\u672C\uFF09", onClick: () => applyMarkdown("bold") }),
-                h(MiniButton, { label: "I", title: "\u659C\u4F53\uFF08\u9009\u4E2D\u6587\u672C\uFF09", onClick: () => applyMarkdown("italic") }),
-                h(MiniButton, { label: "\u2022", title: "\u65E0\u5E8F\u5217\u8868", onClick: () => applyMarkdown("list") }),
-                h(MiniButton, { label: "\u275D", title: "\u5F15\u7528", onClick: () => applyMarkdown("quote") }),
-                h(MiniButton, { label: "\u2304", title: "\u884C\u5185\u4EE3\u7801", onClick: () => applyMarkdown("inline") }),
-                h(MiniButton, { label: "{ }", title: "\u4EE3\u7801\u5757", onClick: () => applyMarkdown("code") }),
-                h(MiniButton, { label: "\u2014", title: "\u5206\u9694\u7EBF", onClick: () => applyMarkdown("hr") }),
-                h("span", { className: "mf-sep" }),
-                h("span", { className: "mf-status" }, "Markdown\uFF1A\u62D6\u62FD\u7AE0\u8282\u6392\u5E8F\uFF0C\u9009\u4E2D\u6587\u672C\u540E\u7528\u5DE5\u5177\u6761\u6392\u7248")
-              ) : null,
               chapter ? h("textarea", { className: "mf-text", value: draft, spellCheck: true, placeholder: "\u5F00\u59CB\u5199\u4F5C\u2026\uFF08Ctrl+S \u4FDD\u5B58\u6B63\u6587\uFF0CCtrl+F \u67E5\u627E\u66FF\u6362\uFF09", onScroll: saveScrollPos, onSelect: (event) => {
                 setSelStart(event.target.selectionStart);
                 setSelEnd(event.target.selectionEnd);
@@ -5507,8 +5701,8 @@ function createClient(require2) {
               h(
                 "div",
                 { className: "mf-foot" },
-                mode === "web" ? h("span", { className: "mf-stat" }, chapter ? h("span", null, countWords(draft) + " \u5B57") : null, chapter ? h("span", { className: "mf-status " + status }, "\xB7 " + label) : null) : h("span", { className: "mf-stat" }, chapter ? countWords(draft) + " \u5B57" : "", project && project.goal ? " \xB7 \u76EE\u6807 " + String(project.goal) + "\uFF08" + String(Math.min(100, Math.round(projectChars / project.goal * 100))) + "%\uFF09" : "", stats ? " \xB7 \u4ECA\u65E5 +" + String(stats.todayChars) + " \xB7 \u8FDE\u7EED " + String(stats.streak) + " \u5929 \xB7 \u7D2F\u8BA1 " + String(stats.totalChars) + " \u5B57" : ""),
-                mode === "web" ? h("span", { className: "mf-stat" }, stats ? [h("span", { key: "today" }, "\u4ECA\u65E5 +" + String(stats.todayChars)), h("span", { key: "streak" }, "\u8FDE\u7EED " + String(stats.streak) + " \u5929"), h("span", { key: "total" }, "\u7D2F\u8BA1 " + String(stats.totalChars) + " \u5B57")] : null) : h("span", { className: "mf-eh-actions" }, h("button", { className: "mf-btn", type: "button", onClick: () => setJobListOpen(!jobListOpen) }, jobListOpen ? "\u6536\u8D77\u4EFB\u52A1" : "\u4EFB\u52A1"), h("button", { className: "mf-btn", type: "button", onClick: () => setDashOpen(!dashOpen) }, dashOpen ? "\u6536\u8D77\u8BB0\u5F55" : "\u5199\u4F5C\u8BB0\u5F55"), h("button", { className: "mf-btn", type: "button", onClick: () => setStatsOpen(!statsOpen) }, statsOpen ? "\u6536\u8D77\u70ED\u529B\u56FE" : "\u5199\u4F5C\u70ED\u529B\u56FE"), h("button", { className: "mf-btn mf-primary", type: "button", disabled: !changed || status === "saving" || !!conflict, onClick: saveChapter }, status === "saving" ? "\u4FDD\u5B58\u4E2D" : "\u4FDD\u5B58\u6B63\u6587"))
+                mode === "web" ? h("span", { className: "mf-stat" }, chapter ? h("span", null, countWords(draft) + " \u5B57") : null, chapter ? h("span", { className: "mf-status " + status }, "\xB7 " + label) : null, agentContextBound && chatSummary && chatSummary.agentPreset === "mofei-writer" ? h("span", { className: "mf-context-status", title: "\u5F53\u524D\u9879\u76EE\u548C\u7AE0\u8282\u5DF2\u5173\u8054\u5230\u5199\u4F5C\u52A9\u624B\uFF1B\u5B83\u4F1A\u6309\u9700\u8BFB\u53D6\u7CBE\u88C5\u4E0A\u4E0B\u6587\u4E0E\u6700\u65B0\u4FEE\u8BA2\u3002" }, "\u5DF2\u5173\u8054\u5199\u4F5C\u52A9\u624B") : null) : h("span", { className: "mf-stat" }, chapter ? countWords(draft) + " \u5B57" : "", project && project.goal ? " \xB7 \u76EE\u6807 " + String(project.goal) + "\uFF08" + String(Math.min(100, Math.round(projectChars / project.goal * 100))) + "%\uFF09" : "", stats ? " \xB7 \u4ECA\u65E5 +" + String(stats.todayChars) + " \xB7 \u8FDE\u7EED " + String(stats.streak) + " \u5929 \xB7 \u7D2F\u8BA1 " + String(stats.totalChars) + " \u5B57" : ""),
+                mode === "web" ? null : h("span", { className: "mf-eh-actions" }, h("button", { className: "mf-btn", type: "button", onClick: () => setJobListOpen(!jobListOpen) }, jobListOpen ? "\u6536\u8D77\u4EFB\u52A1" : "\u4EFB\u52A1"), h("button", { className: "mf-btn", type: "button", onClick: () => setDashOpen(!dashOpen) }, dashOpen ? "\u6536\u8D77\u8BB0\u5F55" : "\u5199\u4F5C\u8BB0\u5F55"), h("button", { className: "mf-btn", type: "button", onClick: () => setStatsOpen(!statsOpen) }, statsOpen ? "\u6536\u8D77\u70ED\u529B\u56FE" : "\u5199\u4F5C\u70ED\u529B\u56FE"), h("button", { className: "mf-btn mf-primary", type: "button", disabled: !changed || status === "saving" || !!conflict, onClick: saveChapter }, status === "saving" ? "\u4FDD\u5B58\u4E2D" : "\u4FDD\u5B58\u6B63\u6587"))
               )
             )
           ),
@@ -5630,6 +5824,10 @@ function createClient(require2) {
         )
       )) : null,
       summaryOpen ? h(SummaryPanel, { open: true, onClose: () => setSummaryOpen(false), projectTitle: project ? project.title : "", chapterRows: summaryRows, ranges: summaryRanges, loading: summaryLoading, error: summaryError, busy: summaryBusy, progress: summaryProgress, result: summaryResult, onRegenerateChapter: (row) => runSummary("chapters", { chapterIds: [row.chapterId], force: true }, "chapter", row.chapterId), onRegenerateRange: (range) => runSummary("ranges", { rangeIds: [range.id], force: true }, "range", range.id), onGenerateChapters: () => runSummary("chapters", {}, "chapters", null), onGenerateRanges: () => runSummary("ranges", {}, "ranges", null), onRefresh: refreshSummaryPanel }) : null,
+      skillsOpen ? h(WritingSkillsPanel, { open: true, onClose: () => setSkillsOpen(false), onOpenChains: projectId ? () => {
+        setSkillsOpen(false);
+        openPromptChains();
+      } : null, skills: writingSkills, loading: skillsLoading, error: skillsError }) : null,
       chainsOpen ? h(PromptChainsPanel, { open: true, onClose: () => setChainsOpen(false), chains, activeChainId: chainActiveId, onSelect: setChainActiveId, busy: chainBusy, error: chainError, result: chainResult, lastPrompt: chainLastPrompt, onSave: handleSaveChain, onDelete: handleDeleteChain, onRun: handleRunChain, onHistory: (chain) => {
         if (chain && chain.id) openGitHistory(chain.id);
       } }) : null,
@@ -5743,7 +5941,7 @@ function createClient(require2) {
   }
   exports.mountStandalone = function(root) {
     if (!root || typeof document === "undefined") return void 0;
-    ensureStyles();
+    ensureStyles2();
     document.body.classList.add("mf-standalone");
     panel.open = true;
     const ReactDOM = require2("react-dom");

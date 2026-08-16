@@ -4,6 +4,7 @@ import { ProjectPage } from './project-page.js'
 import { SummaryPanel } from './summary-panel.js'
 import { PromptChainsPanel } from './prompt-chains.js'
 import { WritingDashboard } from './writing-dashboard.js'
+import { WritingSkillsPanel } from './skills-library.js'
 import { getEditorContentLimit, formatContentLimitError } from './editor-limits.js'
 import { buildChapterMention, buildSelectionMention, buildWriterMention, buildReviewerMention } from './agent-bridge.js'
 import { filterWorldEntries, worldNameConflict, toggleAllSelection, buildBulkTogglePlan, buildBulkDeletePlan } from './worldbook-tools.js'
@@ -25,6 +26,22 @@ export function createClient(require) {
     }).then((r) => r.json()).then((j) => {
       if (!j || j.ok !== true) throw new Error((j && j.error) || '墨扉 rpc failed')
       return j.value
+    })
+  }
+
+  // sessions.create() is a client-state action and drops agentPreset. Project writer
+  // sessions must be created through DSH's native RPC so they start isolated.
+  function dshCall(method, payload) {
+    const rpcId = 'mofei-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8)
+    return fetch('/api/' + method, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ type: 'client-request', rpcId, method, payload: payload || {} }),
+    }).then(async (response) => {
+      const body = await response.json()
+      const result = body && body.result
+      if (!response.ok || !result || result.ok !== true) throw new Error(result && result.error || 'DSH_RPC_FAILED:' + method)
+      return result.value
     })
   }
 
@@ -57,18 +74,17 @@ export function createClient(require) {
     '.mf-form{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-input{box-sizing:border-box;width:100%;padding:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit}.mf-rename{min-width:0;padding:4px 6px;font-size:12px}',
     '.mf-goal{padding:6px 9px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-goal-btn{width:100%;border:1px dashed var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px;cursor:pointer;font:inherit;font-size:11px}',
     '.mf-empty{padding:18px 14px;color:var(--dsw-alias-label-secondary);font-size:12.5px;line-height:1.8}',
-    '.mf-editor{display:flex;min-width:0;min-height:0;flex-direction:column}.mf-status{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-status.unsaved{color:#b45309}.mf-status.saving{color:#2563eb}.mf-status.error{color:#dc2626}',
+    '.mf-editor{display:flex;min-width:0;min-height:0;height:100%;flex-direction:column}.mf-editor-pane{display:flex;flex:1 1 auto;min-width:0;min-height:0;flex-direction:column}.mf-status{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-status.unsaved{color:#b45309}.mf-status.saving{color:#2563eb}.mf-status.error{color:#dc2626}',
     '.mf-title-input{box-sizing:border-box;width:100%;padding:12px 18px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:700 17px/1.4 ui-serif,Georgia,serif;outline:0}',
     '.mf-alert{padding:10px 14px;border-bottom:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.08);color:#dc2626;font-size:12px}.mf-actions{display:flex;gap:7px;margin-top:8px}',
     '.mf-text{box-sizing:border-box;width:100%;flex:1;min-height:0;resize:none;border:0;outline:0;background:var(--dsw-alias-bg-base);color:inherit;padding:28px clamp(20px,6vw,72px);font:16px/1.85 ui-serif,Georgia,serif}',
     '.mf-hist{max-height:240px;overflow:auto;border-bottom:1px solid var(--dsw-alias-border-l1);padding:8px}.mf-hist-head{display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px;font-size:12px;font-weight:650}.mf-hist-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 8px;border-radius:5px}.mf-hist-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-hist-meta{display:flex;align-items:center;gap:10px;min-width:0}.mf-hist-meta strong{font-size:12px}.mf-hist-meta span{color:var(--dsw-alias-label-secondary);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
-    '.mf-foot{min-height:50px;padding:0 14px;border-top:1px solid var(--dsw-alias-border-l1);border-bottom:0;color:var(--dsw-alias-label-secondary);font-size:11.5px}.mf-stat{display:inline-flex;gap:12px;flex-wrap:wrap}',
+    '.mf-foot{flex:0 0 38px;height:38px;min-height:38px;padding:0 14px;border-top:1px solid var(--dsw-alias-border-l1);border-bottom:0;color:var(--dsw-alias-label-secondary);font-size:11.5px;overflow:hidden}.mf-stat{display:inline-flex;gap:12px;min-width:0;white-space:nowrap}.mf-context-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary)}',
     '.mf-search{padding:8px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-search input{box-sizing:border-box;width:100%;padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit;font-size:12px}.mf-sr-item{padding:6px 4px;border-bottom:1px dashed var(--dsw-alias-border-l1)}.mf-sr-item strong{font-size:12px}.mf-sr-line{color:var(--dsw-alias-label-secondary);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.mf-sel{font:inherit;font-size:11px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;max-width:110px}',
     '.mf-import{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)}.mf-import-card{width:min(560px,calc(100vw - 32px));max-height:82vh;overflow:auto;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:16px;display:grid;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.3)}.mf-import-card h3{margin:0;font-size:14px}.mf-imp-vol{padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;font-size:12px}.mf-import-card small{color:var(--dsw-alias-label-secondary);font-size:11px}.mf-import-actions{display:flex;gap:8px;justify-content:flex-end}',
     '.mf-tabs2{display:flex;gap:4px;padding:6px 10px;border-bottom:1px solid var(--dsw-alias-border-l1);overflow-x:auto}.mf-tab2{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:transparent;color:inherit;padding:3px 8px;font-size:12px;cursor:pointer;white-space:nowrap}.mf-tab2.on{background:var(--dsw-alias-interactive-bg-hover)}.mf-tab2.dragging{opacity:.45}.mf-tab2.drop-target{outline:1px dashed var(--dsw-alias-state-business-primary)}.mf-tab2 .mf-tabx{border:0;background:transparent;color:inherit;cursor:pointer;font-size:11px;padding:0 2px;border-radius:3px}.mf-tab2 .mf-tabx:hover{background:rgba(220,38,38,.25)}.mf-tab2 .mf-tab-kind{font-size:9px;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l1);border-radius:3px;padding:0 3px}.mf-tab2 .mf-tab-pin{font-size:10px;color:var(--dsw-alias-state-warn-primary)}.mf-tabmenu{position:absolute;z-index:140;min-width:150px;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:6px;box-shadow:0 12px 36px rgba(0,0,0,.3);padding:4px;display:grid;gap:2px}.mf-tabmenu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:6px 10px;border-radius:4px;cursor:pointer;font:inherit;font-size:12px}.mf-tabmenu button:hover{background:var(--dsw-alias-interactive-bg-hover)}',
     '.mf-findbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap}.mf-findbar input{box-sizing:border-box;width:170px;padding:5px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit;font-size:12px}.mf-findbar input.mf-find-repl{width:150px}.mf-findbar span{font-size:11px;color:var(--dsw-alias-label-secondary);min-width:34px;text-align:center}',
-    '.mf-mdtoolbar{display:flex;align-items:center;gap:5px;padding:6px 14px;border-bottom:1px solid var(--dsw-alias-border-l1);flex-wrap:wrap}.mf-mdtoolbar .mf-mini{min-width:28px;height:24px}.mf-mdtoolbar .mf-sep{width:1px;height:16px;background:var(--dsw-alias-border-l1);margin:0 5px}',
     '.mf-heat{padding:8px 14px;border-top:1px solid var(--dsw-alias-border-l1);display:grid;gap:8px}.mf-heat-grid{display:grid;grid-template-columns:repeat(12,12px);grid-auto-rows:12px;gap:3px;justify-content:start}.mf-hm-cell{width:12px;height:12px;border-radius:3px;background:var(--dsw-alias-interactive-bg-hover);border:1px solid var(--dsw-alias-border-l1)}.mf-hm-cell.l1{background:rgba(67,160,71,.35)}.mf-hm-cell.l2{background:rgba(67,160,71,.55)}.mf-hm-cell.l3{background:rgba(67,160,71,.75)}.mf-hm-cell.l4{background:rgba(67,160,71,.95)}.mf-heat small{color:var(--dsw-alias-label-secondary);font-size:11px}',
     '.mf-ai{display:grid;gap:8px;padding:10px 14px;border-top:1px solid var(--dsw-alias-border-l1);max-height:280px;overflow:auto}.mf-ai-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.mf-ai select{font:inherit;font-size:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;padding:4px 6px}.mf-ai textarea{box-sizing:border-box;width:100%;min-height:56px;padding:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1.6 sans-serif;resize:vertical}.mf-ai-result{white-space:pre-wrap;font:13px/1.7 ui-serif,Georgia,serif;padding:8px 10px;border:1px dashed var(--dsw-alias-border-l1);border-radius:5px;max-height:140px;overflow:auto;color:var(--dsw-alias-label-primary)}',
     '.mf-panel.mf-focus .mf-body{grid-template-columns:minmax(0,1fr)}.mf-panel.mf-focus .mf-col,.mf-panel.mf-focus .mf-activity,.mf-panel.mf-focus .mf-gutter,.mf-panel.mf-focus .mf-chat{display:none}',
@@ -81,32 +97,39 @@ export function createClient(require) {
     // v0.12.1 对话面板：pending 审批/提问卡片
     '.mf-pends{display:grid;gap:8px;padding:8px 10px}.mf-pend{border:1px solid var(--dsw-alias-state-warn-secondary);background:var(--dsw-specific-input-major);border-radius:14px;padding:10px 12px;display:grid;gap:8px;color:var(--dsw-alias-label-primary);box-shadow:var(--dsw-shadow-lv2,0 4px 16px rgba(0,0,0,.2))}.mf-pend-head{font-size:12px;font-weight:650;color:var(--dsw-alias-state-warn-primary)}.mf-pend-body,.mf-pend-q{font-size:13px;line-height:1.6;display:grid;gap:4px;min-width:0}.mf-pend-qtext{font-weight:600}.mf-pend-reason{font-size:12px;color:var(--dsw-alias-label-tertiary);white-space:pre-wrap}.mf-pend-actions{display:flex;gap:6px;justify-content:flex-end}.mf-pend-opts{display:flex;flex-wrap:wrap;gap:6px}.mf-pend-opt{border:1px solid var(--dsw-alias-border-l2);background:transparent;color:inherit;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;font-family:inherit}.mf-pend-opt:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-pend-opt.on{border-color:var(--dsw-alias-state-business-primary);background:var(--dsw-specific-bubble-highlight);color:var(--dsw-alias-label-primary)}.mf-pend-custom{box-sizing:border-box;width:100%;padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit;font-size:12px}',
     '.mf-chat-jump{align-self:flex-end;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);border-radius:999px;padding:2px 10px;font-size:11px;cursor:pointer;font-family:inherit}.mf-chat-jump:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-state-business-primary)}',
-    // v0.14 变形金刚形态：原版 web 完整保留；墨扉 = 右下角 orb 按钮 + 左侧滑入工作台
+    // v0.14 变形工作态：原版 web 完整保留；墨扉 = 右下角 orb 按钮 + 左侧滑入工作台。
+    // 工作态的阅读顺序固定为「墨扉工作台 | DSH 写作助手 | DSH 窄轨」。
     '.mf-bubble{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}',
-    '.mf-bubble-panel{position:absolute;top:0;left:55px;bottom:0;width:calc(100% - 55px - clamp(460px,31vw,520px));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:#0b0b0d;border-right:1px solid rgba(255,255,255,.08);transform:translateX(calc(-100% - 55px));transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 42px rgba(0,0,0,.38)}',
+    // 宽屏让原生 DSH composer 留在最右；空间不足时，优先完整保住写作区，只留下 DSH 窄轨供切回。
+    '.mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:min(calc(100% - 55px),max(920px,calc(100% - 55px - clamp(460px,31vw,520px))));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:#0d0e11;border-right:1px solid rgba(255,255,255,.08);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}',
     '.mf-bubble.on .mf-bubble-panel{transform:translateX(0)}',
     '.mf-orb{position:fixed;right:18px;bottom:18px;width:46px;height:46px;border:0;border-radius:50%;background:var(--dsw-alias-state-business-primary,#4d8dff);color:#fff;cursor:pointer;font:700 17px/1 sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:auto;z-index:95;transition:transform .2s ease,background .2s ease,opacity .2s ease}',
     '.mf-orb:hover{transform:scale(1.08)}.mf-orb.on{background:var(--dsw-alias-label-secondary,#6b6b74)}',
-    // 变形后 orb 退场（收起走墨扉顶栏「✕ 收起」），避免悬在官方 composer 上方挡操作
+    // 变形后 orb 退场（收起走工作台顶栏），避免悬在官方 composer 上方挡操作。
     '.mf-bubble.on .mf-orb{opacity:0;pointer-events:none}',
-    // 变形时：官方侧栏由官方折叠机制收成窄条（click toggle），右侧保留舒适宽度的写作助手栏。
-    // （centerCol 与对话根之间隔着一个 display:contents 包装层，故用后代选择器而非直接子选择器）
-    'body.mf-transform [class*="hHd-Xa_root"]{width:55px !important;min-width:55px !important;max-width:55px !important;overflow:hidden !important}',
+    // 变形时：官方侧栏由官方机制收成窄条，并显式放到 DSH 助手右侧。
+    // 不能隐藏官方 grid 列：这样会触发 grid 自动排版，反而会压扁整页。
+    'body.mf-transform [class*="_frame"]{grid-template-columns:minmax(0,1fr) 55px 0 !important}',
+    'body.mf-transform [class*="centerCol"]{grid-column:1 !important;grid-row:1 !important}',
+    'body.mf-transform [class*="hHd-Xa_root"]{grid-column:2 !important;grid-row:1 !important;width:55px !important;min-width:55px !important;max-width:55px !important;overflow:hidden !important}',
+    // centerCol 与对话根之间隔着 display:contents 包装层，故用后代选择器而非直接子选择器。
     'body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:calc(100% - clamp(460px,31vw,520px)) !important;transition:padding-left .32s cubic-bezier(.22,.61,.36,1)}',
-    // 变形后右侧官方空态改作紧凑的写作助手栏；composer 仍是官方组件，只调整它的容器质感。
-    'body.mf-transform [class*="scrollBody"]{background:#0d0d0f;border-left:1px solid rgba(255,255,255,.08)}',
-    'body.mf-transform [class*="composerSeat"]{padding:0 14px 18px !important}',
+    // 右侧仍是官方 composer，只收紧容器并用同一套分隔线把它收为助手栏。
+    'body.mf-transform [class*="scrollBody"]{background:#101115;border-left:1px solid rgba(255,255,255,.08)}',
+    'body.mf-transform [class*="composerSeat"]{padding:0 16px 18px !important}',
     'body.mf-transform [class*="composerHero"]{box-sizing:border-box;width:100%;max-width:100%;overflow:hidden;padding:20px 0 0}',
     'body.mf-transform [class*="composerHero"]>svg{display:none}',
     'body.mf-transform [class*="composerHero"] [class*="headline"]{font-size:21px !important;line-height:1.35 !important;letter-spacing:0 !important}',
     'body.mf-transform [class*="composerHero"] [class*="heroWorkspaceRow"]{margin-top:4px;padding:0 4px}',
     'body.mf-transform [class*="composerHero"] [class*="card"]{border-radius:8px !important;box-shadow:0 10px 28px rgba(0,0,0,.28)}',
     'body.mf-transform [class*="composerHero"] [class*="card"],body.mf-transform [class*="composerHero"] [class*="row"]{width:100%;max-width:100%}',
-    // v0.13 布局定稿：中 = 墨菲文字展现与修改区（左内栏导航 + 编辑器）；右 = 缩小版 dsh web 气泡（会话条+对话+输入）
-    '.mf-panel.mf-view{background:#0b0b0d}.mf-panel.mf-view .mf-head{position:relative;height:52px;padding:0 16px;background:#0d0d0f;border-bottom-color:rgba(255,255,255,.07)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:#0b0b0d}',
+    // 墨扉工作台：扁平的目录、编辑器与 DSH 助手三栏，不使用悬浮卡片来分区。
+    '.mf-panel.mf-view{background:#0d0e11}.mf-panel.mf-view .mf-head{position:relative;height:56px;padding:0 20px;background:#111217;border-bottom-color:rgba(255,255,255,.08)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:#0d0e11}',
     '.mf-panel.mf-view .mf-activity,.mf-panel.mf-view .mf-gutter,.mf-panel.mf-view .mf-col.mf-mid{display:none}',
-    '.mf-panel.mf-view .mf-col{width:280px;flex:none;border:0;border-right:1px solid rgba(255,255,255,.08);border-radius:0;background:#0d0d0f;overflow:hidden;box-shadow:none}',
-    '.mf-panel.mf-view .mf-editor{flex:1;border:0;border-radius:0;background:#101012;overflow:hidden;box-shadow:none}',
+    '.mf-panel.mf-view .mf-col{width:286px;flex:none;border:0;border-right:1px solid rgba(255,255,255,.08);border-radius:0;background:#101115;overflow:hidden;box-shadow:none}',
+    '.mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:#0d0e11;overflow:hidden;box-shadow:none}',
+    '@media(max-width:1140px){.mf-panel.mf-view .mf-col{width:228px}.mf-panel.mf-view .mf-text{padding-inline:30px}}',
+    '.mf-head-main{display:flex;align-items:center;gap:10px;min-width:0}.mf-head-main strong{font-size:15px;font-weight:680;letter-spacing:0}.mf-head-context{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}.mf-head-actions .mf-btn{min-height:30px}.mf-head-actions .mf-primary{padding-inline:11px}.mf-action-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-action-icon:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-head-actions .mf-stylebar{margin-right:6px}.mf-head-actions .mf-stylebar select{max-width:104px;border:0;background:transparent;padding:4px;color:var(--dsw-alias-label-secondary)}',
     '.mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}',
     // v0.13.1 预览对齐：迷你导航移入左内栏底部横排（此前为 col/editor 间竖向窄条）
     '.mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}',
@@ -114,10 +137,10 @@ export function createClient(require) {
     '.mf-panel.mf-view .mf-mininav{flex:none;border-top:1px solid var(--dsw-alias-border-l1);padding:8px 10px}',
     '.mf-proj-list{display:flex;flex-direction:column;gap:4px;padding:0 2px 8px}',
     // v0.14.1 预览对齐：编辑区空态垂直居中、占位符对比度
-    '.mf-panel.mf-view .mf-editor > .mf-empty{display:grid;place-items:center;height:100%;padding:24px}',
+    '.mf-panel.mf-view .mf-editor-pane > .mf-empty{display:grid;flex:1;place-items:center;min-height:0;padding:24px;color:var(--dsw-alias-label-tertiary)}',
     '.mf-panel.mf-view input::placeholder,.mf-panel.mf-view textarea::placeholder{color:var(--dsw-alias-label-tertiary)}',
-    // v0.14.1: 写作状态徽标
-    '.mf-wstate{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--dsw-alias-border-l1);border-radius:999px;background:transparent;color:var(--dsw-alias-label-tertiary);padding:3px 10px;cursor:pointer;font:11px/1.2 sans-serif;white-space:nowrap}.mf-wstate:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.mf-wstate.on{color:var(--dsw-alias-state-success-primary);border-color:rgba(74,222,128,.35);background:var(--dsw-alias-state-success-tertiary)}',
+    // 写作助手入口兼作会话隔离器：只展开 mofei-writer 会话，减少顶栏重复状态。
+    '.mf-wstate{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px 8px;cursor:pointer;font:12px/1.2 sans-serif;white-space:nowrap}.mf-wstate::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-label-tertiary)}.mf-wstate:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.mf-wstate.on{color:var(--dsw-alias-label-primary)}.mf-wstate.on::before{background:var(--dsw-alias-state-success-primary,#55c98d);box-shadow:0 0 0 3px rgba(85,201,141,.12)}',
     // v0.13.1 预览对齐：左栏行操作 hover 才显现（静止态 = 极简，功能不丢）
     '.mf-panel.mf-view .mf-col .mf-minis{opacity:0;pointer-events:none;transition:opacity .12s ease}',
     '.mf-panel.mf-view .mf-col .mf-item:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-vol-head:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-proj:hover .mf-minis{opacity:1;pointer-events:auto}',
@@ -161,7 +184,8 @@ export function createClient(require) {
       ta.dataset.mofeiPh = '1'
       ta.dataset.mofeiOriginalPlaceholder = ta.placeholder
     }
-    ta.placeholder = '输入写作指令：续写 / 审稿 / 查设定…'
+    const writing = document.body.classList.contains('mf-transform')
+    ta.placeholder = writing ? '输入写作指令：续写 / 审稿 / 查设定…' : (ta.dataset.mofeiOriginalPlaceholder || ta.placeholder)
   }
 
   const panel = { open: false, listeners: [] }
@@ -224,6 +248,11 @@ export function createClient(require) {
     const on = useBubbleOn()
     const previousOn = React.useRef(on)
     React.useEffect(() => {
+      // Composer is mounted asynchronously by DSH. Apply the writing affordance
+      // on a fresh page as well as after the transform, so its two states agree.
+      return later(applyWritingComposerPlaceholder, 340)
+    }, [])
+    React.useEffect(() => {
       const wasOn = previousOn.current
       previousOn.current = on
       if (on) {
@@ -235,8 +264,9 @@ export function createClient(require) {
         if (typeof document !== 'undefined') document.body.classList.remove('mf-transform')
         // Let the writing panel clear the viewport before the native sidebar expands.
         // Expanding both at once makes the two independent layouts visibly collide.
-        if (wasOn) return later(() => syncOfficialSidebar(false), 300)
+        if (wasOn) return later(() => { syncOfficialSidebar(false); applyWritingComposerPlaceholder() }, 300)
         syncOfficialSidebar(false)
+        return later(applyWritingComposerPlaceholder, 0)
       }
       return undefined
     }, [on])
@@ -589,6 +619,11 @@ export function createClient(require) {
     const [chainError, setChainError] = React.useState('')
     const [chainResult, setChainResult] = React.useState('')
     const [chainLastPrompt, setChainLastPrompt] = React.useState('')
+    // 写作技能由 mofei-writer preset 隔离注册；这里仅提供作者可见的技能目录。
+    const [skillsOpen, setSkillsOpen] = React.useState(false)
+    const [writingSkills, setWritingSkills] = React.useState([])
+    const [skillsLoading, setSkillsLoading] = React.useState(false)
+    const [skillsError, setSkillsError] = React.useState('')
     const [dashOpen, setDashOpen] = React.useState(false)
     // v10: 命令面板 + 写作风格
     const [paletteOpen, setPaletteOpen] = React.useState(false)
@@ -635,6 +670,7 @@ export function createClient(require) {
     // v0.13: 右气泡会话条（默认收起，点方向键弹出列表）
     const [chatSessionsOpen, setChatSessionsOpen] = React.useState(false)
     const [chatSessionList, setChatSessionList] = React.useState({ ids: [], byId: {} })
+    const [agentContextBound, setAgentContextBound] = React.useState(false)
     const chatBodyRef = React.useRef(null)
     // v0.10.1: 标签页增强（混开/固定/右键菜单/拖拽/滚动记忆）
     const [tabMenu, setTabMenu] = React.useState(null)
@@ -765,6 +801,7 @@ export function createClient(require) {
     const [worldImportError, setWorldImportError] = React.useState('')
     const [worldImportResult, setWorldImportResult] = React.useState('')
     const locks = React.useRef({})
+    const agentMutationRefreshRef = React.useRef('')
 
     const project = projects.find((item) => item.id === projectId)
     const chapter = project && project.chapters.find((item) => item.id === chapterId)
@@ -812,6 +849,13 @@ export function createClient(require) {
         setOpenTabs((tabs) => tabs.map((t) => { const currentProject = nextProjects.find((item) => item.id === projectId); if (t.kind === 'note') { const note = currentProject && currentProject.notes.find((item2) => item2.id === t.id); return note ? { kind: 'note', id: t.id, title: note.title, pinned: t.pinned } : t } const currentChapter = currentProject && currentProject.chapters.find((item2) => item2.id === t.id); return currentChapter ? { kind: 'chapter', id: t.id, title: currentChapter.title, pinned: t.pinned } : t }))
         if (projectId && !nextProjects.find((item) => item.id === projectId)) { setProjectId(''); setChapterId(''); setDraft(''); setSaved(''); setRevision(0); setStatus('saved'); setError(''); setConflict(null); setSelChar(''); setSelNote(''); setSelWorld(''); setWorldName(''); setWorldKeys(''); setWorldContent(''); setWorldDirty(false); setAiHistory([]); setAiResult(''); setAiError(''); setAiBatchResults([]); setAiBatchError(''); setOpenTabs([]) }
         else if (chapterId && nextProjects.find((item) => item.id === projectId) && !nextProjects.find((item) => item.id === projectId).chapters.find((item2) => item2.id === chapterId)) { setChapterId(''); setDraft(''); setSaved(''); setRevision(0); setStatus('saved'); setError(''); setConflict(null) }
+        else {
+          const latest = chapterId && nextProjects.find((item) => item.id === projectId) && nextProjects.find((item) => item.id === projectId).chapters.find((item) => item.id === chapterId)
+          if (latest && latest.revision !== revision) {
+            if (changed) { setConflict(latest); setStatus('error'); setError('写作 Agent 已更新远端正文，当前草稿没有被覆盖。') }
+            else { setDraft(latest.content); setSaved(latest.content); setRevision(latest.revision); setStatus('saved'); setError(''); setConflict(null) }
+          }
+        }
         return result
       }).catch((failure) => { setError('操作失败'); console.error(failure); return null })
     }
@@ -842,7 +886,7 @@ export function createClient(require) {
       if (!projectId || !chapterId || !changed) return Promise.resolve(null)
       return call('save-draft', { projectId, chapterId, content: draft, baseRevision: revision }).then((result) => { if (result && result.draft) setDrafts((items) => items.filter((item) => !(item.projectId === projectId && item.chapterId === chapterId)).concat([result.draft])); return result }).catch((failure) => { setStatus('error'); setError('草稿持久化失败，请勿关闭页面'); console.error(failure); return null })
     }
-    function updateView(next) { setProjects((items) => items.map((item) => item.id !== projectId ? item : { id: item.id, title: item.title, description: item.description, goal: item.goal, chapters: item.chapters.map((current) => current.id === next.id ? next : current), volumes: item.volumes, characters: item.characters, notes: item.notes, noteCategories: item.noteCategories, worldEntries: item.worldEntries })) }
+    function updateView(next) { setProjects((items) => items.map((item) => item.id !== projectId ? item : { ...item, chapters: item.chapters.map((current) => current.id === next.id ? next : current) })) }
     function accept(next) { updateView(next); setDraft(next.content); setSaved(next.content); setRevision(next.revision); setDrafts((items) => items.filter((item) => !(item.projectId === projectId && item.chapterId === next.id))); setStatus('saved'); setError(''); setConflict(null) }
     function saveChapter() {
       if (!changed || status === 'saving' || conflict) return Promise.resolve(null)
@@ -891,7 +935,7 @@ export function createClient(require) {
     }
     // v0.13: 选择会话（右气泡会话条）
     function selectChatSession(sessionId) {
-      if (!sessionId) return
+      if (!sessionId || !project || project.writerSessionId !== sessionId) return
       const sessions = dshClientSessions
       setChatSessionId(sessionId)
       try { if (sessions && typeof sessions.open === 'function') sessions.open(sessionId) } catch (error) { /* noop */ }
@@ -928,7 +972,7 @@ export function createClient(require) {
       }, 350)
     }
     function createProject() { if (!newProject.trim()) return; call('create-project', { title: newProject }).then((result) => { if (result && result.project) { setNewProject(''); setProjectForm(false); setProjectId(result.project.id); try { if (typeof localStorage !== 'undefined') localStorage['mofei.lastProject'] = result.project.id } catch (persistError) { /* noop */ } reload() } }).catch((failure) => { setError('创建项目失败'); console.error(failure) }) }
-    function createChapter(volumeId) { if (!projectId || !newChapter.trim()) return; call('create-chapter', { projectId, title: newChapter, volumeId: volumeId || null }).then((result) => { if (result && result.chapter) { setNewChapter(''); setChapterForm(false); setProjects((items) => items.map((item) => item.id !== projectId ? item : { id: item.id, title: item.title, description: item.description, goal: item.goal, chapters: item.chapters.concat([result.chapter]), volumes: item.volumes, characters: item.characters, notes: item.notes, noteCategories: item.noteCategories, worldEntries: item.worldEntries })); pickChapter(result.chapter) } }).catch((failure) => { setError('创建章节失败'); console.error(failure) }) }
+    function createChapter(volumeId) { if (!projectId || !newChapter.trim()) return; call('create-chapter', { projectId, title: newChapter, volumeId: volumeId || null }).then((result) => { if (result && result.chapter) { setNewChapter(''); setChapterForm(false); setProjects((items) => items.map((item) => item.id !== projectId ? item : { ...item, chapters: item.chapters.concat([result.chapter]) })); pickChapter(result.chapter) } }).catch((failure) => { setError('创建章节失败'); console.error(failure) }) }
     function startRename(kind, id, currentTitle) { setRename({ kind, id }); setRenameValue(currentTitle) }
     function commitRename() {
       if (!rename || !renameValue.trim()) { setRename(null); return }
@@ -941,7 +985,7 @@ export function createClient(require) {
       const value = String(titleDraft || '').trim()
       if (!value || value === chapter.title) { setTitleDraft(chapter.title); return }
       call('update-chapter-meta', { projectId, chapterId, title: value }).then(() => {
-        setProjects((items) => items.map((item) => item.id !== projectId ? item : { id: item.id, title: item.title, description: item.description, goal: item.goal, chapters: item.chapters.map((current) => current.id === chapterId ? { ...current, title: value } : current), volumes: item.volumes, characters: item.characters, notes: item.notes, noteCategories: item.noteCategories, worldEntries: item.worldEntries }))
+        setProjects((items) => items.map((item) => item.id !== projectId ? item : { ...item, chapters: item.chapters.map((current) => current.id === chapterId ? { ...current, title: value } : current) }))
         setOpenTabs((tabs) => tabs.map((t) => t.id === chapterId ? { ...t, title: value } : t))
         setTitleDraft(value)
       }).catch((failure) => { setError('章节标题保存失败'); console.error(failure) })
@@ -1073,6 +1117,16 @@ export function createClient(require) {
       if (!projectId) return
       setChainsOpen(true); setChainError(''); setChainResult(''); setChainLastPrompt('')
       loadPromptChains()
+    }
+    function openWritingSkills() {
+      setSkillsOpen(true); setSkillsLoading(true); setSkillsError('')
+      call('list-writing-skills').then((result) => {
+        setWritingSkills(Array.isArray(result && result.skills) ? result.skills : [])
+        setSkillsLoading(false)
+      }).catch((failure) => {
+        setWritingSkills([]); setSkillsLoading(false)
+        setSkillsError('写作技能加载失败：' + String((failure && failure.message) || failure))
+      })
     }
     function handleSaveChain(input) {
       if (!projectId || chainBusy) return
@@ -1471,27 +1525,22 @@ export function createClient(require) {
     function killMofeiJob(jobId) {
       call('job-kill-mofei', { jobId }).then(() => pollMofeiJobs()).catch(() => { /* noop */ })
     }
-    // v0.11: 对话面板——绑定当前 DSH 会话（list 订阅）并渲染会话快照（流式/工具帧）
+    // 每本小说只绑定自己的 mofei-writer 会话。这里仅订阅目录，绝不把 DSH 当前开发会话带进墨扉。
     React.useEffect(() => {
       if (!open) return undefined
       const sessions = dshClientSessions
       if (!sessions || !sessions.list || typeof sessions.list.subscribe !== 'function') { setChatHint('DSH 会话服务不可用'); return undefined }
-      const syncCurrent = () => {
+      const syncList = () => {
         try {
           const snap = sessions.list.getSnapshot()
-          const current = snap && snap.current
-          if (current) {
-            setChatSessionId(current)
-            const summary = snap.byId && snap.byId[current]
-            if (summary) setChatSummary(summary)
-          }
           setChatSessionList({ ids: (snap && snap.ids) || [], byId: (snap && snap.byId) || {} })
+          if (chatSessionId) setChatSummary(snap && snap.byId && snap.byId[chatSessionId] || null)
         } catch (error) { /* noop */ }
       }
-      syncCurrent()
-      const unsub = sessions.list.subscribe(syncCurrent)
+      syncList()
+      const unsub = sessions.list.subscribe(syncList)
       return () => { if (unsub && typeof unsub === 'function') unsub() }
-    }, [open])
+    }, [open, chatSessionId])
     React.useEffect(() => {
       if (!open || !chatSessionId) return undefined
       const sessions = dshClientSessions
@@ -1511,6 +1560,27 @@ export function createClient(require) {
       } catch (error) { setChatHint('会话绑定失败：' + String((error && error.message) || error)) }
       return () => { if (unsub && typeof unsub === 'function') unsub() }
     }, [open, chatSessionId])
+    // 当前项目/章节不是通过可见聊天消息传递，而是与该项目专属 DSH 写作会话做短生命周期绑定。
+    // 写作 preset 的 mofei_get-active-context 工具会在实际执行前取回精装上下文。
+    React.useEffect(() => {
+      let alive = true
+      if (!open || !chatSessionId || !projectId) { setAgentContextBound(false); return undefined }
+      call('bind-agent-context', { sessionId: chatSessionId, projectId, ...(chapterId ? { chapterId } : {}) }).then((result) => {
+        if (alive) setAgentContextBound(!!(result && result.bound))
+      }).catch(() => { if (alive) setAgentContextBound(false) })
+      return () => { alive = false }
+    }, [open, chatSessionId, projectId, chapterId])
+    // DSH 会话快照已包含工具完成事件。Agent 写入后以它为信号刷新项目实体；
+    // 若作者本地仍有未保存草稿，reload() 会保留草稿并进入冲突状态。
+    React.useEffect(() => {
+      if (!open || !project || !chatSessionId || project.writerSessionId !== chatSessionId || !chatSnap) return undefined
+      const writes = normalizeChatItems(chatSnap).filter((item) => item.kind === 'tool' && !item.running && item.ok !== false && /^(?:mofei|openfic)_(?:write|edit|update|create|delete|move|set|reorder|save|revert|rollback)-/.test(String(item.name || '')))
+      const token = writes.map((item) => item.key || item.name).join('|')
+      if (!token || token === agentMutationRefreshRef.current) return undefined
+      agentMutationRefreshRef.current = token
+      const cancel = later(() => { reload() }, 80)
+      return cancel
+    }, [open, projectId, project && project.writerSessionId, chatSessionId, chatSnap])
     // v0.12.1: 拉取 agent 预设清单（供「＋」新建会话选择；只保留可用预设）
     React.useEffect(() => {
       if (!open) return undefined
@@ -1550,69 +1620,65 @@ export function createClient(require) {
         try { binding.session.cancel() } catch (error) { /* noop */ }
       }
     }
-    async function newChatSession() {
+    function createdSessionId(created, sessions, before) {
+      let sessionId = created && ((created.value && created.value.sessionId) || created.sessionId) || null
+      if (sessionId) return sessionId
+      const after = sessions && sessions.list && sessions.list.getSnapshot ? sessions.list.getSnapshot() : {}
+      return (after.ids || []).find((id) => !before.has(id)) || null
+    }
+    async function activateProjectWriterSession(targetProjectId, forceNew) {
       const sessions = dshClientSessions
-      if (!sessions || typeof sessions.create !== 'function') { setChatError('DSH 会话服务不可用'); return }
+      if (!targetProjectId) { setChatError('请先选择一本小说项目'); return null }
+      if (!sessions || !sessions.list || typeof sessions.create !== 'function') { setChatError('DSH 会话服务不可用'); return null }
       setChatBusy(true); setChatError('')
       try {
-        const before = new Set((sessions.list.getSnapshot().ids) || [])
-        const created = await sessions.create({})
-        let sessionId = created && ((created.value && created.value.sessionId) || created.sessionId) || null
-        if (!sessionId) {
-          const after = sessions.list.getSnapshot()
-          sessionId = (after.ids || []).find((id) => !before.has(id)) || null
-        }
-        if (!sessionId) { setChatError('创建会话失败'); setChatBusy(false); return }
-        // 尽量指定所选预设（仅 blank 会话可 select；失败回退默认预设）
-        try {
-          const connection = dshClientConnection
-          const api = connection && connection.api
-          if (api && api.agentPresets && typeof api.agentPresets.select === 'function') {
-            await api.agentPresets.select({ sessionId, agentPreset: chatPresetId || 'mofei-writer' })
+        if (!forceNew) {
+          const bound = await call('writer-session', { projectId: targetProjectId })
+          const assignedId = bound && bound.sessionId
+          const snapshot = sessions.list.getSnapshot()
+          const summary = assignedId && snapshot && snapshot.byId && snapshot.byId[assignedId]
+          if (assignedId && summary && summary.agentPreset === 'mofei-writer') {
+            if (typeof sessions.open === 'function') { try { sessions.open(assignedId) } catch (error) { /* noop */ } }
+            setChatSessionId(assignedId)
+            setChatSummary(summary)
+            setChatBusy(false)
+            return assignedId
           }
-        } catch (error) { /* 预设选择失败不阻塞 */ }
-        if (typeof sessions.open === 'function') { try { sessions.open(sessionId) } catch (error) { /* noop */ } }
-        setChatBusy(false)
-      } catch (failure) { setChatBusy(false); setChatError('新建会话失败：' + String((failure && failure.message) || failure)) }
-    }
-    // v0.14.1 写作状态：让当前 DSH 会话进入/新建 墨扉写作（mofei-writer）状态。
-    // 机制（dsh 官方 API）：
-    //   1) 空白会话 → agentPresets.select 原地 recompose 成 mofei-writer（不换会话）；
-    //   2) 已开聊的标准会话（官方锁定预设）→ sessions.create({ agentPreset:'mofei-writer' }) 新建写作会话并打开；
-    //   3) 已是写作会话 → 提示无需操作。
-    async function enterWritingMode() {
-      const sessions = dshClientSessions
-      const connection = dshClientConnection
-      const api = connection && connection.api
-      if (!sessions || typeof sessions.create !== 'function' || !api || !api.agentPresets || typeof api.agentPresets.select !== 'function') { flashBridgeNotice('DSH 会话/预设服务不可用'); return }
-      const summary = chatSummary || {}
-      if (summary.agentPreset === 'mofei-writer') { flashBridgeNotice('当前已是写作会话（mofei-writer）✍'); return }
-      if (chatSessionId && summary.blank) {
-        // 空白会话原地切换成写作会话；服务端若判 locked（已开聊）则降级为新建
-        try {
-          await api.agentPresets.select({ sessionId: chatSessionId, agentPreset: 'mofei-writer' })
-          setChatSummary((prev) => ({ ...(prev || {}), agentPreset: 'mofei-writer' }))
-          flashBridgeNotice('✍ 已进入写作状态：当前会话切换为 墨扉写作（mofei-writer），右窄条里直接下写作指令')
-          return
-        } catch (failure) {
-          flashBridgeNotice('当前会话已开聊不能切换预设，改为新建写作会话…')
         }
-      }
-      // 已开聊或未知状态 → 新建写作会话（官方 API 原生支持 create 时指定 agentPreset）
-      try {
         const before = new Set((sessions.list.getSnapshot().ids) || [])
-        const created = await sessions.create({ agentPreset: 'mofei-writer' })
-        let sessionId = created && ((created.value && created.value.sessionId) || created.sessionId) || null
-        if (!sessionId) {
-          const after = sessions.list.getSnapshot()
-          sessionId = (after.ids || []).find((id) => !before.has(id)) || null
-        }
-        if (!sessionId) { flashBridgeNotice('新建写作会话失败'); return }
+        const created = await dshCall('session.create', { agentPreset: 'mofei-writer' })
+        const sessionId = createdSessionId(created, sessions, before)
+        if (!sessionId) { setChatError('创建项目写作会话失败'); setChatBusy(false); return null }
+        const bound = await call('bind-writer-session', { projectId: targetProjectId, sessionId })
+        if (!bound || bound.error) { setChatError('写作会话归属保存失败'); setChatBusy(false); return null }
+        setProjects((items) => items.map((item) => item.id === targetProjectId ? { ...item, writerSessionId: sessionId } : item))
         if (typeof sessions.open === 'function') { try { sessions.open(sessionId) } catch (error) { /* noop */ } }
-        flashBridgeNotice('✍ 已新建写作会话（mofei-writer）并打开——右窄条里和写作 Agent 对话吧')
-      } catch (failure) {
-        flashBridgeNotice('新建写作会话失败：' + String((failure && failure.message) || failure))
-      }
+        const snapshot = sessions.list.getSnapshot()
+        setChatSessionId(sessionId)
+        setChatSummary(snapshot && snapshot.byId && snapshot.byId[sessionId] || { agentPreset: 'mofei-writer' })
+        setChatBusy(false)
+        return sessionId
+      } catch (failure) { setChatBusy(false); setChatError('打开项目写作会话失败：' + String((failure && failure.message) || failure)); return null }
+    }
+    // 项目切换是写作会话切换。它从不复用或改写标准 DSH 开发会话。
+    React.useEffect(() => {
+      let alive = true
+      if (!open || !projectId) { setChatSessionId(''); setChatSummary(null); setChatSnap(null); setAgentContextBound(false); return undefined }
+      activateProjectWriterSession(projectId, false).then((sessionId) => {
+        if (!alive || !sessionId) return
+        setChatHint('')
+      })
+      return () => { alive = false }
+    }, [open, projectId])
+    async function newChatSession() {
+      if (!projectId) { setChatError('请先选择一本小说项目'); return }
+      await activateProjectWriterSession(projectId, true)
+    }
+    // 保留原入口，但它现在只会打开当前小说项目的专属写作会话。
+    async function enterWritingMode() {
+      if (!projectId) { flashBridgeNotice('请先在墨扉选择或新建一本小说项目'); return }
+      const sessionId = await activateProjectWriterSession(projectId, false)
+      if (sessionId) flashBridgeNotice('✍ 已打开《' + (project && project.title || '当前项目') + '》的专属写作会话')
     }
     // v7: 摘要维护面板
     function refreshSummaryPanel() {
@@ -1940,6 +2006,7 @@ export function createClient(require) {
       { id: 'mofei-writer', label: '/mofei:writer', hint: '把 Writer 写作任务发给当前 DSH 会话', run: () => { setPaletteOpen(false); setPaletteQuery(''); if (chapter) bridgeMention('writer') } },
       { id: 'mofei-reviewer', label: '/mofei:reviewer', hint: '把 Reviewer 审稿任务发给当前 DSH 会话', run: () => { setPaletteOpen(false); setPaletteQuery(''); if (chapter) bridgeMention('reviewer') } },
       { id: 'mofei-summary', label: '/mofei:summary', hint: '打开摘要面板', run: () => { setSummaryOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
+      { id: 'mofei-skills', label: '/mofei:skills', hint: '浏览已启用的 OpenFic 写作技能', run: () => { openWritingSkills(); setPaletteOpen(false); setPaletteQuery('') } },
       { id: 'mofei-style', label: '/mofei:style', hint: '打开风格视图（新建/编辑/预览/删除）', run: () => { setTab('styles'); setPaletteOpen(false); setPaletteQuery('') } },
       { id: 'mofei-retrieve', label: '/mofei:retrieve', hint: '打开检索视图（跨实体结构化 RAG）', run: () => { setTab('retrieve'); setPaletteOpen(false); setPaletteQuery('') } },
       { id: 'mofei-git-history', label: '/mofei:git-history', hint: '项目 git 历史 / 链版本 diff', run: () => { setPaletteOpen(false); setPaletteQuery(''); openGitHistory(null) } },
@@ -1951,10 +2018,8 @@ export function createClient(require) {
       { id: 'close-workbench', label: '退出墨扉', hint: '返回标准 DSH', run: () => { setPaletteOpen(false); setPaletteQuery(''); close() } },
     ]
     const filteredCommands = (mode === 'web' ? paletteCommands.filter((item) => item.id !== 'close-workbench') : paletteCommands).filter((item) => !paletteQuery.trim() || (item.label + ' ' + item.hint).toLowerCase().includes(paletteQuery.toLowerCase()))
-    // v0.14.1: 写作状态（当前 DSH 会话的 agent preset）
-    const writingSession = !!(chatSummary && chatSummary.agentPreset === 'mofei-writer')
-    const blankSession = !chatSessionId || !!(chatSummary && chatSummary.blank)
-    const writerSessions = chatSessionList.ids.map((id) => ({ id, summary: chatSessionList.byId[id] || {} })).filter((item) => item.summary.agentPreset === 'mofei-writer').slice(0, 30)
+    // 写作状态只认当前小说项目持有的会话，绝不从全局 DSH 会话列表借用开发会话。
+    const writingSession = !!(project && project.writerSessionId && project.writerSessionId === chatSessionId && chatSummary && chatSummary.agentPreset === 'mofei-writer')
     if (!open) return null
     const label = status === 'saving' ? '正在保存' : status === 'unsaved' ? '未保存' : status === 'error' ? '需要处理' : '已保存'
     const volumesSorted = volumes
@@ -1972,23 +2037,18 @@ export function createClient(require) {
     }
     const mfChildren = [h('section', { className: 'mf-panel' + (mode === 'web' ? ' mf-view' : '') + (focus ? ' mf-focus' : ''), role: 'dialog', 'aria-label': '墨扉写作工作区' },
       h('header', { className: 'mf-head' },
-        h('div', null, h('strong', null, '墨扉'), h('small', null, project ? project.title + ' · ' + (project.currentStyle || currentStyle) : '写作工作台')),
-        h('span', { className: 'mf-eh-actions' },
-          mode === 'web' ? h('button', { className: 'mf-wstate' + (writingSession ? ' on' : ''), type: 'button', title: '只显示并切换墨扉写作会话', onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, writingSession ? '✍ 写作中' : blankSession ? '○ 空白会话' : '· 标准会话') : null,
-          mode === 'web' ? h('button', { className: 'mf-btn' + (writingSession ? '' : ' mf-primary'), type: 'button', title: writingSession ? '当前已是写作会话（mofei-writer）' : '让 AI 会话进入写作状态：空白会话原地切换；已开聊则新建 mofei-writer 写作会话', onClick: enterWritingMode }, writingSession ? '✍ 写作中' : '✍ 进入写作状态') : null,
-          styles.length ? h('label', { className: 'mf-stylebar' }, '风格', h('select', { value: project && project.currentStyle || currentStyle, onChange: (event) => changeStyle(event.target.value) }, styles.map((item) => h('option', { key: item.id, value: item.id }, item.name)))) : null,
-          h('button', { className: 'mf-btn', type: 'button', title: '命令面板（Ctrl+Shift+P）', onClick: () => setPaletteOpen(true) }, '命令'),
-          h('button', { className: 'mf-btn', type: 'button', onClick: () => setImportOpen(true) }, '导入 TXT'),
-          project ? h('button', { className: 'mf-btn', type: 'button', onClick: exportProjectTxt }, '导出 TXT') : null,
+        h('div', { className: 'mf-head-main' }, h('strong', null, '墨扉'), h('span', { className: 'mf-head-context', title: project ? project.title : '写作工作台' }, project ? project.title : '写作工作台')),
+        h('span', { className: 'mf-head-actions' },
+          mode === 'web' ? h('button', { className: 'mf-wstate' + (writingSession ? ' on' : ''), type: 'button', title: '只显示、切换或新建墨扉写作会话', onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, '写作助手') : null,
+          h('button', { className: 'mf-action-icon', type: 'button', title: '命令面板（Ctrl+Shift+P）', onClick: () => setPaletteOpen(true) }, '⋯'),
           mode === 'web' ? h('button', { className: 'mf-btn mf-primary', type: 'button', title: project ? '在当前项目新建章节' : '新建项目', onClick: () => { if (project) { setChapterForm(true); setTab('projects') } else { setProjectForm(true); setTab('projects') } } }, '＋ 新建') : null,
-          mode === 'web' && onCollapse ? h('button', { className: 'mf-btn', type: 'button', title: '收起墨扉，返回原版 web', onClick: onCollapse }, '✕ 收起') : null,
+          mode === 'web' && onCollapse ? h('button', { className: 'mf-action-icon', type: 'button', title: '收起墨扉，返回原版 web', onClick: onCollapse }, '×') : null,
           mode === 'web' ? null : h('button', { className: 'mf-close', type: 'button', onClick: close, title: '关闭' }, '×')),
         mode === 'web' && chatSessionsOpen ? h('div', { className: 'mf-writer-session-menu', role: 'menu', 'aria-label': '墨扉写作会话' },
-          h('h3', null, '写作会话'),
-          writerSessions.length ? writerSessions.map((item) => h('button', { key: item.id, className: 'mf-writer-session-item' + (item.id === chatSessionId ? ' on' : ''), type: 'button', role: 'menuitem', onClick: () => selectChatSession(item.id) },
-            h('span', { className: 'name' }, item.summary.title || '未命名写作会话'),
-            h('span', { className: 'time' }, fmtAgo(item.summary.updatedAt)))) : h('div', { className: 'mf-writer-session-empty' }, '暂无写作会话'),
-          h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => { newChatSession(); setChatSessionsOpen(false) } }, '＋ 新写作会话')) : null),
+          h('h3', null, project ? '《' + project.title + '》的写作会话' : '写作会话'),
+          project ? h('div', { className: 'mf-writer-session-item on' }, h('span', { className: 'name' }, writingSession ? '项目专属写作会话已打开' : '项目专属写作会话'), h('span', { className: 'time' }, writingSession ? 'mofei-writer' : '正在关联')) : h('div', { className: 'mf-writer-session-empty' }, '先选择一本小说项目'),
+          project ? h('button', { className: 'mf-btn', type: 'button', onClick: () => { enterWritingMode(); setChatSessionsOpen(false) } }, '打开项目会话') : null,
+          project ? h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => { newChatSession(); setChatSessionsOpen(false) } }, '＋ 新建本项目会话') : null) : null),
       h('div', { className: 'mf-body' + (dragAxis ? ' resizing' : '') + (chatOpen ? '' : ' no-chat'), style: { '--mf-left': layout.left + 'px', '--mf-middle': layout.middle + 'px' } },
         h('nav', { className: 'mf-activity', 'aria-label': '墨扉活动栏' },
           h('button', { className: 'mf-act' + (tab === 'projects' ? ' on' : ''), type: 'button', title: '项目', onClick: () => setTab('projects') }, '▤', h('span', null, '项目')),
@@ -2103,7 +2163,8 @@ export function createClient(require) {
             h('div', { className: 'mf-empty' }, '笔记树：两级分类 · 锁定=Agent 不可改')
           ),
           mode === 'web' ? h('div', { className: 'mf-mininav' },
-            [['projects', '▤', '项目'], ['retrieve', '⌕', '检索'], ['characters', '☺', '角色'], ['world', '◈', '世界'], ['notes', '☰', '笔记']].map((item) => h('button', { key: item[0], type: 'button', className: tab === item[0] ? 'on' : '', onClick: () => setTab(item[0]) }, h('span', { className: 'ic' }, item[1]), item[2]))
+            [['projects', '▤', '项目'], ['retrieve', '⌕', '检索'], ['characters', '☺', '角色'], ['world', '◈', '世界'], ['notes', '☰', '笔记']].map((item) => h('button', { key: item[0], type: 'button', className: tab === item[0] ? 'on' : '', onClick: () => setTab(item[0]) }, h('span', { className: 'ic' }, item[1]), item[2])),
+            h('button', { type: 'button', className: skillsOpen ? 'on' : '', title: '写作技能与工作流', onClick: openWritingSkills }, h('span', { className: 'ic' }, '✦'), '技能')
           ) : null
         ),
         h('div', { className: 'mf-gutter' + (dragAxis === 'left' ? ' dragging' : ''), 'data-axis': 'left', role: 'separator', title: '拖动调整宽度', onPointerDown: startGutterDrag, onPointerMove: moveGutterDrag, onPointerUp: endGutterDrag, onPointerCancel: cancelGutterDrag, onDoubleClick: resetGutter }),
@@ -2171,8 +2232,7 @@ export function createClient(require) {
                 h('button', { className: 'mf-btn mf-primary', type: 'button', disabled: !styleDirty, onClick: saveStyleEditor }, '保存风格'),
                 h(MiniButton, { label: '×', danger: true, armed: armed && armed.kind === 'delete-style' && armed.id === selStyleId + ':' + styleScope, title: '删除该风格', onClick: () => deleteStyleItem(selStyleId, styleScope) })))
             : h('div', { className: 'mf-empty' }, '在左侧选择风格文件编辑，或点「+ 新建」。'))
-          : h('div', null,
-            h('div', { className: 'mf-eh' }, h('span', null, chapter ? chapter.title : '正文编辑器'), h('span', { className: 'mf-eh-actions' }, chapter ? h(MiniButton, { label: showHistory ? '收起历史' : '历史', title: '章节历史版本', onClick: () => setShowHistory(!showHistory) }) : null, project ? h(MiniButton, { label: '摘要', title: '摘要维护面板', on: summaryOpen, onClick: () => summaryOpen ? setSummaryOpen(false) : openSummaryPanel() }) : null, project ? h(MiniButton, { label: '链', title: 'Prompt Chains 提示词链', on: chainsOpen, onClick: () => chainsOpen ? setChainsOpen(false) : openPromptChains() }) : null, chapter ? h(MiniButton, { label: '送章', title: '把本章提及发送到当前 DSH 会话', onClick: () => bridgeMention('chapter') }) : null, chapter ? h(MiniButton, { label: '送选中', title: '把选中文本提及发送到当前 DSH 会话', onClick: () => bridgeMention('selection') }) : null, mode === 'web' && latestAssistantText() ? h(MiniButton, { label: '⌄ 插入回复', title: '把 Agent 最新回复插入正文光标处', onClick: insertLatestReply }) : null, mode === 'web' && chatSnap ? h(MiniButton, { label: '📄 跳转提及', title: '跳到 Agent 最新回复提及的章节', onClick: jumpLatestMention }) : null, chapter ? h(MiniButton, { label: aiOpen ? '收起助手' : 'AI 助手', title: 'AI 写作助手', on: aiOpen, onClick: () => setAiOpen(!aiOpen) }) : null, bridgeNotice ? h('span', { className: 'mf-bridge-note', title: bridgeNotice }, bridgeNotice) : null, h(MiniButton, { label: focus ? '退出专注' : '专注', title: '专注模式', onClick: () => setFocus(!focus) }), h('span', { className: 'mf-status ' + status }, chapter ? label : ''))),
+          : h('div', { className: 'mf-editor-pane' },
             findOpen ? h('div', { className: 'mf-findbar' },
               h('input', { value: findQuery, placeholder: '查找…', onChange: (event) => updateFind(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter') findNext(); if (event.key === 'Escape') setFindOpen(false) } }),
               h('span', null, findMatches.length ? String(findIndex + 1) + '/' + String(findMatches.length) : '0/0'),
@@ -2186,19 +2246,6 @@ export function createClient(require) {
             error ? h('div', { className: 'mf-alert' }, h('div', null, error), conflict ? h('div', { className: 'mf-actions' }, h('button', { className: 'mf-btn', type: 'button', onClick: rebase }, '保留草稿继续'), h('button', { className: 'mf-btn', type: 'button', onClick: () => accept(conflict) }, '使用远端正文')) : null) : null,
             showHistory && chapter ? h('div', { className: 'mf-hist' }, h('div', { className: 'mf-hist-head' }, h('span', null, '历史版本（回滚将产生新修订）'), h('button', { className: 'mf-close', type: 'button', onClick: () => setShowHistory(false), title: '关闭' }, '×')), historyLoading ? h('div', { className: 'mf-empty' }, '正在加载…') : historyList.length ? historyList.map((item) => h('div', { key: item.revision, className: 'mf-hist-item' }, h('div', { className: 'mf-hist-meta' }, h('strong', null, 'r' + String(item.revision)), h('span', null, fmtTime(item.at) + ' · ' + String(item.chars) + ' 字')), h(MiniButton, { label: armed && armed.kind === 'rollback' && armed.id === String(item.revision) ? '确认回滚' : '回滚', danger: true, armed: armed && armed.kind === 'rollback' && armed.id === String(item.revision), title: '回滚到此版本', onClick: () => rollbackTo(item.revision) }))) : h('div', { className: 'mf-empty' }, '暂无历史版本')) : null,
             chapter ? h('input', { key: 'title-' + chapterId, className: 'mf-title-input', value: titleDraft, placeholder: '章节标题', spellCheck: false, onChange: (event) => setTitleDraft(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter') { event.preventDefault(); event.target.blur() } }, onBlur: () => commitTitle(), title: '章节标题' }) : null,
-            chapter ? h('div', { className: 'mf-mdtoolbar' },
-              h(MiniButton, { label: 'H2', title: '二级标题（选中多行或光标所在行）', onClick: () => applyMarkdown('h2') }),
-              h(MiniButton, { label: 'H3', title: '三级标题', onClick: () => applyMarkdown('h3') }),
-              h(MiniButton, { label: 'B', title: '加粗（选中文本）', onClick: () => applyMarkdown('bold') }),
-              h(MiniButton, { label: 'I', title: '斜体（选中文本）', onClick: () => applyMarkdown('italic') }),
-              h(MiniButton, { label: '•', title: '无序列表', onClick: () => applyMarkdown('list') }),
-              h(MiniButton, { label: '❝', title: '引用', onClick: () => applyMarkdown('quote') }),
-              h(MiniButton, { label: '⌄', title: '行内代码', onClick: () => applyMarkdown('inline') }),
-              h(MiniButton, { label: '{ }', title: '代码块', onClick: () => applyMarkdown('code') }),
-              h(MiniButton, { label: '—', title: '分隔线', onClick: () => applyMarkdown('hr') }),
-              h('span', { className: 'mf-sep' }),
-              h('span', { className: 'mf-status' }, 'Markdown：拖拽章节排序，选中文本后用工具条排版')
-            ) : null,
             chapter ? h('textarea', { className: 'mf-text', value: draft, spellCheck: true, placeholder: '开始写作…（Ctrl+S 保存正文，Ctrl+F 查找替换）', onScroll: saveScrollPos, onSelect: (event) => { setSelStart(event.target.selectionStart); setSelEnd(event.target.selectionEnd) }, onMouseUp: (event) => { setSelStart(event.target.selectionStart); setSelEnd(event.target.selectionEnd) }, onChange: (event) => { setDraft(event.target.value); if (!conflict) { setStatus('unsaved'); setError('') } }, onKeyDown: (event) => { const key = String(event.key).toLowerCase(); if ((event.ctrlKey || event.metaKey) && key === 's') { event.preventDefault(); saveChapter() } if ((event.ctrlKey || event.metaKey) && key === 'f') { event.preventDefault(); setFindOpen(true); updateFind(''); later(() => { const el = document.querySelector('.mf-findbar input'); if (el) el.focus() }, 60) } if (event.key === 'Tab' && !event.ctrlKey && !event.altKey && !event.metaKey) { event.preventDefault(); const el = event.target; const start = el.selectionStart || 0; const end = el.selectionEnd || start; const next = draft.slice(0, start) + '\u3000\u3000' + draft.slice(end); const caret = start + 2; setDraft(next); if (!conflict) { setStatus('unsaved'); setError('') } later(() => { const target = document.querySelector('textarea.mf-text'); if (target) { target.focus(); target.setSelectionRange(caret, caret) } }, 0) } } }) : h('div', { className: 'mf-empty' }, '选择章节后开始写作。'),
             aiOpen ? h('div', { className: 'mf-ai' },
               h('div', { className: 'mf-ai-head' },
@@ -2223,10 +2270,10 @@ export function createClient(require) {
             ) : null,
             h('div', { className: 'mf-foot' },
               mode === 'web'
-                ? h('span', { className: 'mf-stat' }, chapter ? h('span', null, countWords(draft) + ' 字') : null, chapter ? h('span', { className: 'mf-status ' + status }, '· ' + label) : null)
+                ? h('span', { className: 'mf-stat' }, chapter ? h('span', null, countWords(draft) + ' 字') : null, chapter ? h('span', { className: 'mf-status ' + status }, '· ' + label) : null, agentContextBound && chatSummary && chatSummary.agentPreset === 'mofei-writer' ? h('span', { className: 'mf-context-status', title: '当前项目和章节已关联到写作助手；它会按需读取精装上下文与最新修订。' }, '已关联写作助手') : null)
                 : h('span', { className: 'mf-stat' }, chapter ? countWords(draft) + ' 字' : '', project && project.goal ? ' · 目标 ' + String(project.goal) + '（' + String(Math.min(100, Math.round(projectChars / project.goal * 100))) + '%）' : '', stats ? ' · 今日 +' + String(stats.todayChars) + ' · 连续 ' + String(stats.streak) + ' 天 · 累计 ' + String(stats.totalChars) + ' 字' : ''),
               mode === 'web'
-                ? h('span', { className: 'mf-stat' }, stats ? [h('span', { key: 'today' }, '今日 +' + String(stats.todayChars)), h('span', { key: 'streak' }, '连续 ' + String(stats.streak) + ' 天'), h('span', { key: 'total' }, '累计 ' + String(stats.totalChars) + ' 字')] : null)
+                ? null
                 : h('span', { className: 'mf-eh-actions' }, h('button', { className: 'mf-btn', type: 'button', onClick: () => setJobListOpen(!jobListOpen) }, jobListOpen ? '收起任务' : '任务'), h('button', { className: 'mf-btn', type: 'button', onClick: () => setDashOpen(!dashOpen) }, dashOpen ? '收起记录' : '写作记录'), h('button', { className: 'mf-btn', type: 'button', onClick: () => setStatsOpen(!statsOpen) }, statsOpen ? '收起热力图' : '写作热力图'), h('button', { className: 'mf-btn mf-primary', type: 'button', disabled: !changed || status === 'saving' || !!conflict, onClick: saveChapter }, status === 'saving' ? '保存中' : '保存正文')))
             )
           ),
@@ -2305,6 +2352,7 @@ export function createClient(require) {
           h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => setWorldImportOpen(false) }, '完成'))
       )) : null,
       summaryOpen ? h(SummaryPanel, { open: true, onClose: () => setSummaryOpen(false), projectTitle: project ? project.title : '', chapterRows: summaryRows, ranges: summaryRanges, loading: summaryLoading, error: summaryError, busy: summaryBusy, progress: summaryProgress, result: summaryResult, onRegenerateChapter: (row) => runSummary('chapters', { chapterIds: [row.chapterId], force: true }, 'chapter', row.chapterId), onRegenerateRange: (range) => runSummary('ranges', { rangeIds: [range.id], force: true }, 'range', range.id), onGenerateChapters: () => runSummary('chapters', {}, 'chapters', null), onGenerateRanges: () => runSummary('ranges', {}, 'ranges', null), onRefresh: refreshSummaryPanel }) : null,
+      skillsOpen ? h(WritingSkillsPanel, { open: true, onClose: () => setSkillsOpen(false), onOpenChains: projectId ? () => { setSkillsOpen(false); openPromptChains() } : null, skills: writingSkills, loading: skillsLoading, error: skillsError }) : null,
       chainsOpen ? h(PromptChainsPanel, { open: true, onClose: () => setChainsOpen(false), chains, activeChainId: chainActiveId, onSelect: setChainActiveId, busy: chainBusy, error: chainError, result: chainResult, lastPrompt: chainLastPrompt, onSave: handleSaveChain, onDelete: handleDeleteChain, onRun: handleRunChain, onHistory: (chain) => { if (chain && chain.id) openGitHistory(chain.id) } }) : null,
       dashOpen ? h(WritingDashboard, { open: true, onClose: () => setDashOpen(false), days: stats && stats.calendar ? stats.calendar : {} }) : null,
       gitHistOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.stopPropagation(); if (event.target === event.currentTarget) setGitHistOpen(false) } }, h('div', { className: 'mf-import-card' },

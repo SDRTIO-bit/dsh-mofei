@@ -30,6 +30,11 @@ const ok = (m) => console.log('PASS: ' + m)
     try { return JSON.parse(t) } catch (e) { return { raw: t.slice(0, 80) } }
   }, { method, payload })
   const val = (j) => (j && j.result && j.result.value) || (j && j.value) || j
+  const mofei = (method, args) => page.evaluate(async ({ method, args }) => {
+    const r = await fetch('/api/mofei', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ method, args: args || {} }) })
+    const t = await r.text()
+    try { return JSON.parse(t) } catch (e) { return { raw: t.slice(0, 80) } }
+  }, { method, args })
 
   // 1. 预设可挂载：create 直接带 agentPreset
   const created = val(await api('session.create', { agentPreset: 'mofei-writer' }))
@@ -37,12 +42,24 @@ const ok = (m) => console.log('PASS: ' + m)
   else fail('预设挂载失败: ' + JSON.stringify(created).slice(0, 160))
   const sid = created.sessionId
 
-  // 2. 发消息问身份
-  const promptRes = val(await api('session.prompt', { sessionId: sid, mode: 'queue', content: [{ type: 'text', text: '请只回答一句话：你是谁？你的职责是什么？' }] }))
+  // 2. 写作工作台绑定的是实际 DSH session；Agent 不接收可见的“送章”消息。
+  const stamp = String(Date.now()).slice(-6)
+  const projectTitle = '自动联动验证-' + stamp
+  const chapterTitle = '当前章节-' + stamp
+  const projectResult = val(await mofei('create-project', { title: projectTitle }))
+  const project = projectResult && projectResult.project
+  const chapterResult = project && val(await mofei('create-chapter', { projectId: project.id, title: chapterTitle }))
+  const chapter = chapterResult && chapterResult.chapter
+  const bound = project && chapter && val(await mofei('bind-agent-context', { sessionId: sid, projectId: project.id, chapterId: chapter.id }))
+  if (bound && bound.bound && bound.project && bound.project.id === project.id && bound.chapter && bound.chapter.id === chapter.id) ok('当前项目/章节已后台绑定到 mofei-writer 会话')
+  else fail('上下文绑定失败: ' + JSON.stringify(bound).slice(0, 180))
+
+  // 3. 发消息验证 persona 与绑定上下文。唯一名称无法由模型猜出，必须通过专用工具读取。
+  const promptRes = val(await api('session.prompt', { sessionId: sid, mode: 'queue', content: [{ type: 'text', text: '请先使用 mofei_get-active-context，然后只回答一句话：你是谁，以及当前打开的项目和章节名称。' }] }))
   if (promptRes && promptRes.accepted) ok('prompt 已入队')
   else fail('prompt 失败: ' + JSON.stringify(promptRes).slice(0, 120))
 
-  // 3. 轮询 history 等回复（最多 150s）
+  // 4. 轮询 history 等回复（最多 150s）
   let reply = ''
   for (let i = 0; i < 30; i++) {
     await sleep(5000)
@@ -56,7 +73,8 @@ const ok = (m) => console.log('PASS: ' + m)
       if (type !== 'assistant/message') continue
       const d = ev && ev.data || {}
       const blocks = d.message && d.message.content || []
-      if (Array.isArray(blocks)) blocks.forEach((b) => { if (b && b.text) texts.push(String(b.text)) })
+      // DSH 会把模型内部 reasoning 与最终回复都放在带 text 字段的块中；只验最终 text 块。
+      if (Array.isArray(blocks)) blocks.forEach((b) => { if (b && b.type === 'text' && b.text) texts.push(String(b.text)) })
     }
     reply = texts.join(' ').trim()
     if (reply) break
@@ -68,14 +86,17 @@ const ok = (m) => console.log('PASS: ' + m)
     const isCoding = /(?:我是|I am).{0,24}(?:coding|编程|代码).{0,24}(?:agent|助手)/i.test(reply)
     if (isWriter && !isCoding) ok('回复 persona = 写作助手（隔离生效）')
     else fail('persona 异常: writer=' + isWriter + ' coding=' + isCoding)
+    if (reply.includes(projectTitle) && reply.includes(chapterTitle)) ok('写作助手通过 mofei_get-active-context 取得当前项目与章节')
+    else fail('写作助手未返回已绑定上下文: ' + reply.slice(0, 260))
   }
 
-  // 4. 工具目录隔离（通过模型自述工具清单验证成本高，这里用会话完成状态 + 不触发 coding 工具作为旁证）
+  // 5. 工具目录隔离（通过模型自述工具清单验证成本高，这里用会话完成状态 + 不触发 coding 工具作为旁证）
   const listRes = val(await api('session.list', {}))
   const row = ((listRes && listRes.items) || []).find((s) => s.sessionId === sid)
   if (row && row.agentPreset === 'mofei-writer') ok('会话列表中该会话标记 mofei-writer')
   else fail('会话标记异常: ' + JSON.stringify(row).slice(0, 120))
 
+  if (project && project.id) await mofei('delete-project', { projectId: project.id })
   await browser.close()
   console.log(failures === 0 ? '== V0.14.2 WRITING-ISOLATION ALL PASS ==' : failures + ' FAILURES')
   process.exit(failures === 0 ? 0 : 1)

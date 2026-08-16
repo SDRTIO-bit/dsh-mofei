@@ -1,4 +1,4 @@
-// 布局几何检查（v0.14 变形金刚形态）：默认 = 原版 web 完整；变形 = 官方窄条 + 墨扉工作台 + 右气泡
+// 布局几何检查（v0.14 变形工作态）：默认 = 原版 web 完整；变形 = 墨扉工作台 + DSH 助手 + 右侧 DSH 窄轨
 const { chromium } = require('C:/Users/zhao/AppData/Roaming/npm/node_modules/@playwright/mcp/node_modules/playwright')
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 ;(async () => {

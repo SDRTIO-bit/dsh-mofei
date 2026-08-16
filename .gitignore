@@ -6,6 +6,9 @@ node_modules/
 # Local tooling, logs, and transient diagnostics
 /.codegraph/
 /.omo/
+/.jez/
+/.playwright-cli/
+/output/
 *.log
 *.tmp
 /probe-*.cjs

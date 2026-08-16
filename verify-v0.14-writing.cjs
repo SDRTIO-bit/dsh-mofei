@@ -1,7 +1,7 @@
 // v0.14.1 验收（写作状态线）：让 AI 会话进入写作状态（mofei-writer 预设）。
 // ① 官方 API：空白会话 agentPreset.select 原地切换（与墨扉按钮同一条服务端路径）
 // ② 官方 API：session.create({agentPreset:'mofei-writer'}) 直接建写作会话
-// ③ UI：工作台顶栏徽标（当前会话已是写作会话）+ 重复点击提示
+// ③ UI：工作台顶栏写作会话入口仅显示/切换 mofei-writer 会话。
 const { chromium } = require('C:/Users/zhao/AppData/Roaming/npm/node_modules/@playwright/mcp/node_modules/playwright')
 const BASE = process.env.MOFEI_BASE || 'http://127.0.0.1:3088'
 let failures = 0
@@ -23,7 +23,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     try { return JSON.parse(text) } catch (e) { return { raw: text.slice(0, 80), status: r.status } }
   }, { method, payload })
 
-  // ① 空白会话原地切换（服务端路径 = 墨扉「✍ 进入写作状态」的 select 分支）
+  // ① 空白会话原地切换（服务端路径 = 写作会话 selector 的 select 分支）
   const created = await api('session.create', {})
   const cval = (created && created.result && created.result.value) || (created && created.value) || created
   if (cval && cval.sessionId) ok('官方 API 创建空白会话（' + cval.sessionId.slice(0, 10) + '…）')
@@ -39,7 +39,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   if (dval && dval.agentPreset === 'mofei-writer') ok('session.create 直接建写作会话（agentPreset=mofei-writer）')
   else fail('direct create 失败: ' + JSON.stringify(direct).slice(0, 160))
 
-  // ③ UI：徽标 + 按钮 + 重复点击提示
+// ③ UI：写作会话入口。项目专属会话的完整隔离由 verify-v0.15-project-sessions.cjs 覆盖。
   await page.locator('.mf-orb').click()
   await sleep(900)
   const badge = await page.evaluate(() => {
@@ -47,31 +47,22 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
     const btn = Array.from(document.querySelectorAll('.mf-head button')).map((b) => b.textContent.trim()).find((t) => t.includes('写作'))
     return { badge: el ? el.textContent.trim() : null, btn: btn || null }
   })
-  if (badge.badge === '✍ 写作中') ok('顶栏徽标「✍ 写作中」（当前会话已是写作会话）')
-  else ok('当前会话徽标: ' + JSON.stringify(badge) + '（非写作会话时显示空白/标准亦可）')
+  if (badge.badge === '写作助手') ok('顶栏显示单一「写作助手」会话入口')
+  else fail('写作会话入口异常: ' + JSON.stringify(badge))
   if (badge.btn && badge.btn.includes('写作')) ok('写作状态按钮存在')
   else fail('按钮缺失: ' + JSON.stringify(badge))
   await page.locator('.mf-wstate').click()
   await sleep(150)
   const writerMenu = await page.locator('.mf-writer-session-menu').count()
   const writerRows = await page.locator('.mf-writer-session-item').count()
-  if (writerMenu === 1 && writerRows >= 2) ok('写作会话菜单仅提供 mofei-writer 会话（' + writerRows + ' 个）')
+  if (writerMenu === 1 && writerRows <= 1) ok('写作会话入口不再列出全局 DSH 会话（' + writerRows + ' 个当前项目行）')
   else fail('写作会话菜单异常: menu=' + writerMenu + ' rows=' + writerRows)
   await page.locator('.mf-wstate').click()
-  // 已是写作会话 → 点按钮提示
-  if (badge.badge === '✍ 写作中') {
-    await page.locator('.mf-head button', { hasText: '写作中' }).click()
-    await sleep(800)
-    const note = await page.evaluate(() => { const n = document.querySelector('.mf-bridge-note'); return n ? n.textContent.trim() : null })
-    if (note && note.includes('已是写作会话')) ok('重复点击提示「已是写作会话」')
-    else fail('提示异常: ' + note)
-  }
-
   // 还原
-  await page.locator('.mf-head button', { hasText: '收起' }).click()
+  await page.locator('.mf-head button[title="收起墨扉，返回原版 web"]').click()
   await sleep(700)
   const restored = await page.evaluate(() => !document.body.classList.contains('mf-transform'))
-  if (restored) ok('「✕ 收起」还原原版 web')
+  if (restored) ok('收起图标还原原版 web')
   else fail('还原失败')
 
   await browser.close()
