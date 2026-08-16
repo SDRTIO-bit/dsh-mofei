@@ -308,13 +308,19 @@ export default {
     }
 
     // v10: 文件优先镜像。JSON 仍是运行缓存/兼容层；文件树是用户可直接查看编辑、可 git 管理的正式形态。
+    // v0.18: 项目级 rootDir（小说文件夹）——有 rootDir 的项目实体文件写/读 rootDir，否则工作区 .mofei/projects/<id>。
     const mofeiFileRoot = path.join(cwd, '.mofei')
+    function projectFileBase(project) {
+      if (project && typeof project.rootDir === 'string' && project.rootDir.trim()) return path.resolve(project.rootDir.trim())
+      return path.join(mofeiFileRoot, 'projects', safeFileSegment(project && project.id, 'project'))
+    }
     function safeFileSegment(value, fallback) { const raw = String(value || fallback).replace(/[\\/:*?"<>|#%&{}$!'@+`=]/g, '-').replace(/\s+/g, '-').slice(0, 80); return raw || fallback }
     function frontmatter(meta) { return '---\n' + Object.entries(meta).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join('\n') + '\n---\n' }
     function styleMeta(project) { return { id: project.id, title: project.title || '未命名项目', description: project.description || '', goal: project.goal || 0, currentStyle: project.currentStyle || 'default', writerSessionId: projectWriterSessionId(project) || null } }
     async function writeMofeiFile(relative, content) {
       if (String(cwd).startsWith('virtual-root')) return
-      const target = path.join(mofeiFileRoot, relative)
+      // v0.18: 绝对路径 = rootDir 项目直接写入；相对路径 = 工作区 .mofei 下
+      const target = path.isAbsolute(relative) ? relative : path.join(mofeiFileRoot, relative)
       // v0.15: 内容相同不重写——否则每次镜像都会刷新全部文件 mtime，
       // 触发 sync-status 轮询误判「外部编辑」→ reload-from-files → 镜像 → 无限 ping-pong。
       try { if (await readFile(target, 'utf8') === content) return } catch (error) { /* 文件不存在 → 创建 */ }
@@ -325,25 +331,26 @@ export default {
       if (String(cwd).startsWith('virtual-root')) return
       await writeMofeiFile('zone.yml', 'active: true\nversion: 1\n')
       for (const project of store.projects) {
-        const base = path.posix.join('projects', safeFileSegment(project.id, 'project'))
-        await writeMofeiFile(path.posix.join(base, 'project.yml'), frontmatter(styleMeta(project)))
+        // v0.18: 项目级 rootDir（小说文件夹）或工作区 .mofei/projects/<id>
+        const base = projectFileBase(project)
+        await writeMofeiFile(path.join(base, 'project.yml'), frontmatter(styleMeta(project)))
         for (const volume of project.volumes || []) {
           const volDir = safeFileSegment(volume.id, volume.title || '卷')
           for (const chapter of project.chapters.filter((item) => item.volumeId === volume.id)) {
-            await writeMofeiFile(path.posix.join(base, 'chapters', volDir, `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`), frontmatter({ id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision, volumeId: chapter.volumeId || null }) + (chapter.content || ''))
+            await writeMofeiFile(path.join(base, 'chapters', volDir, `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`), frontmatter({ id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision, volumeId: chapter.volumeId || null }) + (chapter.content || ''))
           }
         }
         for (const chapter of project.chapters.filter((item) => !item.volumeId)) {
-          await writeMofeiFile(path.posix.join(base, 'chapters', `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`), frontmatter({ id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision, volumeId: null }) + (chapter.content || ''))
+          await writeMofeiFile(path.join(base, 'chapters', `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`), frontmatter({ id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision, volumeId: null }) + (chapter.content || ''))
         }
-        for (const character of project.characters || []) await writeMofeiFile(path.posix.join(base, 'characters', `${safeFileSegment(character.id, character.name || '角色')}.md`), frontmatter({ id: character.id, name: character.name, isFavorited: !!character.isFavorited }) + (character.description || ''))
-        for (const note of project.notes || []) await writeMofeiFile(path.posix.join(base, 'notes', `${safeFileSegment(note.id, note.title || '笔记')}.md`), frontmatter({ id: note.id, title: note.title, categoryId: note.categoryId || null, isLocked: !!note.isLocked, isHidden: !!note.isHidden }) + (note.content || ''))
-        for (const entry of project.worldEntries || []) await writeMofeiFile(path.posix.join(base, 'world', `${safeFileSegment(entry.id, entry.name || '条目')}.md`), frontmatter({ id: entry.id, name: entry.name, keys: normalizeKeys(entry.keys), isEnabled: entry.isEnabled !== false, constant: !!entry.constant, order: entry.order }) + (entry.content || ''))
+        for (const character of project.characters || []) await writeMofeiFile(path.join(base, 'characters', `${safeFileSegment(character.id, character.name || '角色')}.md`), frontmatter({ id: character.id, name: character.name, isFavorited: !!character.isFavorited }) + (character.description || ''))
+        for (const note of project.notes || []) await writeMofeiFile(path.join(base, 'notes', `${safeFileSegment(note.id, note.title || '笔记')}.md`), frontmatter({ id: note.id, title: note.title, categoryId: note.categoryId || null, isLocked: !!note.isLocked, isHidden: !!note.isHidden }) + (note.content || ''))
+        for (const entry of project.worldEntries || []) await writeMofeiFile(path.join(base, 'world', `${safeFileSegment(entry.id, entry.name || '条目')}.md`), frontmatter({ id: entry.id, name: entry.name, keys: normalizeKeys(entry.keys), isEnabled: entry.isEnabled !== false, constant: !!entry.constant, order: entry.order }) + (entry.content || ''))
         const chapterSummaries = (summaryStore.chapters && summaryStore.chapters || {})
-        for (const [chapterId, entry] of Object.entries(chapterSummaries)) if (entry && entry.summary) await writeMofeiFile(path.posix.join(base, 'summaries', 'chapters', `${safeFileSegment(chapterId, 'chapter')}.md`), frontmatter({ chapterId, updatedAt: entry.updatedAt || 0, chapterRevision: entry.chapterRevision || 0 }) + entry.summary)
-        for (const range of summaryStore.ranges || []) await writeMofeiFile(path.posix.join(base, 'summaries', 'ranges', `${safeFileSegment(range.id, 'range')}.md`), frontmatter({ id: range.id, title: range.title || range.id, chapterIds: range.chapterIds || [] }) + (range.summary || ''))
+        for (const [chapterId, entry] of Object.entries(chapterSummaries)) if (entry && entry.summary) await writeMofeiFile(path.join(base, 'summaries', 'chapters', `${safeFileSegment(chapterId, 'chapter')}.md`), frontmatter({ chapterId, updatedAt: entry.updatedAt || 0, chapterRevision: entry.chapterRevision || 0 }) + entry.summary)
+        for (const range of summaryStore.ranges || []) await writeMofeiFile(path.join(base, 'summaries', 'ranges', `${safeFileSegment(range.id, 'range')}.md`), frontmatter({ id: range.id, title: range.title || range.id, chapterIds: range.chapterIds || [] }) + (range.summary || ''))
         const chains = (chainStore.byProject && chainStore.byProject[project.id]) || []
-        for (const chain of chains) await writeMofeiFile(path.posix.join(base, 'chains', `${safeFileSegment(chain.id, chain.name || '链')}.md`), frontmatter({ id: chain.id, name: chain.name, updatedAt: chain.updatedAt || 0 }) + (chain.content || ''))
+        for (const chain of chains) await writeMofeiFile(path.join(base, 'chains', `${safeFileSegment(chain.id, chain.name || '链')}.md`), frontmatter({ id: chain.id, name: chain.name, updatedAt: chain.updatedAt || 0 }) + (chain.content || ''))
       }
       const styleDir = path.join(mofeiFileRoot, 'styles')
       await mkdir(styleDir, { recursive: true })
@@ -387,14 +394,14 @@ export default {
       return { meta, body }
     }
     function isVirtualRoot() { return String(cwd).startsWith('virtual-root') }
-    async function mofeiReadFile(relative) { return readFile(path.join(mofeiFileRoot, relative), 'utf8') }
+    async function mofeiReadFile(relative) { return readFile(path.isAbsolute(relative) ? relative : path.join(mofeiFileRoot, relative), 'utf8') }
     async function listMofeiMarkdown(relativeDir) {
       const out = []
       const walk = async (relative) => {
         let entries
-        try { entries = await readdir(path.join(mofeiFileRoot, relative), { withFileTypes: true }) } catch (error) { return }
+        try { entries = await readdir(path.isAbsolute(relative) ? relative : path.join(mofeiFileRoot, relative), { withFileTypes: true }) } catch (error) { return }
         for (const entry of entries) {
-          const child = path.posix.join(relative, entry.name)
+          const child = path.join(relative, entry.name)
           if (entry.isDirectory()) await walk(child)
           else if (entry.isFile() && entry.name.endsWith('.md')) out.push(child)
         }
@@ -418,11 +425,11 @@ export default {
       let sum = 0
       const walk = async (relative) => {
         let entries
-        try { entries = await readdir(path.join(mofeiFileRoot, relative), { withFileTypes: true }) } catch (error) { return }
+        try { entries = await readdir(path.isAbsolute(relative) ? relative : path.join(mofeiFileRoot, relative), { withFileTypes: true }) } catch (error) { return }
         for (const entry of entries) {
-          const child = path.posix.join(relative, entry.name)
+          const child = path.join(relative, entry.name)
           try {
-            const info = await stat(path.join(mofeiFileRoot, child))
+            const info = await stat(path.isAbsolute(child) ? child : path.join(mofeiFileRoot, child))
             const mtime = info.mtimeMs || 0
             count += 1; sum += mtime; if (mtime > max) max = mtime
           } catch (error) { /* 文件刚被删除则忽略 */ }
@@ -430,6 +437,12 @@ export default {
         }
       }
       await walk('projects')
+      // v0.18: rootDir 项目（小说文件夹）纳入变更检测
+      for (const project of store.projects) {
+        if (typeof project.rootDir === 'string' && project.rootDir.trim() && path.isAbsolute(project.rootDir)) {
+          await walk(path.resolve(project.rootDir.trim()))
+        }
+      }
       const value = count + ':' + max + ':' + sum
       fileStampCache = { at: now, value }
       return value
@@ -447,18 +460,16 @@ export default {
       const empty = () => ({ added: 0, updated: 0, conflicts: 0 })
       const report = { changed: false, projects: [], chapters: empty(), characters: empty(), notes: empty(), worldEntries: empty(), summaries: { updated: 0, conflicts: 0 }, chains: { updated: 0, conflicts: 0 }, nextId: store.nextId }
       if (isVirtualRoot()) return report
-      const projectsRoot = path.posix.join('projects')
-      let projectDirs = []
-      try { projectDirs = (await readdir(path.join(mofeiFileRoot, projectsRoot), { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort() } catch (error) { return report }
-      for (const dirName of projectDirs) {
-        const base = path.posix.join(projectsRoot, dirName)
+      const importProjectDir = async (base) => {
         let projectMeta = {}
-        try { projectMeta = parseFrontmatter(await mofeiReadFile(path.posix.join(base, 'project.yml'))).meta } catch (error) { continue }
-        const projectId = typeof projectMeta.id === 'string' && projectMeta.id ? projectMeta.id : dirName
+        try { projectMeta = parseFrontmatter(await mofeiReadFile(path.join(base, 'project.yml'))).meta } catch (error) { return }
+        const projectId = typeof projectMeta.id === 'string' && projectMeta.id ? projectMeta.id : path.basename(base)
         bumpNextId(projectId)
         let project = projectBy(projectId)
         if (!project) {
-          project = { id: projectId, title: text(projectMeta.title, '未命名项目'), description: typeof projectMeta.description === 'string' ? projectMeta.description : '', goal: typeof projectMeta.goal === 'number' && isFinite(projectMeta.goal) ? projectMeta.goal : 0, currentStyle: typeof projectMeta.currentStyle === 'string' && projectMeta.currentStyle ? projectMeta.currentStyle : 'default', writerSessionId: typeof projectMeta.writerSessionId === 'string' ? projectMeta.writerSessionId.trim() : '', chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
+          // v0.18: 工作区 projects 目录之外的 base 视为小说文件夹 rootDir
+          const inheritedRoot = path.dirname(base) === path.join(mofeiFileRoot, 'projects') ? '' : base
+          project = { id: projectId, title: text(projectMeta.title, '未命名项目'), description: typeof projectMeta.description === 'string' ? projectMeta.description : '', goal: typeof projectMeta.goal === 'number' && isFinite(projectMeta.goal) ? projectMeta.goal : 0, currentStyle: typeof projectMeta.currentStyle === 'string' && projectMeta.currentStyle ? projectMeta.currentStyle : 'default', writerSessionId: typeof projectMeta.writerSessionId === 'string' ? projectMeta.writerSessionId.trim() : '', ...(inheritedRoot ? { rootDir: inheritedRoot } : {}), chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
           store.projects.push(project)
           report.projects.push({ id: projectId, added: true })
           report.changed = true
@@ -478,7 +489,7 @@ export default {
         }
         // 章节：chapters/**/*.md（卷目录或平铺），frontmatter.id 为准，文件名仅作可读标签。
         const volumes = new Map((project.volumes || []).map((volume) => [volume.id, volume]))
-        for (const relative of await listMofeiMarkdown(path.posix.join(base, 'chapters'))) {
+        for (const relative of await listMofeiMarkdown(path.join(base, 'chapters'))) {
           const parsed = parseFrontmatter(await mofeiReadFile(relative))
           const id = typeof parsed.meta.id === 'string' && parsed.meta.id ? parsed.meta.id : path.basename(relative, '.md')
           bumpNextId(id)
@@ -512,7 +523,7 @@ export default {
           }
         }
         // 角色
-        for (const relative of await listMofeiMarkdown(path.posix.join(base, 'characters'))) {
+        for (const relative of await listMofeiMarkdown(path.join(base, 'characters'))) {
           const parsed = parseFrontmatter(await mofeiReadFile(relative))
           const id = typeof parsed.meta.id === 'string' && parsed.meta.id ? parsed.meta.id : path.basename(relative, '.md')
           bumpNextId(id)
@@ -531,7 +542,7 @@ export default {
           }
         }
         // 笔记
-        for (const relative of await listMofeiMarkdown(path.posix.join(base, 'notes'))) {
+        for (const relative of await listMofeiMarkdown(path.join(base, 'notes'))) {
           const parsed = parseFrontmatter(await mofeiReadFile(relative))
           const id = typeof parsed.meta.id === 'string' && parsed.meta.id ? parsed.meta.id : path.basename(relative, '.md')
           bumpNextId(id)
@@ -554,7 +565,7 @@ export default {
           }
         }
         // 世界书
-        for (const relative of await listMofeiMarkdown(path.posix.join(base, 'world'))) {
+        for (const relative of await listMofeiMarkdown(path.join(base, 'world'))) {
           const parsed = parseFrontmatter(await mofeiReadFile(relative))
           const id = typeof parsed.meta.id === 'string' && parsed.meta.id ? parsed.meta.id : path.basename(relative, '.md')
           bumpNextId(id)
@@ -577,10 +588,10 @@ export default {
           }
         }
         // 摘要：summaries/chapters/*.md 与 summaries/ranges/*.md
-        for (const relative of await listMofeiMarkdown(path.posix.join(base, 'summaries'))) {
+        for (const relative of await listMofeiMarkdown(path.join(base, 'summaries'))) {
           const parsed = parseFrontmatter(await mofeiReadFile(relative))
           const fileUpdatedAt = typeof parsed.meta.updatedAt === 'number' && isFinite(parsed.meta.updatedAt) ? parsed.meta.updatedAt : 0
-          const parts = relative.split('/')
+          const parts = relative.split(/[\\/]/)
           const kind = parts[parts.length - 2]
           if (kind === 'chapters') {
             const chapterId = typeof parsed.meta.chapterId === 'string' && parsed.meta.chapterId ? parsed.meta.chapterId : path.basename(relative, '.md')
@@ -601,7 +612,7 @@ export default {
           }
         }
         // 链：chains/*.md
-        for (const relative of await listMofeiMarkdown(path.posix.join(base, 'chains'))) {
+        for (const relative of await listMofeiMarkdown(path.join(base, 'chains'))) {
           const parsed = parseFrontmatter(await mofeiReadFile(relative))
           const id = typeof parsed.meta.id === 'string' && parsed.meta.id ? parsed.meta.id : path.basename(relative, '.md')
           bumpNextId(id)
@@ -619,6 +630,16 @@ export default {
             chainStore = { version: 1, byProject }
             report.chains.updated += 1; report.changed = true
           } else report.chains.conflicts += 1
+        }
+      }
+      // v0.18: 阶段 1 工作区 .mofei/projects/**；阶段 2 rootDir 项目（小说文件夹）
+      const projectsRoot = path.join(mofeiFileRoot, 'projects')
+      let projectDirs = []
+      try { projectDirs = (await readdir(projectsRoot, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort() } catch (error) { /* 尚无 projects 目录 */ }
+      for (const dirName of projectDirs) await importProjectDir(path.join(projectsRoot, dirName))
+      for (const project of store.projects.slice()) {
+        if (typeof project.rootDir === 'string' && project.rootDir.trim() && path.isAbsolute(project.rootDir)) {
+          await importProjectDir(path.resolve(project.rootDir.trim()))
         }
       }
       report.nextId = store.nextId
@@ -1281,7 +1302,7 @@ export default {
           if (fileRevision < storeRevision) return 'diverge-store'
           return 'synced'
         }
-        const base = path.posix.join('projects', safeFileSegment(project.id, 'project'))
+        const base = projectFileBase(project)
         const fileRevisionOf = async (relative) => {
           try { return parseFrontmatter(await mofeiReadFile(relative)).meta.revision } catch (error) { return null }
         }
@@ -1309,43 +1330,43 @@ export default {
           }
           return true
         }
-        push({ kind: 'project', id: project.id, file: path.posix.join(base, 'project.yml'), exists: true, status: 'synced', storeRevision: null, fileRevision: null })
+        push({ kind: 'project', id: project.id, file: path.join(base, 'project.yml'), exists: true, status: 'synced', storeRevision: null, fileRevision: null })
         for (const chapter of project.chapters) {
-          const file = path.posix.join(base, 'chapters', `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`)
+          const file = path.join(base, 'chapters', `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`)
           const fileRevision = await fileRevisionOf(file)
           push({ kind: 'chapter', id: chapter.id, title: chapter.title, file, exists: fileRevision !== null, fileRevision, storeRevision: chapter.revision, status: statusOf(fileRevision, chapter.revision) })
         }
         for (const character of project.characters || []) {
-          const file = path.posix.join(base, 'characters', `${safeFileSegment(character.id, character.name || '角色')}.md`)
+          const file = path.join(base, 'characters', `${safeFileSegment(character.id, character.name || '角色')}.md`)
           const parsed = await fileEntityOf(file)
           push({ kind: 'character', id: character.id, name: character.name, file, exists: parsed !== null, fileRevision: null, storeRevision: null, status: parsed === null ? 'missing-file' : syncedEntity(parsed, 'name', 'description', character) ? 'synced' : 'diverge-file' })
         }
         for (const note of project.notes || []) {
-          const file = path.posix.join(base, 'notes', `${safeFileSegment(note.id, note.title || '笔记')}.md`)
+          const file = path.join(base, 'notes', `${safeFileSegment(note.id, note.title || '笔记')}.md`)
           const parsed = await fileEntityOf(file)
           push({ kind: 'note', id: note.id, title: note.title, file, exists: parsed !== null, fileRevision: null, storeRevision: null, status: parsed === null ? 'missing-file' : syncedEntity(parsed, 'title', 'content', note) ? 'synced' : 'diverge-file' })
         }
         for (const entry of project.worldEntries || []) {
-          const file = path.posix.join(base, 'world', `${safeFileSegment(entry.id, entry.name || '条目')}.md`)
+          const file = path.join(base, 'world', `${safeFileSegment(entry.id, entry.name || '条目')}.md`)
           const parsed = await fileEntityOf(file)
           push({ kind: 'world', id: entry.id, name: entry.name, file, exists: parsed !== null, fileRevision: null, storeRevision: null, status: parsed === null ? 'missing-file' : syncedEntity(parsed, 'name', 'content', entry) ? 'synced' : 'diverge-file' })
         }
         const summaryEntries = summaryStore.chapters || {}
         for (const chapterId of Object.keys(summaryEntries)) {
           const entry = summaryEntries[chapterId]
-          const file = path.posix.join(base, 'summaries', 'chapters', `${safeFileSegment(chapterId, 'chapter')}.md`)
+          const file = path.join(base, 'summaries', 'chapters', `${safeFileSegment(chapterId, 'chapter')}.md`)
           let fileUpdatedAt = null
           try { fileUpdatedAt = parseFrontmatter(await mofeiReadFile(file)).meta.updatedAt } catch (error) { /* missing */ }
           push({ kind: 'chapter-summary', id: chapterId, file, exists: fileUpdatedAt !== null, fileRevision: fileUpdatedAt, storeRevision: entry.updatedAt, status: fileUpdatedAt === null ? 'missing-file' : fileUpdatedAt > entry.updatedAt ? 'diverge-file' : fileUpdatedAt < entry.updatedAt ? 'diverge-store' : 'synced' })
         }
         for (const range of summaryStore.ranges || []) {
-          const file = path.posix.join(base, 'summaries', 'ranges', `${safeFileSegment(range.id, 'range')}.md`)
+          const file = path.join(base, 'summaries', 'ranges', `${safeFileSegment(range.id, 'range')}.md`)
           let fileUpdatedAt = null
           try { fileUpdatedAt = parseFrontmatter(await mofeiReadFile(file)).meta.updatedAt } catch (error) { /* missing */ }
           push({ kind: 'range-summary', id: range.id, file, exists: fileUpdatedAt !== null, fileRevision: fileUpdatedAt, storeRevision: range.updatedAt, status: fileUpdatedAt === null ? 'missing-file' : fileUpdatedAt > range.updatedAt ? 'diverge-file' : fileUpdatedAt < range.updatedAt ? 'diverge-store' : 'synced' })
         }
         for (const chain of chainList(project.id)) {
-          const file = path.posix.join(base, 'chains', `${safeFileSegment(chain.id, chain.name || '链')}.md`)
+          const file = path.join(base, 'chains', `${safeFileSegment(chain.id, chain.name || '链')}.md`)
           let fileUpdatedAt = null
           try { fileUpdatedAt = parseFrontmatter(await mofeiReadFile(file)).meta.updatedAt } catch (error) { /* missing */ }
           push({ kind: 'chain', id: chain.id, name: chain.name, file, exists: fileUpdatedAt !== null, fileRevision: fileUpdatedAt, storeRevision: chain.updatedAt, status: fileUpdatedAt === null ? 'missing-file' : fileUpdatedAt > chain.updatedAt ? 'diverge-file' : fileUpdatedAt < chain.updatedAt ? 'diverge-store' : 'synced' })
@@ -1362,9 +1383,19 @@ export default {
       },
       'stats': async () => { await load(); await queue; return statsView() },
       'create-project': async (args) => mutate(async () => {
-        const project = { id: allocate('project'), title: text(args && args.title, '未命名项目'), description: text(args && args.description, ''), goal: 0, writerSessionId: '', chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
+        // v0.18: rootDir（小说文件夹）可选；绝对路径时该项目实体文件存 rootDir
+        const rootDir = typeof (args && args.rootDir) === 'string' ? args.rootDir.trim() : ''
+        const safeRoot = rootDir && path.isAbsolute(rootDir) ? path.resolve(rootDir) : ''
+        const project = { id: allocate('project'), title: text(args && args.title, '未命名项目'), description: text(args && args.description, ''), goal: 0, writerSessionId: '', ...(safeRoot ? { rootDir: safeRoot } : {}), chapters: [], volumes: [], characters: [], notes: [], noteCategories: [], worldEntries: [] }
         store.projects.push(project); await saveProjects(); return { project: projectView(project) }
       }),
+      // v0.18: 向导回显项目存储位置（rootDir 或工作区默认）
+      'get-project-root': async (args) => {
+        await load(); await queue
+        const project = projectBy(args && args.projectId)
+        if (!project) return { error: 'PROJECT_NOT_FOUND' }
+        return { projectId: project.id, rootDir: (typeof project.rootDir === 'string' && project.rootDir) ? project.rootDir : null, defaultRoot: path.join(mofeiFileRoot, 'projects', safeFileSegment(project.id, 'project')) }
+      },
       'create-chapter': async (args) => mutate(async () => {
         const project = projectBy(args && args.projectId)
         if (!project) return { error: 'PROJECT_NOT_FOUND' }

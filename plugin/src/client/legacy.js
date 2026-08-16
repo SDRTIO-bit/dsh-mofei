@@ -110,7 +110,7 @@ export function createClient(require) {
     // 工作态的阅读顺序固定为「墨扉工作台 | DSH 写作助手 | DSH 窄轨」。
     '.mf-bubble{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}',
     // 宽屏让原生 DSH composer 留在最右；空间不足时，优先完整保住写作区，只留下 DSH 窄轨供切回。
-    '.mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:min(calc(100% - 55px),max(920px,calc(100% - 55px - clamp(460px,31vw,520px))));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:#0d0e11;border-right:1px solid rgba(255,255,255,.08);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}',
+    '.mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:min(calc(100% - 55px),max(920px,calc(100% - 55px - clamp(460px,31vw,520px))));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--dsw-alias-bg-layer-1,#0d0e11);border-right:1px solid var(--dsw-alias-border-l1);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}',
     '.mf-bubble.on .mf-bubble-panel{transform:translateX(0)}',
     '.mf-orb{position:fixed;right:18px;bottom:18px;width:46px;height:46px;border:0;border-radius:50%;background:var(--dsw-alias-state-business-primary,#4d8dff);color:#fff;cursor:pointer;font:700 17px/1 sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:auto;z-index:95;transition:transform .2s ease,background .2s ease,opacity .2s ease}',
     '.mf-orb:hover{transform:scale(1.08)}.mf-orb.on{background:var(--dsw-alias-label-secondary,#6b6b74)}',
@@ -124,7 +124,7 @@ export function createClient(require) {
     // centerCol 与对话根之间隔着 display:contents 包装层，故用后代选择器而非直接子选择器。
     'body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:calc(100% - clamp(460px,31vw,520px)) !important;transition:padding-left .32s cubic-bezier(.22,.61,.36,1)}',
     // 右侧仍是官方 composer，只收紧容器并用同一套分隔线把它收为助手栏。
-    'body.mf-transform [class*="scrollBody"]{background:#101115;border-left:1px solid rgba(255,255,255,.08)}',
+    'body.mf-transform [class*="scrollBody"]{background:var(--dsw-alias-bg-layer-1,#101115);border-left:1px solid var(--dsw-alias-border-l1)}',
     'body.mf-transform [class*="composerSeat"]{padding:0 16px 18px !important}',
     'body.mf-transform [class*="composerHero"]{box-sizing:border-box;width:100%;max-width:100%;overflow:hidden;padding:20px 0 0}',
     'body.mf-transform [class*="composerHero"]>svg{display:none}',
@@ -135,13 +135,13 @@ export function createClient(require) {
     'body.mf-transform [class*="composerHero"] [class*="card"]{border-radius:8px !important;box-shadow:0 10px 28px rgba(0,0,0,.28)}',
     'body.mf-transform [class*="composerHero"] [class*="card"],body.mf-transform [class*="composerHero"] [class*="row"]{width:100%;max-width:100%}',
     // 墨扉工作台：扁平的目录、编辑器与 DSH 助手三栏，不使用悬浮卡片来分区。
-    '.mf-panel.mf-view{background:#0d0e11}.mf-panel.mf-view .mf-head{position:relative;height:56px;padding:0 20px;background:#111217;border-bottom-color:rgba(255,255,255,.08)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:#0d0e11}',
+    '.mf-panel.mf-view{background:var(--dsw-alias-bg-layer-1,#0d0e11)}.mf-panel.mf-view .mf-head{position:relative;height:56px;padding:0 20px;background:var(--dsw-alias-bg-layer-2,#111217);border-bottom-color:var(--dsw-alias-border-l1)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:var(--dsw-alias-bg-layer-1,#0d0e11)}',
     '.mf-panel.mf-view .mf-activity,.mf-panel.mf-view .mf-gutter,.mf-panel.mf-view .mf-col.mf-mid{display:none}',
-    '.mf-panel.mf-view .mf-col{width:286px;flex:none;border:0;border-right:1px solid rgba(255,255,255,.08);border-radius:0;background:#101115;overflow:hidden;box-shadow:none}',
-    '.mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:#0d0e11;overflow:hidden;box-shadow:none}',
+    '.mf-panel.mf-view .mf-col{width:286px;flex:none;border:0;border-right:1px solid var(--dsw-alias-border-l1);border-radius:0;background:var(--dsw-alias-bg-layer-1,#101115);overflow:hidden;box-shadow:none}',
+    '.mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:var(--dsw-alias-bg-base,#0d0e11);overflow:hidden;box-shadow:none}',
     '@media(max-width:1140px){.mf-panel.mf-view .mf-col{width:228px}.mf-panel.mf-view .mf-text{padding-inline:30px}}',
     '.mf-head-main{display:flex;align-items:center;gap:10px;min-width:0}.mf-head-main strong{font-size:15px;font-weight:680;letter-spacing:0}.mf-head-context{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}.mf-head-actions .mf-btn{min-height:30px}.mf-head-actions .mf-primary{padding-inline:11px}.mf-action-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-action-icon:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-head-actions .mf-stylebar{margin-right:6px}.mf-head-actions .mf-stylebar select{max-width:104px;border:0;background:transparent;padding:4px;color:var(--dsw-alias-label-secondary)}',
-    '.mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:#141416;border:1px solid rgba(255,255,255,.12);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}.mf-writer-session-menu .mf-btn.danger{color:#f87171;border-color:rgba(248,113,113,.3)}.mf-writer-session-menu-sep{height:1px;margin:8px 2px;background:var(--dsw-alias-border-l1)}.mf-writer-session-item .badge{flex:none;width:18px;text-align:center;color:var(--dsw-alias-state-success-primary,#55c98d);font-size:12px}',
+    '.mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:var(--dsw-alias-bg-overlay,#141416);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}.mf-writer-session-menu .mf-btn.danger{color:#f87171;border-color:rgba(248,113,113,.3)}.mf-writer-session-menu-sep{height:1px;margin:8px 2px;background:var(--dsw-alias-border-l1)}.mf-writer-session-item .badge{flex:none;width:18px;text-align:center;color:var(--dsw-alias-state-success-primary,#55c98d);font-size:12px}',
     // v0.13.1 预览对齐：迷你导航移入左内栏底部横排（此前为 col/editor 间竖向窄条）
     '.mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}',
     '.mf-panel.mf-view .mf-col > .mf-list{display:flex;flex-direction:column;gap:2px}',
@@ -171,6 +171,8 @@ export function createClient(require) {
     '.mf-sess-toggle{display:flex;align-items:center;gap:6px;width:100%;padding:7px 12px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:inherit;font-size:11.5px;flex:none}.mf-sess-toggle:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}',
     '.mf-sess-list{max-height:180px;overflow:auto;border-bottom:1px solid var(--dsw-alias-border-l1);padding:4px 6px 6px;display:flex;flex-direction:column;gap:1px;flex:none}.mf-sess-item{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:7px;cursor:pointer;font-size:11.5px;color:var(--dsw-alias-label-secondary)}.mf-sess-item:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-sess-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-sess-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-sess-item .time{font-size:9.5px;color:var(--dsw-alias-label-tertiary);flex:none}',
     '.mf-panel.mf-view .mf-chat-input{padding:8px 12px 12px;border-top:0}.mf-panel.mf-view .mf-chat-input textarea{border-radius:16px;background:var(--dsw-alias-bg-base);font-size:13px}',
+    // v0.18: 初始向导
+    '.mf-onboard{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}.mf-onboard-card{width:min(560px,calc(100vw - 40px));display:grid;gap:14px;padding:28px 30px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 26px 80px rgba(0,0,0,.5)}.mf-onboard-card h2{margin:0;font-size:18px}.mf-onboard-card p{margin:0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.7}.mf-onboard-folder{display:flex;gap:8px;align-items:center}.mf-onboard-folder input{flex:1;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1.4 sans-serif;outline:0}.mf-onboard-folder input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard input[type="text"]{box-sizing:border-box;width:100%;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:13px/1.4 sans-serif;outline:0}.mf-onboard input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}.mf-onboard-error{color:#f87171;font-size:12px}.mf-onboard-note{font-size:11.5px;color:var(--dsw-alias-label-secondary);line-height:1.6}',
   ].join('\n')
   let styleEl = null
   function ensureStyles() {
@@ -686,6 +688,14 @@ export function createClient(require) {
     const [chatSessionsOpen, setChatSessionsOpen] = React.useState(false)
     const [chatSessionList, setChatSessionList] = React.useState({ ids: [], byId: {} })
     const [agentContextBound, setAgentContextBound] = React.useState(false)
+    // v0.18: 初始向导（空白状态引导选择小说文件夹）+ 会话菜单自动弹出
+    const [onboardOpen, setOnboardOpen] = React.useState(false)
+    const [onboardFolder, setOnboardFolder] = React.useState('')
+    const [onboardTitle, setOnboardTitle] = React.useState('')
+    const [onboardBusy, setOnboardBusy] = React.useState(false)
+    const [onboardError, setOnboardError] = React.useState('')
+    const [onboardPicking, setOnboardPicking] = React.useState(false)
+    const autoSessionMenuRef = React.useRef(false)
     const chatBodyRef = React.useRef(null)
     // v0.10.1: 标签页增强（混开/固定/右键菜单/拖拽/滚动记忆）
     const [tabMenu, setTabMenu] = React.useState(null)
@@ -873,6 +883,29 @@ export function createClient(require) {
         }
         return result
       }).catch((failure) => { setError('操作失败'); console.error(failure); return null })
+    }
+    // v0.18: 初始向导——空白状态引导选择「小说文件夹」（后续所有文件保存在那里）
+    function pickOnboardFolder() {
+      if (onboardPicking) return
+      setOnboardPicking(true); setOnboardError('')
+      dshCall('host.pickDirectory', {}).then((picked) => {
+        setOnboardPicking(false)
+        if (typeof picked === 'string' && picked.trim()) setOnboardFolder(picked.trim())
+      }).catch((failure) => { setOnboardPicking(false); setOnboardError('选择文件夹失败：' + String((failure && failure.message) || failure)) })
+    }
+    function startOnboardProject() {
+      if (onboardBusy) return
+      const title = onboardTitle.trim() || '未命名小说'
+      setOnboardBusy(true); setOnboardError('')
+      call('create-project', { title, ...(onboardFolder ? { rootDir: onboardFolder } : {}) }).then((result) => {
+        setOnboardBusy(false)
+        if (result && result.project) {
+          setOnboardOpen(false)
+          setProjectId(result.project.id)
+          try { if (typeof localStorage !== 'undefined') localStorage['mofei.lastProject'] = result.project.id } catch (persistError) { /* noop */ }
+          reload()
+        } else setOnboardError((result && result.error) || '创建项目失败')
+      }).catch((failure) => { setOnboardBusy(false); setOnboardError('创建项目失败：' + String((failure && failure.message) || failure)) })
     }
     React.useEffect(() => {
       if (!open) return undefined
@@ -1170,6 +1203,32 @@ export function createClient(require) {
     function deleteCustomSkill(name) {
       call('delete-custom-skill', { name }).then(() => refreshSkillSettings()).catch(() => { /* noop */ })
     }
+    // v0.18: 空白状态 → 初始向导；有项目 → 关闭
+    React.useEffect(() => {
+      if (mode !== 'web' || loading) return
+      setOnboardOpen(!projects.length)
+    }, [mode, loading, projects])
+    // v0.18: 会话菜单自动弹出——打开墨菲且未绑定会话、存在历史会话时，直接可承接上次对话。
+    // 注意：chatSessionList 快照频繁更新，不能整对象作依赖（会清掉 later 定时器）——
+    // 用 ref 读取最新列表，依赖只含「列表是否非空」这一信号（冷启动快照为空，数据异步到达后触发一次）。
+    const chatSessionListRef = React.useRef(chatSessionList)
+    chatSessionListRef.current = chatSessionList
+    const sessionListNonEmpty = (chatSessionList.ids || []).length > 0
+    React.useEffect(() => {
+      if (chatSessionId) autoSessionMenuRef.current = false
+    }, [chatSessionId])
+    React.useEffect(() => {
+      if (mode !== 'web' || loading || chatSessionId) return undefined
+      if (autoSessionMenuRef.current) return undefined
+      const list = chatSessionListRef.current
+      const hasHistory = (Array.isArray(list.ids) ? list.ids : []).some((id) => {
+        const summary = list.byId && list.byId[id]
+        return summary && summary.origin !== 'subagent'
+      })
+      if (!hasHistory) return undefined
+      autoSessionMenuRef.current = true
+      return later(() => setChatSessionsOpen(true), 400)
+    }, [mode, loading, chatSessionId, sessionListNonEmpty])
     function handleSaveChain(input) {
       if (!projectId || chainBusy) return
       setChainBusy(true); setChainError('')
@@ -2155,7 +2214,7 @@ export function createClient(require) {
       h('header', { className: 'mf-head' },
         h('div', { className: 'mf-head-main' }, h('strong', null, '墨扉'), h('span', { className: 'mf-head-context', title: project ? project.title : '写作工作台' }, project ? project.title : '写作工作台')),
         h('span', { className: 'mf-head-actions' },
-          mode === 'web' ? h('button', { className: 'mf-wstate' + (writingSession ? ' on' : ''), type: 'button', title: '只显示、切换或新建墨扉写作会话', onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, '写作助手') : null,
+          mode === 'web' ? h('button', { className: 'mf-wstate' + (writingSession ? ' on' : ''), type: 'button', title: '选择/切换历史会话或新建写作会话', onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, '会话') : null,
           h('button', { className: 'mf-action-icon', type: 'button', title: '命令面板（Ctrl+Shift+P）', onClick: () => setPaletteOpen(true) }, '⋯'),
           mode === 'web' ? h('button', { className: 'mf-btn mf-primary', type: 'button', title: project ? '在当前项目新建章节' : '新建项目', onClick: () => { if (project) { setChapterForm(true); setTab('projects') } else { setProjectForm(true); setTab('projects') } } }, '＋ 新建') : null,
           mode === 'web' && onCollapse ? h('button', { className: 'mf-action-icon', type: 'button', title: '收起墨扉，返回原版 web', onClick: onCollapse }, '×') : null,
@@ -2515,7 +2574,20 @@ export function createClient(require) {
       paletteOpen ? h('div', { className: 'mf-palette', onMouseDown: (event) => event.stopPropagation() },
         h('input', { value: paletteQuery, placeholder: '墨扉命令…（新建项目/摘要/链/写作记录/退出）', autoFocus: true, onChange: (event) => setPaletteQuery(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter' && filteredCommands[0]) filteredCommands[0].run(); if (event.key === 'Escape') setPaletteOpen(false) } }),
         filteredCommands.length ? filteredCommands.map((item) => h('button', { key: item.id, className: 'mf-palette-item', type: 'button', onClick: () => item.run() }, item.label, h('small', null, item.hint))) : h('div', { className: 'mf-empty' }, '无匹配命令')
-      ) : null
+      ) : null,
+      // v0.18: 初始向导（空白状态引导选择小说文件夹）
+      mode === 'web' && onboardOpen ? h('div', { className: 'mf-onboard', role: 'presentation' },
+        h('div', { className: 'mf-onboard-card', role: 'dialog', 'aria-label': '开始写作' },
+          h('h2', null, '开始你的第一本小说'),
+          h('p', null, '先选择一个小说的存放文件夹——之后这本小说的全部内容（章节、角色、世界书、笔记、链）都会保存在那里。'),
+          h('div', { className: 'mf-onboard-folder' },
+            h('input', { value: onboardFolder, placeholder: '尚未选择文件夹（留空则使用默认位置）', readOnly: true, onChange: () => {} }),
+            h('button', { className: 'mf-btn', type: 'button', disabled: onboardPicking, onClick: pickOnboardFolder }, onboardPicking ? '选择中…' : '选择文件夹')),
+          h('input', { type: 'text', value: onboardTitle, placeholder: '小说名（如：探案未至之境）', onChange: (event) => setOnboardTitle(event.target.value) }),
+          onboardError ? h('div', { className: 'mf-onboard-error' }, onboardError) : null,
+          h('div', { className: 'mf-onboard-note' }, '提示：也可以直接开始写作，之后仍可在命令面板中管理存放位置。'),
+          h('div', { className: 'mf-onboard-actions' },
+            h('button', { className: 'mf-btn mf-primary', type: 'button', disabled: onboardBusy, onClick: startOnboardProject }, onboardBusy ? '创建中…' : '开始写作')))) : null
     ]
     // v0.12: 官方 web conversation.view 标签 → 内联渲染；侧栏入口 → overlay
     if (mode === 'web') return h('div', { className: 'mf-view-root' }, mfChildren)

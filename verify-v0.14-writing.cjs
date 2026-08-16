@@ -44,20 +44,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
   await sleep(900)
   const badge = await page.evaluate(() => {
     const el = document.querySelector('.mf-wstate')
-    const btn = Array.from(document.querySelectorAll('.mf-head button')).map((b) => b.textContent.trim()).find((t) => t.includes('写作'))
-    return { badge: el ? el.textContent.trim() : null, btn: btn || null }
+    return { badge: el ? el.textContent.trim() : null, btn: el ? el.textContent.trim() : null }
   })
-  if (badge.badge === '写作助手') ok('顶栏显示单一「写作助手」会话入口')
+  if (badge.badge === '会话') ok('顶栏显示单一「会话」入口（全部会话 + 项目写作会话）')
   else fail('写作会话入口异常: ' + JSON.stringify(badge))
-  if (badge.btn && badge.btn.includes('写作')) ok('写作状态按钮存在')
+  if (badge.btn && badge.btn.includes('会话')) ok('会话入口按钮存在')
   else fail('按钮缺失: ' + JSON.stringify(badge))
-  await page.locator('.mf-wstate').click()
-  await sleep(150)
+  // v0.18: 菜单可能已被自动弹出（变形后未绑定会话时自动打开），点击前先确认状态
+  if (await page.locator('.mf-writer-session-menu').count() === 0) {
+    await page.locator('.mf-wstate').click()
+    await sleep(150)
+  }
   const writerMenu = await page.locator('.mf-writer-session-menu').count()
   const writerRows = await page.locator('.mf-writer-session-item').count()
-  if (writerMenu === 1 && writerRows <= 1) ok('写作会话入口不再列出全局 DSH 会话（' + writerRows + ' 个当前项目行）')
+  if (writerMenu === 1 && writerRows >= 1) ok('会话菜单列出项目写作会话与全局会话（' + writerRows + ' 行）')
   else fail('写作会话菜单异常: menu=' + writerMenu + ' rows=' + writerRows)
-  await page.locator('.mf-wstate').click()
+  if (await page.locator('.mf-writer-session-menu').count() > 0) {
+    await page.locator('.mf-wstate').click()
+    await sleep(100)
+  }
   // 还原
   await page.locator('.mf-head button[title="收起墨扉，返回原版 web"]').click()
   await sleep(700)

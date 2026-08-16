@@ -76,7 +76,10 @@ async function call(page, method, args) {
   await page.locator('.mf-proj', { hasText: PROJ }).first().click()
   await page.locator('.mf-wstate').first().waitFor({ state: 'visible', timeout: 10000 })
   await sleep(2500)
-  await page.locator('.mf-wstate').first().click()
+  // v0.18: 菜单可能已被自动弹出，幂等打开
+  if (await page.locator('.mf-writer-session-menu').count() === 0) {
+    await page.locator('.mf-wstate').first().click()
+  }
   await page.locator('.mf-writer-session-menu').waitFor({ state: 'visible', timeout: 5000 })
   const menuText = await page.locator('.mf-writer-session-menu').innerText()
   if (menuText.includes('全部会话')) ok('会话菜单含「全部会话」区')
@@ -92,7 +95,10 @@ async function call(page, method, args) {
   if (await exitBtn.count()) {
     await exitBtn.first().click()
     await sleep(600)
-    await page.locator('.mf-wstate').first().click()
+    // v0.18: 退出对话后菜单会自动重新弹出（未绑定+有历史），幂等打开
+    if (await page.locator('.mf-writer-session-menu').count() === 0) {
+      await page.locator('.mf-wstate').first().click()
+    }
     await page.locator('.mf-writer-session-menu').waitFor({ state: 'visible', timeout: 5000 })
     const afterText = await page.locator('.mf-writer-session-menu').innerText()
     if (afterText.includes('退出当前对话')) fail('退出后「退出当前对话」仍在（绑定未解除）')
