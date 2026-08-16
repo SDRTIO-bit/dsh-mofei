@@ -128,8 +128,10 @@ export function createClient(require) {
     'body.mf-transform [class*="composerSeat"]{padding:0 16px 18px !important}',
     'body.mf-transform [class*="composerHero"]{box-sizing:border-box;width:100%;max-width:100%;overflow:hidden;padding:20px 0 0}',
     'body.mf-transform [class*="composerHero"]>svg{display:none}',
-    'body.mf-transform [class*="composerHero"] [class*="headline"]{font-size:21px !important;line-height:1.35 !important;letter-spacing:0 !important}',
-    'body.mf-transform [class*="composerHero"] [class*="heroWorkspaceRow"]{margin-top:4px;padding:0 4px}',
+    // v0.17.1: 430px 窄条下头部压缩——标题单行截断，工作区行（Router Standard 下拉）不换行，避免重叠
+    'body.mf-transform [class*="composerHero"] [class*="headline"]{font-size:15px !important;line-height:1.3 !important;letter-spacing:0 !important;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    'body.mf-transform [class*="composerHero"] [class*="headlineText"]{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    'body.mf-transform [class*="composerHero"] [class*="heroWorkspaceRow"]{margin-top:2px;padding:0 2px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px !important;line-height:1.5 !important;color:var(--dsw-alias-label-secondary) !important}',
     'body.mf-transform [class*="composerHero"] [class*="card"]{border-radius:8px !important;box-shadow:0 10px 28px rgba(0,0,0,.28)}',
     'body.mf-transform [class*="composerHero"] [class*="card"],body.mf-transform [class*="composerHero"] [class*="row"]{width:100%;max-width:100%}',
     // 墨扉工作台：扁平的目录、编辑器与 DSH 助手三栏，不使用悬浮卡片来分区。
@@ -144,10 +146,13 @@ export function createClient(require) {
     '.mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}',
     '.mf-panel.mf-view .mf-col > .mf-list{display:flex;flex-direction:column;gap:2px}',
     '.mf-panel.mf-view .mf-mininav{flex:none;border-top:1px solid var(--dsw-alias-border-l1);padding:8px 10px}',
+    // v0.17.1: 迷你导航对比度提升（tertiary 在墨韵皮肤中过暗，视觉审查发现难读）
+    '.mf-panel.mf-view .mf-mininav button{color:var(--dsw-alias-label-secondary)}',
+    '.mf-panel.mf-view .mf-mininav button:hover{color:var(--dsw-alias-label-primary)}',
     '.mf-proj-list{display:flex;flex-direction:column;gap:4px;padding:0 2px 8px}',
     // v0.14.1 预览对齐：编辑区空态垂直居中、占位符对比度
-    '.mf-panel.mf-view .mf-editor-pane > .mf-empty{display:grid;flex:1;place-items:center;min-height:0;padding:24px;color:var(--dsw-alias-label-tertiary)}',
-    '.mf-panel.mf-view input::placeholder,.mf-panel.mf-view textarea::placeholder{color:var(--dsw-alias-label-tertiary)}',
+    '.mf-panel.mf-view .mf-editor-pane > .mf-empty{display:grid;flex:1;place-items:center;min-height:0;padding:24px;color:var(--dsw-alias-label-secondary)}',
+    '.mf-panel.mf-view input::placeholder,.mf-panel.mf-view textarea::placeholder{color:var(--dsw-alias-label-secondary)}',
     // 写作助手入口兼作会话隔离器：只展开 mofei-writer 会话，减少顶栏重复状态。
     '.mf-wstate{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px 8px;cursor:pointer;font:12px/1.2 sans-serif;white-space:nowrap}.mf-wstate::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--dsw-alias-label-tertiary)}.mf-wstate:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}.mf-wstate.on{color:var(--dsw-alias-label-primary)}.mf-wstate.on::before{background:var(--dsw-alias-state-success-primary,#55c98d);box-shadow:0 0 0 3px rgba(85,201,141,.12)}',
     // v0.13.1 预览对齐：左栏行操作 hover 才显现（静止态 = 极简，功能不丢）
