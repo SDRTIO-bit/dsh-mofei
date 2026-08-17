@@ -2026,7 +2026,7 @@ function createClient(require2) {
     ".mf-panel.mf-focus .mf-body{grid-template-columns:minmax(0,1fr)}.mf-panel.mf-focus .mf-col,.mf-panel.mf-focus .mf-activity,.mf-panel.mf-focus .mf-gutter,.mf-panel.mf-focus .mf-chat{display:none}",
     "@media(max-width:760px){.mf-panel{width:100vw;height:100vh;margin:0;border:0;border-radius:0}.mf-body{grid-template-columns:48px 110px minmax(0,1fr)}.mf-body>.mf-col.mf-mid{display:none}.mf-gutter{display:none}.mf-chat{display:none}.mf-text{padding:18px 15px}.mf-head small{display:none}}",
     ".mf-standalone .mf-overlay{position:absolute;background:transparent}.mf-standalone .mf-panel{width:100vw;height:100vh;margin:0;border-radius:0;border:none}",
-    ".mf-palette{position:fixed;left:50%;top:90px;transform:translateX(-50%);width:min(620px,calc(100vw - 32px));max-height:420px;overflow:auto;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.35);z-index:130}.mf-palette input{box-sizing:border-box;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:transparent;color:inherit;font:inherit}.mf-palette-item{display:block;width:100%;padding:9px 12px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13px}.mf-palette-item:hover,.mf-palette-item.on{background:var(--dsw-alias-interactive-bg-hover)}.mf-palette-item small{display:block;margin-top:3px;color:var(--dsw-alias-label-secondary);font-size:11px}",
+    ".mf-palette{position:fixed;left:50%;top:72px;transform:translateX(-50%);width:min(620px,calc(100% - 24px));max-height:min(520px,calc(100vh - 96px));overflow:auto;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.35);z-index:130}.mf-palette-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-palette-head strong{font-size:13px;font-weight:680}.mf-palette-head small{display:block;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-palette-close{flex:0 0 auto;width:28px;height:28px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-palette-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-palette input{box-sizing:border-box;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:transparent;color:inherit;font:inherit}.mf-palette-item{display:block;width:100%;padding:9px 12px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13px}.mf-palette-item:hover,.mf-palette-item.on{background:var(--dsw-alias-interactive-bg-hover)}.mf-palette-item small{display:block;margin-top:3px;color:var(--dsw-alias-label-secondary);font-size:11px}",
     ".mf-stylebar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-stylebar select{font:inherit;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;padding:3px 6px}",
     ".mf-git{max-height:46vh;overflow:auto;border-bottom:1px solid var(--dsw-alias-border-l1);padding:8px 12px;display:grid;gap:6px}.mf-git pre{white-space:pre-wrap;font:11px/1.6 ui-monospace,Consolas,monospace;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-elevated,transparent);border:1px solid var(--dsw-alias-border-l1);border-radius:5px;padding:8px;margin:0;max-height:220px;overflow:auto}.mf-git-item{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:5px}.mf-git-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-git-item code{font:11px ui-monospace,Consolas,monospace;color:var(--dsw-alias-label-secondary)}",
     ".mf-git-diff{font:11px/1.6 ui-monospace,Consolas,monospace;max-height:240px;overflow:auto;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-elevated,transparent)}.mf-diff-line{white-space:pre-wrap;padding:0 6px}.mf-diff-add{color:#4ade80;background:rgba(74,222,128,.08)}.mf-diff-del{color:#f87171;background:rgba(248,113,113,.08)}.mf-diff-hunk{color:#60a5fa;background:rgba(96,165,250,.08)}.mf-diff-meta{color:var(--dsw-alias-label-secondary)}",
@@ -4013,6 +4013,10 @@ function createClient(require2) {
       setOpen(false);
       removeStyles();
     }
+    function closePalette() {
+      setPaletteOpen(false);
+      setPaletteQuery("");
+    }
     function rebase() {
       if (conflict) {
         updateView(conflict);
@@ -5329,8 +5333,9 @@ function createClient(require2) {
         if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === "P" || event.key === "p")) {
           event.preventDefault();
           setPaletteOpen(true);
+          setPaletteQuery("");
         } else if (event.key === "Escape") {
-          setPaletteOpen(false);
+          closePalette();
           setTabMenu(null);
         }
       };
@@ -5339,6 +5344,16 @@ function createClient(require2) {
         if (typeof window !== "undefined") window.removeEventListener("keydown", onKey);
       };
     }, [open]);
+    React.useEffect(() => {
+      if (!paletteOpen || typeof document === "undefined") return void 0;
+      const onPointerDown = (event) => {
+        const target = event.target;
+        if (target && target.closest && (target.closest(".mf-palette") || target.closest("[data-mf-palette-trigger]"))) return;
+        closePalette();
+      };
+      document.addEventListener("pointerdown", onPointerDown);
+      return () => document.removeEventListener("pointerdown", onPointerDown);
+    }, [paletteOpen]);
     function changeStyle(styleId) {
       setCurrentStyle(styleId);
       if (projectId) call("set-project-style", { projectId, styleId }).then(() => reload()).catch((failure) => {
@@ -5353,85 +5368,65 @@ function createClient(require2) {
         setPaletteOpen(false);
         setPaletteQuery("");
       } },
-      { id: "mofei-new-chapter", label: "/mofei:new-chapter", hint: "\u5728\u5F53\u524D\u9879\u76EE\u65B0\u5EFA\u7AE0\u8282", run: () => {
+      { id: "mofei-new-chapter", label: "\u65B0\u5EFA\u7AE0\u8282", hint: "\u5728\u5F53\u524D\u9879\u76EE\u65B0\u5EFA\u7AE0\u8282", run: () => {
         setChapterForm(true);
         setTab("projects");
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
-      { id: "mofei-writer", label: "/mofei:writer", hint: "\u628A Writer \u5199\u4F5C\u4EFB\u52A1\u53D1\u7ED9\u5F53\u524D DSH \u4F1A\u8BDD", run: () => {
-        setPaletteOpen(false);
-        setPaletteQuery("");
+      { id: "mofei-writer", label: "\u53D1\u9001 Writer \u4EFB\u52A1", hint: "\u628A\u5199\u4F5C\u4EFB\u52A1\u53D1\u7ED9\u5F53\u524D DSH \u4F1A\u8BDD", run: () => {
+        closePalette();
         if (chapter) bridgeMention("writer");
       } },
-      { id: "mofei-reviewer", label: "/mofei:reviewer", hint: "\u628A Reviewer \u5BA1\u7A3F\u4EFB\u52A1\u53D1\u7ED9\u5F53\u524D DSH \u4F1A\u8BDD", run: () => {
-        setPaletteOpen(false);
-        setPaletteQuery("");
+      { id: "mofei-reviewer", label: "\u53D1\u9001 Reviewer \u5BA1\u7A3F", hint: "\u628A\u5BA1\u7A3F\u4EFB\u52A1\u53D1\u7ED9\u5F53\u524D DSH \u4F1A\u8BDD", run: () => {
+        closePalette();
         if (chapter) bridgeMention("reviewer");
       } },
-      { id: "mofei-summary", label: "/mofei:summary", hint: "\u6253\u5F00\u6458\u8981\u9762\u677F", run: () => {
+      { id: "mofei-summary", label: "\u6253\u5F00\u6458\u8981", hint: "\u7EF4\u62A4\u7AE0\u8282\u548C\u533A\u95F4\u6458\u8981", run: () => {
         setSummaryOpen(true);
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
-      { id: "mofei-skills", label: "/mofei:skills", hint: "\u6D4F\u89C8\u5DF2\u542F\u7528\u7684 OpenFic \u5199\u4F5C\u6280\u80FD", run: () => {
+      { id: "mofei-skills", label: "\u5199\u4F5C\u6280\u80FD", hint: "\u6D4F\u89C8\u5DF2\u542F\u7528\u7684 OpenFic \u5199\u4F5C\u6280\u80FD", run: () => {
         openWritingSkills();
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
-      { id: "mofei-style", label: "/mofei:style", hint: "\u6253\u5F00\u98CE\u683C\u89C6\u56FE\uFF08\u65B0\u5EFA/\u7F16\u8F91/\u9884\u89C8/\u5220\u9664\uFF09", run: () => {
+      { id: "mofei-style", label: "\u5199\u4F5C\u98CE\u683C", hint: "\u65B0\u5EFA\u3001\u7F16\u8F91\u3001\u9884\u89C8\u6216\u5220\u9664\u6587\u98CE", run: () => {
         setTab("styles");
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
-      { id: "mofei-retrieve", label: "/mofei:retrieve", hint: "\u6253\u5F00\u68C0\u7D22\u89C6\u56FE\uFF08\u8DE8\u5B9E\u4F53\u7ED3\u6784\u5316 RAG\uFF09", run: () => {
+      { id: "mofei-retrieve", label: "\u8DE8\u9879\u76EE\u68C0\u7D22", hint: "\u641C\u7D22\u89D2\u8272\u3001\u7B14\u8BB0\u3001\u4E16\u754C\u4E66\u548C\u7AE0\u8282", run: () => {
         setTab("retrieve");
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
-      { id: "mofei-git-history", label: "/mofei:git-history", hint: "\u9879\u76EE git \u5386\u53F2 / \u94FE\u7248\u672C diff", run: () => {
-        setPaletteOpen(false);
-        setPaletteQuery("");
+      { id: "mofei-git-history", label: "\u9879\u76EE\u7248\u672C\u5386\u53F2", hint: "\u67E5\u770B\u9879\u76EE Git \u5386\u53F2\u548C\u94FE\u7248\u672C\u5DEE\u5F02", run: () => {
+        closePalette();
         openGitHistory(null);
       } },
-      { id: "mofei-jobs", label: "/mofei:jobs", hint: "\u6253\u5F00\u540E\u53F0\u4EFB\u52A1\u5217\u8868\uFF08\u53EF\u53D6\u6D88\uFF09", run: () => {
+      { id: "mofei-jobs", label: "\u540E\u53F0\u4EFB\u52A1", hint: "\u67E5\u770B\u6216\u53D6\u6D88\u6458\u8981\u7B49\u957F\u4EFB\u52A1", run: () => {
         setJobListOpen(true);
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
-      { id: "open-summary", label: "\u6458\u8981\u9762\u677F", hint: "\u7AE0\u8282/\u533A\u95F4\u6458\u8981\u7EF4\u62A4", run: () => {
-        setSummaryOpen(true);
-        setPaletteOpen(false);
-        setPaletteQuery("");
-      } },
-      { id: "open-chains", label: "Prompt Chains", hint: "\u6253\u5F00\u63D0\u793A\u8BCD\u94FE", run: () => {
+      { id: "open-chains", label: "\u63D0\u793A\u8BCD\u94FE", hint: "\u6253\u5F00\u9879\u76EE\u7EA7 Prompt Chains", run: () => {
         setChainsOpen(true);
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
       { id: "open-dashboard", label: "\u5199\u4F5C\u8BB0\u5F55", hint: "\u6253\u5F00\u5199\u4F5C\u4EEA\u8868\u76D8", run: () => {
         setDashOpen(true);
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
       { id: "open-heatmap", label: "\u5199\u4F5C\u70ED\u529B\u56FE", hint: "\u6253\u5F00\u6700\u8FD1 84 \u5929\u5199\u4F5C\u70ED\u529B\u56FE", run: () => {
         setStatsOpen(true);
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
-      { id: "mofei-sessions", label: "/mofei:sessions", hint: "\u6253\u5F00\u4F1A\u8BDD\u5217\u8868\uFF08\u5207\u6362\u5386\u53F2\u4F1A\u8BDD / \u9000\u51FA\u5F53\u524D\u5BF9\u8BDD\uFF09", run: () => {
-        setPaletteOpen(false);
-        setPaletteQuery("");
+      { id: "mofei-sessions", label: "\u5207\u6362\u5199\u4F5C\u4F1A\u8BDD", hint: "\u5207\u6362\u5386\u53F2\u4F1A\u8BDD\u6216\u9000\u51FA\u5F53\u524D\u5BF9\u8BDD", run: () => {
+        closePalette();
         setChatSessionsOpen(true);
       } },
       { id: "exit-chat", label: "\u9000\u51FA\u5F53\u524D\u5BF9\u8BDD", hint: "\u89E3\u9664\u53F3\u4FA7 Agent \u9762\u677F\u7684\u4F1A\u8BDD\u7ED1\u5B9A\uFF0C\u56DE\u5230\u4F1A\u8BDD\u9009\u62E9\u6001", run: () => {
         exitCurrentChat();
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
       } },
       { id: "close-workbench", label: "\u9000\u51FA\u58A8\u6249", hint: "\u8FD4\u56DE\u6807\u51C6 DSH", run: () => {
-        setPaletteOpen(false);
-        setPaletteQuery("");
+        closePalette();
         close();
       } }
     ];
@@ -5521,7 +5516,7 @@ function createClient(require2) {
           h(
             "span",
             { className: "mf-head-actions" },
-            h("button", { className: "mf-action-icon", type: "button", title: "\u547D\u4EE4\u9762\u677F\uFF08Ctrl+Shift+P\uFF09", onClick: () => setPaletteOpen(true) }, "\u22EF"),
+            h("button", { className: "mf-action-icon", type: "button", title: paletteOpen ? "\u5173\u95ED\u5FEB\u6377\u64CD\u4F5C" : "\u5FEB\u6377\u64CD\u4F5C\uFF08Ctrl+Shift+P\uFF09", "aria-label": paletteOpen ? "\u5173\u95ED\u5FEB\u6377\u64CD\u4F5C" : "\u6253\u5F00\u5FEB\u6377\u64CD\u4F5C", "aria-expanded": paletteOpen, "aria-controls": "mf-palette", "data-mf-palette-trigger": "true", onClick: () => paletteOpen ? closePalette() : (setPaletteOpen(true), setPaletteQuery("")) }, "\u22EF"),
             mode === "web" ? h("button", { className: "mf-btn mf-primary", type: "button", title: project ? "\u5728\u5F53\u524D\u9879\u76EE\u65B0\u5EFA\u7AE0\u8282" : "\u65B0\u5EFA\u9879\u76EE", onClick: () => {
               if (project) {
                 setChapterForm(true);
@@ -6261,10 +6256,11 @@ function createClient(require2) {
       )) : null,
       paletteOpen ? h(
         "div",
-        { className: "mf-palette", onMouseDown: (event) => event.stopPropagation() },
-        h("input", { value: paletteQuery, placeholder: "\u58A8\u6249\u547D\u4EE4\u2026\uFF08\u65B0\u5EFA\u9879\u76EE/\u6458\u8981/\u94FE/\u5199\u4F5C\u8BB0\u5F55/\u9000\u51FA\uFF09", autoFocus: true, onChange: (event) => setPaletteQuery(event.target.value), onKeyDown: (event) => {
+        { id: "mf-palette", className: "mf-palette", role: "dialog", "aria-label": "\u58A8\u6249\u5FEB\u6377\u64CD\u4F5C", onMouseDown: (event) => event.stopPropagation() },
+        h("div", { className: "mf-palette-head" }, h("div", null, h("strong", null, "\u5FEB\u6377\u64CD\u4F5C"), h("small", null, "\u641C\u7D22\u5E76\u6267\u884C\u5E38\u7528\u5199\u4F5C\u64CD\u4F5C")), h("button", { className: "mf-palette-close", type: "button", "aria-label": "\u5173\u95ED\u5FEB\u6377\u64CD\u4F5C", title: "\u5173\u95ED", onClick: closePalette }, "\xD7")),
+        h("input", { value: paletteQuery, placeholder: "\u641C\u7D22\u64CD\u4F5C\u2026", autoFocus: true, onChange: (event) => setPaletteQuery(event.target.value), onKeyDown: (event) => {
           if (event.key === "Enter" && filteredCommands[0]) filteredCommands[0].run();
-          if (event.key === "Escape") setPaletteOpen(false);
+          if (event.key === "Escape") closePalette();
         } }),
         filteredCommands.length ? filteredCommands.map((item) => h("button", { key: item.id, className: "mf-palette-item", type: "button", onClick: () => item.run() }, item.label, h("small", null, item.hint))) : h("div", { className: "mf-empty" }, "\u65E0\u5339\u914D\u547D\u4EE4")
       ) : null,

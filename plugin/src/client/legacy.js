@@ -99,7 +99,7 @@ export function createClient(require) {
     '.mf-panel.mf-focus .mf-body{grid-template-columns:minmax(0,1fr)}.mf-panel.mf-focus .mf-col,.mf-panel.mf-focus .mf-activity,.mf-panel.mf-focus .mf-gutter,.mf-panel.mf-focus .mf-chat{display:none}',
     '@media(max-width:760px){.mf-panel{width:100vw;height:100vh;margin:0;border:0;border-radius:0}.mf-body{grid-template-columns:48px 110px minmax(0,1fr)}.mf-body>.mf-col.mf-mid{display:none}.mf-gutter{display:none}.mf-chat{display:none}.mf-text{padding:18px 15px}.mf-head small{display:none}}',
     '.mf-standalone .mf-overlay{position:absolute;background:transparent}.mf-standalone .mf-panel{width:100vw;height:100vh;margin:0;border-radius:0;border:none}',
-    '.mf-palette{position:fixed;left:50%;top:90px;transform:translateX(-50%);width:min(620px,calc(100vw - 32px));max-height:420px;overflow:auto;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.35);z-index:130}.mf-palette input{box-sizing:border-box;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:transparent;color:inherit;font:inherit}.mf-palette-item{display:block;width:100%;padding:9px 12px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13px}.mf-palette-item:hover,.mf-palette-item.on{background:var(--dsw-alias-interactive-bg-hover)}.mf-palette-item small{display:block;margin-top:3px;color:var(--dsw-alias-label-secondary);font-size:11px}',
+    '.mf-palette{position:fixed;left:50%;top:72px;transform:translateX(-50%);width:min(620px,calc(100% - 24px));max-height:min(520px,calc(100vh - 96px));overflow:auto;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.35);z-index:130}.mf-palette-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-palette-head strong{font-size:13px;font-weight:680}.mf-palette-head small{display:block;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-palette-close{flex:0 0 auto;width:28px;height:28px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-palette-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-palette input{box-sizing:border-box;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:transparent;color:inherit;font:inherit}.mf-palette-item{display:block;width:100%;padding:9px 12px;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13px}.mf-palette-item:hover,.mf-palette-item.on{background:var(--dsw-alias-interactive-bg-hover)}.mf-palette-item small{display:block;margin-top:3px;color:var(--dsw-alias-label-secondary);font-size:11px}',
     '.mf-stylebar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-stylebar select{font:inherit;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;background:var(--dsw-alias-bg-base);color:inherit;padding:3px 6px}',
     '.mf-git{max-height:46vh;overflow:auto;border-bottom:1px solid var(--dsw-alias-border-l1);padding:8px 12px;display:grid;gap:6px}.mf-git pre{white-space:pre-wrap;font:11px/1.6 ui-monospace,Consolas,monospace;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-elevated,transparent);border:1px solid var(--dsw-alias-border-l1);border-radius:5px;padding:8px;margin:0;max-height:220px;overflow:auto}.mf-git-item{display:flex;align-items:center;gap:10px;padding:5px 8px;border-radius:5px}.mf-git-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-git-item code{font:11px ui-monospace,Consolas,monospace;color:var(--dsw-alias-label-secondary)}',
     '.mf-git-diff{font:11px/1.6 ui-monospace,Consolas,monospace;max-height:240px;overflow:auto;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-elevated,transparent)}.mf-diff-line{white-space:pre-wrap;padding:0 6px}.mf-diff-add{color:#4ade80;background:rgba(74,222,128,.08)}.mf-diff-del{color:#f87171;background:rgba(248,113,113,.08)}.mf-diff-hunk{color:#60a5fa;background:rgba(96,165,250,.08)}.mf-diff-meta{color:var(--dsw-alias-label-secondary)}',
@@ -1314,6 +1314,7 @@ export function createClient(require) {
     function moveNote(id, categoryId) { call('move-note', { projectId, noteId: id, categoryId: categoryId || null }).then(() => reload()).catch((failure) => { setError('移动笔记失败'); console.error(failure) }) }
     function createVolume() { if (!newVol.trim()) return; call('create-volume', { projectId, title: newVol }).then((result) => { if (result && result.volume) { setNewVol(''); setVolForm(false); reload() } }).catch((failure) => { setError('创建卷失败'); console.error(failure) }) }
     function close() { persist(); setOpen(false); removeStyles() }
+    function closePalette() { setPaletteOpen(false); setPaletteQuery('') }
     function rebase() { if (conflict) { updateView(conflict); setSaved(conflict.content); setRevision(conflict.revision); setConflict(null); setStatus('unsaved'); setError('草稿已基于远端最新版本，可检查后保存。') } }
     function decodeTxtBuffer(buffer) {
       const bytes = new Uint8Array(buffer)
@@ -2201,34 +2202,43 @@ export function createClient(require) {
     React.useEffect(() => {
       if (!open) return undefined
       const onKey = (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'P' || event.key === 'p')) { event.preventDefault(); setPaletteOpen(true) }
-        else if (event.key === 'Escape') { setPaletteOpen(false); setTabMenu(null) }
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'P' || event.key === 'p')) { event.preventDefault(); setPaletteOpen(true); setPaletteQuery('') }
+        else if (event.key === 'Escape') { closePalette(); setTabMenu(null) }
       }
       if (typeof window !== 'undefined') window.addEventListener('keydown', onKey)
       return () => { if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey) }
     }, [open])
+    React.useEffect(() => {
+      if (!paletteOpen || typeof document === 'undefined') return undefined
+      const onPointerDown = (event) => {
+        const target = event.target
+        if (target && target.closest && (target.closest('.mf-palette') || target.closest('[data-mf-palette-trigger]'))) return
+        closePalette()
+      }
+      document.addEventListener('pointerdown', onPointerDown)
+      return () => document.removeEventListener('pointerdown', onPointerDown)
+    }, [paletteOpen])
     function changeStyle(styleId) {
       setCurrentStyle(styleId)
       if (projectId) call('set-project-style', { projectId, styleId }).then(() => reload()).catch((failure) => { setError('切换写作风格失败'); console.error(failure) })
     }
     const paletteCommands = [
       { id: 'new-project', label: '新建项目', hint: '创建小说项目', run: () => { setProjectForm(true); setTab('projects'); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'mofei-new-chapter', label: '/mofei:new-chapter', hint: '在当前项目新建章节', run: () => { setChapterForm(true); setTab('projects'); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'mofei-writer', label: '/mofei:writer', hint: '把 Writer 写作任务发给当前 DSH 会话', run: () => { setPaletteOpen(false); setPaletteQuery(''); if (chapter) bridgeMention('writer') } },
-      { id: 'mofei-reviewer', label: '/mofei:reviewer', hint: '把 Reviewer 审稿任务发给当前 DSH 会话', run: () => { setPaletteOpen(false); setPaletteQuery(''); if (chapter) bridgeMention('reviewer') } },
-      { id: 'mofei-summary', label: '/mofei:summary', hint: '打开摘要面板', run: () => { setSummaryOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'mofei-skills', label: '/mofei:skills', hint: '浏览已启用的 OpenFic 写作技能', run: () => { openWritingSkills(); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'mofei-style', label: '/mofei:style', hint: '打开风格视图（新建/编辑/预览/删除）', run: () => { setTab('styles'); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'mofei-retrieve', label: '/mofei:retrieve', hint: '打开检索视图（跨实体结构化 RAG）', run: () => { setTab('retrieve'); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'mofei-git-history', label: '/mofei:git-history', hint: '项目 git 历史 / 链版本 diff', run: () => { setPaletteOpen(false); setPaletteQuery(''); openGitHistory(null) } },
-      { id: 'mofei-jobs', label: '/mofei:jobs', hint: '打开后台任务列表（可取消）', run: () => { setJobListOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'open-summary', label: '摘要面板', hint: '章节/区间摘要维护', run: () => { setSummaryOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'open-chains', label: 'Prompt Chains', hint: '打开提示词链', run: () => { setChainsOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'open-dashboard', label: '写作记录', hint: '打开写作仪表盘', run: () => { setDashOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'open-heatmap', label: '写作热力图', hint: '打开最近 84 天写作热力图', run: () => { setStatsOpen(true); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'mofei-sessions', label: '/mofei:sessions', hint: '打开会话列表（切换历史会话 / 退出当前对话）', run: () => { setPaletteOpen(false); setPaletteQuery(''); setChatSessionsOpen(true) } },
-      { id: 'exit-chat', label: '退出当前对话', hint: '解除右侧 Agent 面板的会话绑定，回到会话选择态', run: () => { exitCurrentChat(); setPaletteOpen(false); setPaletteQuery('') } },
-      { id: 'close-workbench', label: '退出墨扉', hint: '返回标准 DSH', run: () => { setPaletteOpen(false); setPaletteQuery(''); close() } },
+      { id: 'mofei-new-chapter', label: '新建章节', hint: '在当前项目新建章节', run: () => { setChapterForm(true); setTab('projects'); closePalette() } },
+      { id: 'mofei-writer', label: '发送 Writer 任务', hint: '把写作任务发给当前 DSH 会话', run: () => { closePalette(); if (chapter) bridgeMention('writer') } },
+      { id: 'mofei-reviewer', label: '发送 Reviewer 审稿', hint: '把审稿任务发给当前 DSH 会话', run: () => { closePalette(); if (chapter) bridgeMention('reviewer') } },
+      { id: 'mofei-summary', label: '打开摘要', hint: '维护章节和区间摘要', run: () => { setSummaryOpen(true); closePalette() } },
+      { id: 'mofei-skills', label: '写作技能', hint: '浏览已启用的 OpenFic 写作技能', run: () => { openWritingSkills(); closePalette() } },
+      { id: 'mofei-style', label: '写作风格', hint: '新建、编辑、预览或删除文风', run: () => { setTab('styles'); closePalette() } },
+      { id: 'mofei-retrieve', label: '跨项目检索', hint: '搜索角色、笔记、世界书和章节', run: () => { setTab('retrieve'); closePalette() } },
+      { id: 'mofei-git-history', label: '项目版本历史', hint: '查看项目 Git 历史和链版本差异', run: () => { closePalette(); openGitHistory(null) } },
+      { id: 'mofei-jobs', label: '后台任务', hint: '查看或取消摘要等长任务', run: () => { setJobListOpen(true); closePalette() } },
+      { id: 'open-chains', label: '提示词链', hint: '打开项目级 Prompt Chains', run: () => { setChainsOpen(true); closePalette() } },
+      { id: 'open-dashboard', label: '写作记录', hint: '打开写作仪表盘', run: () => { setDashOpen(true); closePalette() } },
+      { id: 'open-heatmap', label: '写作热力图', hint: '打开最近 84 天写作热力图', run: () => { setStatsOpen(true); closePalette() } },
+      { id: 'mofei-sessions', label: '切换写作会话', hint: '切换历史会话或退出当前对话', run: () => { closePalette(); setChatSessionsOpen(true) } },
+      { id: 'exit-chat', label: '退出当前对话', hint: '解除右侧 Agent 面板的会话绑定，回到会话选择态', run: () => { exitCurrentChat(); closePalette() } },
+      { id: 'close-workbench', label: '退出墨扉', hint: '返回标准 DSH', run: () => { closePalette(); close() } },
     ]
     const filteredCommands = (mode === 'web' ? paletteCommands.filter((item) => item.id !== 'close-workbench') : paletteCommands).filter((item) => !paletteQuery.trim() || (item.label + ' ' + item.hint).toLowerCase().includes(paletteQuery.toLowerCase()))
     // 写作状态只认当前小说项目持有的会话，绝不从全局 DSH 会话列表借用开发会话。
@@ -2252,7 +2262,7 @@ export function createClient(require) {
       h('header', { className: 'mf-head' },
         h('div', { className: 'mf-head-main' }, h('strong', null, '墨扉'), h('span', { className: 'mf-head-context', title: project ? project.title : '写作工作台' }, project ? project.title : '写作工作台')),
         h('span', { className: 'mf-head-actions' },
-          h('button', { className: 'mf-action-icon', type: 'button', title: '命令面板（Ctrl+Shift+P）', onClick: () => setPaletteOpen(true) }, '⋯'),
+          h('button', { className: 'mf-action-icon', type: 'button', title: paletteOpen ? '关闭快捷操作' : '快捷操作（Ctrl+Shift+P）', 'aria-label': paletteOpen ? '关闭快捷操作' : '打开快捷操作', 'aria-expanded': paletteOpen, 'aria-controls': 'mf-palette', 'data-mf-palette-trigger': 'true', onClick: () => paletteOpen ? closePalette() : (setPaletteOpen(true), setPaletteQuery('')) }, '⋯'),
           mode === 'web' ? h('button', { className: 'mf-btn mf-primary', type: 'button', title: project ? '在当前项目新建章节' : '新建项目', onClick: () => { if (project) { setChapterForm(true); setTab('projects') } else { setProjectForm(true); setTab('projects') } } }, '＋ 新建') : null,
           mode === 'web' && onCollapse ? h('button', { className: 'mf-action-icon', type: 'button', title: '收起墨扉，返回原版 web', onClick: onCollapse }, '×') : null,
           mode === 'web' ? null : h('button', { className: 'mf-close', type: 'button', onClick: close, title: '关闭' }, '×')),
@@ -2609,8 +2619,9 @@ export function createClient(require) {
         : h('div', { className: 'mf-empty' }, '暂无任务；「批量摘要」等长任务会出现在这里，可取消。'),
         h('div', { className: 'mf-import-actions' }, h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => setJobListOpen(false) }, '关闭'))
       )) : null,
-      paletteOpen ? h('div', { className: 'mf-palette', onMouseDown: (event) => event.stopPropagation() },
-        h('input', { value: paletteQuery, placeholder: '墨扉命令…（新建项目/摘要/链/写作记录/退出）', autoFocus: true, onChange: (event) => setPaletteQuery(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter' && filteredCommands[0]) filteredCommands[0].run(); if (event.key === 'Escape') setPaletteOpen(false) } }),
+      paletteOpen ? h('div', { id: 'mf-palette', className: 'mf-palette', role: 'dialog', 'aria-label': '墨扉快捷操作', onMouseDown: (event) => event.stopPropagation() },
+        h('div', { className: 'mf-palette-head' }, h('div', null, h('strong', null, '快捷操作'), h('small', null, '搜索并执行常用写作操作')), h('button', { className: 'mf-palette-close', type: 'button', 'aria-label': '关闭快捷操作', title: '关闭', onClick: closePalette }, '×')),
+        h('input', { value: paletteQuery, placeholder: '搜索操作…', autoFocus: true, onChange: (event) => setPaletteQuery(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter' && filteredCommands[0]) filteredCommands[0].run(); if (event.key === 'Escape') closePalette() } }),
         filteredCommands.length ? filteredCommands.map((item) => h('button', { key: item.id, className: 'mf-palette-item', type: 'button', onClick: () => item.run() }, item.label, h('small', null, item.hint))) : h('div', { className: 'mf-empty' }, '无匹配命令')
       ) : null,
       // v0.18: 初始向导（空白状态引导选择小说文件夹）
