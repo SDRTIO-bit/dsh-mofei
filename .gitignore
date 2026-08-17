@@ -13,6 +13,7 @@ node_modules/
 *.log
 *.tmp
 /probe-*.cjs
+/verify-shots/*/
 /verify-shots/*.png
 /verify-shots/*.json
 /verify-shots/*sample*.txt

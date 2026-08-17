@@ -283,13 +283,24 @@ export default {
       queue = run.then(() => undefined, () => undefined)
       return run
     }
-    async function saveProjects() { await fs.writeText(projectTarget, JSON.stringify(store, null, 2), undefined, undefined, policy); await mirrorFileTree(); await gitCommitAll('墨扉 项目保存').catch(() => { /* 非 git 工作区忽略 */ }) }
-    async function saveDrafts() { await fs.writeText(draftTarget, JSON.stringify(draftStore, null, 2), undefined, undefined, policy); await mirrorFileTree() }
-    async function saveStats() { await fs.writeText(statsTarget, JSON.stringify(stats, null, 2), undefined, undefined, policy); await mirrorFileTree() }
-    async function saveAiSessions() { await fs.writeText(aiSessionsTarget, JSON.stringify(aiSessions, null, 2), undefined, undefined, policy) }
-    async function saveSummaries() { await fs.writeText(summaryTarget, JSON.stringify(summaryStore, null, 2), undefined, undefined, policy); await mirrorFileTree() }
-    async function saveChains() { await fs.writeText(chainsTarget, JSON.stringify(chainStore, null, 2), undefined, undefined, policy); await mirrorFileTree() }
-    async function saveSkillSettings() { await fs.writeText(skillSettingsTarget, JSON.stringify(skillSettings, null, 2), undefined, undefined, policy) }
+    function isReplaceConflict(error) { return /ReplaceFileW EIO \(Win32 1175\)/.test(String(error && error.message || error)) }
+    async function writePersisted(target, value) {
+      const content = JSON.stringify(value, null, 2)
+      for (let attempt = 0; ; attempt += 1) {
+        try { await fs.writeText(target, content, undefined, undefined, policy); return }
+        catch (error) {
+          if (!isReplaceConflict(error) || attempt >= 3) throw error
+          await new Promise((resolve) => setTimeout(resolve, 35 * (attempt + 1)))
+        }
+      }
+    }
+    async function saveProjects() { await writePersisted(projectTarget, store); await mirrorFileTree(); await gitCommitAll('墨扉 项目保存').catch(() => { /* 非 git 工作区忽略 */ }) }
+    async function saveDrafts() { await writePersisted(draftTarget, draftStore); await mirrorFileTree() }
+    async function saveStats() { await writePersisted(statsTarget, stats); await mirrorFileTree() }
+    async function saveAiSessions() { await writePersisted(aiSessionsTarget, aiSessions) }
+    async function saveSummaries() { await writePersisted(summaryTarget, summaryStore); await mirrorFileTree() }
+    async function saveChains() { await writePersisted(chainsTarget, chainStore); await mirrorFileTree() }
+    async function saveSkillSettings() { await writePersisted(skillSettingsTarget, skillSettings) }
     // v0.17: 自创技能目录 = DSH skill-filesystem 的用户技能根（~/.dsh/skills/*.md）。
     function customSkillDir() { return path.join(os.homedir(), '.dsh', 'skills') }
     async function listCustomSkills() {
@@ -474,6 +485,9 @@ export default {
           report.projects.push({ id: projectId, added: true })
           report.changed = true
         } else {
+          // 从当前 DSH 工作区发现的项目需要记住其真实根目录，后续轮询和镜像才会追踪同一棵文件树。
+          const inheritedRoot = path.dirname(base) === path.join(mofeiFileRoot, 'projects') ? '' : base
+          if (inheritedRoot && project.rootDir !== inheritedRoot) { project.rootDir = inheritedRoot; report.changed = true }
           const styleChanged = typeof projectMeta.currentStyle === 'string' && projectMeta.currentStyle && projectMeta.currentStyle !== (project.currentStyle || 'default')
           const titleChanged = typeof projectMeta.title === 'string' && projectMeta.title && projectMeta.title !== project.title
           const descriptionChanged = typeof projectMeta.description === 'string' && projectMeta.description !== (project.description || '')
@@ -596,19 +610,26 @@ export default {
           if (kind === 'chapters') {
             const chapterId = typeof parsed.meta.chapterId === 'string' && parsed.meta.chapterId ? parsed.meta.chapterId : path.basename(relative, '.md')
             const existing = summaryStore.chapters && summaryStore.chapters[chapterId]
-            if (!existing || fileUpdatedAt >= existing.updatedAt) {
-              summaryStore = applyChapterSummary(summaryStore, chapterId, typeof parsed.meta.chapterRevision === 'number' ? parsed.meta.chapterRevision : 0, parsed.body)
+            const chapterRevision = typeof parsed.meta.chapterRevision === 'number' ? parsed.meta.chapterRevision : 0
+            // 相同时间戳且内容相同表示已同步；不能重复 apply，否则 discover-workspace
+            // 会把无变更扫描误报为 changed，继而反复覆盖 .mofei-summaries.json。
+            const changed = !existing || fileUpdatedAt > existing.updatedAt || (fileUpdatedAt === existing.updatedAt && (existing.summary !== parsed.body || existing.chapterRevision !== chapterRevision))
+            if (changed) {
+              summaryStore = applyChapterSummary(summaryStore, chapterId, chapterRevision, parsed.body)
               if (fileUpdatedAt) summaryStore.chapters[chapterId].updatedAt = fileUpdatedAt
               report.summaries.updated += 1; report.changed = true
-            } else report.summaries.conflicts += 1
+            } else if (fileUpdatedAt < existing.updatedAt) report.summaries.conflicts += 1
           } else if (kind === 'ranges') {
             const rangeId = typeof parsed.meta.id === 'string' && parsed.meta.id ? parsed.meta.id : path.basename(relative, '.md')
             const existing = (summaryStore.ranges || []).find((range) => range.id === rangeId)
-            if (!existing || fileUpdatedAt >= existing.updatedAt) {
-              summaryStore = applyRangeSummary(summaryStore, rangeId, Array.isArray(parsed.meta.chapterIds) ? parsed.meta.chapterIds : [], parsed.body)
+            const chapterIds = Array.isArray(parsed.meta.chapterIds) ? Array.from(new Set(parsed.meta.chapterIds.filter((chapterId) => typeof chapterId === 'string' && chapterId))) : []
+            const sameChapterIds = !!existing && existing.chapterIds.length === chapterIds.length && existing.chapterIds.every((chapterId, index) => chapterId === chapterIds[index])
+            const changed = !existing || fileUpdatedAt > existing.updatedAt || (fileUpdatedAt === existing.updatedAt && (existing.summary !== parsed.body || !sameChapterIds))
+            if (changed) {
+              summaryStore = applyRangeSummary(summaryStore, rangeId, chapterIds, parsed.body)
               if (fileUpdatedAt) { const range = summaryStore.ranges.find((item) => item.id === rangeId); if (range) range.updatedAt = fileUpdatedAt }
               report.summaries.updated += 1; report.changed = true
-            } else report.summaries.conflicts += 1
+            } else if (fileUpdatedAt < existing.updatedAt) report.summaries.conflicts += 1
           }
         }
         // 链：chains/*.md
@@ -619,8 +640,10 @@ export default {
           const fileUpdatedAt = typeof parsed.meta.updatedAt === 'number' && isFinite(parsed.meta.updatedAt) ? parsed.meta.updatedAt : 0
           const list = chainList(project.id).slice()
           const existing = list.find((item) => item.id === id)
-          if (!existing || fileUpdatedAt >= existing.updatedAt) {
-            const chain = { id, name: text(parsed.meta.name, '未命名链'), content: parsed.body, updatedAt: fileUpdatedAt || Date.now() }
+          const name = text(parsed.meta.name, '未命名链')
+          const changed = !existing || fileUpdatedAt > existing.updatedAt || ((fileUpdatedAt === existing.updatedAt || fileUpdatedAt === 0) && (existing.name !== name || existing.content !== parsed.body))
+          if (changed) {
+            const chain = { id, name, content: parsed.body, updatedAt: fileUpdatedAt || Date.now() }
             const byProject = {}
             Object.keys(chainStore.byProject).forEach((pid) => {
               if (pid === project.id) return
@@ -629,8 +652,18 @@ export default {
             Object.defineProperty(byProject, project.id, { value: existing ? list.map((item) => item.id === id ? chain : item) : list.concat([chain]), enumerable: true, writable: true, configurable: true })
             chainStore = { version: 1, byProject }
             report.chains.updated += 1; report.changed = true
-          } else report.chains.conflicts += 1
+          } else if (fileUpdatedAt < existing.updatedAt) report.chains.conflicts += 1
         }
+      }
+      // 当前 DSH 会话的工作区可直接是一本小说根目录，也可含旧式 .mofei/projects/**。
+      // 显式发现让外部创建、Git 拉取或 Agent 写入的项目进入内存 store 与后续文件轮询。
+      const workspaceRoot = options && typeof options.workspaceRoot === 'string' && path.isAbsolute(options.workspaceRoot) ? path.resolve(options.workspaceRoot) : ''
+      if (workspaceRoot) {
+        try { await importProjectDir(workspaceRoot) } catch (error) { /* 根目录不是墨扉项目则忽略 */ }
+        try {
+          const embedded = path.join(workspaceRoot, '.mofei', 'projects')
+          for (const entry of await readdir(embedded, { withFileTypes: true })) if (entry.isDirectory()) await importProjectDir(path.join(embedded, entry.name))
+        } catch (error) { /* 无旧式嵌入项目目录 */ }
       }
       // v0.18: 阶段 1 工作区 .mofei/projects/**；阶段 2 rootDir 项目（小说文件夹）
       const projectsRoot = path.join(mofeiFileRoot, 'projects')
@@ -1264,7 +1297,7 @@ export default {
         const tags = Array.isArray(args && args.tags) ? args.tags.filter((item) => typeof item === 'string').slice(0, 20) : []
         const body = typeof (args && args.content) === 'string' ? args.content : ''
         const fileName = safeFileSegment(styleId, 'style') + '.md'
-        const dir = scope === 'project' ? path.join(mofeiFileRoot, 'projects', safeFileSegment(projectId, 'project'), 'styles') : path.join(mofeiFileRoot, 'styles')
+        const dir = scope === 'project' ? path.join(projectFileBase(projectBy(projectId)), 'styles') : path.join(mofeiFileRoot, 'styles')
         await mkdir(dir, { recursive: true })
         await writeFile(path.join(dir, fileName), frontmatter({ id: styleId, name, description, tags }) + '\n' + body + '\n', 'utf8')
         return { saved: true, style: { id: styleId, name, description, tags, file: fileName, scope, projectId: projectId || null } }
@@ -1275,7 +1308,7 @@ export default {
         const scope = (args && args.scope) === 'project' ? 'project' : 'global'
         const projectId = scope === 'project' ? (args && args.projectId) : null
         if (scope === 'project' && !projectBy(projectId)) return { error: 'PROJECT_NOT_FOUND' }
-        const file = path.join(scope === 'project' ? path.join(mofeiFileRoot, 'projects', safeFileSegment(projectId, 'project'), 'styles') : path.join(mofeiFileRoot, 'styles'), safeFileSegment(styleId, 'style') + '.md')
+        const file = path.join(scope === 'project' ? path.join(projectFileBase(projectBy(projectId)), 'styles') : path.join(mofeiFileRoot, 'styles'), safeFileSegment(styleId, 'style') + '.md')
         try { await rm(file); return { deleted: true, styleId, scope, projectId: projectId || null } } catch (error) { return { deleted: false, styleId, scope } }
       }),
       'get-project-style': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); if (!project) return { error: 'PROJECT_NOT_FOUND' }; return { currentStyle: project.currentStyle || 'default', style: parseStyle(await readStyle(project.currentStyle || 'default', project.id), project.currentStyle || 'default') } },
@@ -1377,6 +1410,13 @@ export default {
       },
       // v0.15: 变更检测轮询。storeStamp 变 → 工具/UI 写入（内存已新，UI 直接 reload）；
       // fileStamp 变而 storeStamp 不变 → 外部文件编辑（需 reload-from-files 文件优先导入）。
+      'discover-workspace': async (args) => mutate(async () => {
+        const workspaceRoot = typeof (args && args.workspaceRoot) === 'string' && path.isAbsolute(args.workspaceRoot) ? path.resolve(args.workspaceRoot) : ''
+        if (!workspaceRoot) return { error: 'WORKSPACE_ROOT_REQUIRED' }
+        const report = await importFileTree({ workspaceRoot })
+        if (report.changed) { await saveProjects(); await saveSummaries(); await saveChains() }
+        return { workspaceRoot, report }
+      }),
       'sync-status': async () => {
         await load(); await queue
         return { storeStamp: storeStamp(), fileStamp: await fileTreeStamp() }

@@ -1,7 +1,7 @@
-// v0.18 验收（初始向导存储链路 + 会话入口）：
+// v0.19 验收（工作区存储链路 + 官方会话侧栏）：
 // 1. rootDir（小说文件夹）：create-project(rootDir) → 实体文件落盘 rootDir → 文件优先读回 → 删除不删用户目录
-// 2. 自动弹会话菜单：变形后未绑定会话且存在历史会话 → 菜单自动弹出（可直接承接上次对话）
-// 3. 顶栏会话入口按钮改名「会话」
+// 2. 变形后仍可展开右侧官方 DSH 侧栏并使用其历史会话树
+// 3. Web 模式不再渲染墨扉的重复会话选择菜单
 const { chromium } = require('C:/Users/zhao/AppData/Roaming/npm/node_modules/@playwright/mcp/node_modules/playwright')
 const fs = require('node:fs')
 const os = require('node:os')
@@ -72,22 +72,70 @@ async function call(page, method, args) {
   else fail('小说文件夹被误删！')
   fs.rmSync(TMP, { recursive: true, force: true })
 
-  // —— 2. 会话入口 + 自动弹菜单（UI）——
+  // —— 2. 官方会话侧栏（UI）——
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
   await page.locator('.mf-orb').waitFor({ state: 'visible', timeout: 30000 })
   await sleep(2500)
-  const wstateText = await page.locator('.mf-wstate').innerText().catch(() => '')
-  if (wstateText.includes('会话')) ok('顶栏入口已改为「会话」')
-  else fail('顶栏入口异常: ' + wstateText)
   await page.locator('.mf-orb').click()
   await sleep(900)
   await page.locator('.mf-panel.mf-view').waitFor({ state: 'visible', timeout: 10000 })
-  await page.waitForSelector('.mf-writer-session-menu', { state: 'visible', timeout: 10000 }).then(() => ok('变形后自动弹出会话菜单（可直接承接上次对话）')).catch(() => fail('会话菜单未自动弹出'))
-  const menuText = await page.locator('.mf-writer-session-menu').innerText().catch(() => '')
-  if (menuText.includes('全部会话')) ok('菜单含「全部会话」区')
-  else fail('菜单异常: ' + menuText.slice(0, 80))
+  if (await page.locator('.mf-wstate,.mf-writer-session-menu').count() === 0) ok('Web 模式未渲染重复的墨扉会话菜单')
+  else fail('仍渲染墨扉会话菜单')
+  const sidebarToggle = page.locator('[class*="hHd-Xa_toggle"]')
+  const beforeLabel = await sidebarToggle.getAttribute('aria-label')
+  if (beforeLabel === '打开侧边栏') {
+    await sidebarToggle.click()
+    await sleep(700)
+  }
+  const layout = await page.evaluate(() => {
+    const root = document.querySelector('[class*="hHd-Xa_root"]')
+    const frame = document.querySelector('[class*="_frame"]')
+    const panel = document.querySelector('.mf-bubble-panel')
+    const composer = document.querySelector('[class*="scrollBody"]')
+    const panelRect = panel && panel.getBoundingClientRect()
+    const composerRect = composer && composer.getBoundingClientRect()
+    return {
+      transformed: document.body.classList.contains('mf-transform'),
+      expanded: !String(root && root.className || '').includes('collapsed'),
+      grid: frame ? getComputedStyle(frame).gridTemplateColumns : '',
+      historyItems: document.querySelectorAll('.YDXeBa_title').length,
+      panelRight: panelRect ? panelRect.right : -1,
+      composerLeft: composerRect ? composerRect.left : -1,
+    }
+  })
+  if (layout.transformed && layout.expanded && layout.grid.includes('280px')) ok('变形态中官方右侧栏可展开')
+  else fail('官方侧栏展开失败: ' + JSON.stringify(layout))
+  if (layout.panelRight >= 0 && layout.composerLeft >= 0 && Math.abs(layout.composerLeft - layout.panelRight) <= 2) ok('Composer 与墨扉面板边界对齐')
+  else fail('Composer 被墨扉面板覆盖: ' + JSON.stringify(layout))
+  if (layout.historyItems > 0) ok('官方侧栏显示历史会话树（' + layout.historyItems + ' 项）')
+  else fail('官方侧栏未显示历史会话')
+
+  // —— 3. 窄屏工作台 ——
+  // 500px 宽度下不再为 Composer 保留 380px，墨扉应保留可编辑的主区域和 55px 官方窄轨。
+  await page.setViewportSize({ width: 500, height: 800 })
+  await sleep(350)
+  const narrow = await page.evaluate(() => {
+    const panel = document.querySelector('.mf-bubble-panel')
+    const workbench = document.querySelector('.mf-panel.mf-view')
+    const projectColumn = document.querySelector('.mf-panel.mf-view .mf-col')
+    const editor = document.querySelector('.mf-panel.mf-view .mf-editor')
+    const panelRect = panel && panel.getBoundingClientRect()
+    const columnRect = projectColumn && projectColumn.getBoundingClientRect()
+    const editorRect = editor && editor.getBoundingClientRect()
+    return {
+      panelWidth: panelRect ? Math.round(panelRect.width) : 0,
+      workbenchWidth: workbench ? Math.round(workbench.getBoundingClientRect().width) : 0,
+      projectColumnWidth: columnRect ? Math.round(columnRect.width) : 0,
+      editorWidth: editorRect ? Math.round(editorRect.width) : 0,
+      horizontalOverflow: !!(panel && panel.scrollWidth > panel.clientWidth),
+    }
+  })
+  if (narrow.panelWidth >= 430 && narrow.workbenchWidth >= 430) ok('500px 窄屏工作台保留可用主区域（' + narrow.panelWidth + 'px）')
+  else fail('500px 窄屏工作台被压缩: ' + JSON.stringify(narrow))
+  if (narrow.projectColumnWidth > 0 && narrow.editorWidth >= 200 && !narrow.horizontalOverflow) ok('500px 窄屏项目列与编辑区无横向裁切')
+  else fail('500px 窄屏内部布局异常: ' + JSON.stringify(narrow))
 
   await browser.close()
-  console.log(failures === 0 ? '== V0.18 ONBOARD ALL PASS ==' : failures + ' FAILURES')
+  console.log(failures === 0 ? '== V0.19 WORKSPACE+SIDEBAR ALL PASS ==' : failures + ' FAILURES')
   process.exit(failures === 0 ? 0 : 1)
 })().catch((e) => { console.error('SCRIPT ERROR: ' + (e && e.stack || e)); process.exit(2) })

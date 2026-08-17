@@ -110,7 +110,7 @@ export function createClient(require) {
     // 工作态的阅读顺序固定为「墨扉工作台 | DSH 写作助手 | DSH 窄轨」。
     '.mf-bubble{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}',
     // 宽屏让原生 DSH composer 留在最右；空间不足时，优先完整保住写作区，只留下 DSH 窄轨供切回。
-    '.mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:min(calc(100% - 55px),max(920px,calc(100% - 55px - clamp(460px,31vw,520px))));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--dsw-alias-bg-layer-1,#0d0e11);border-right:1px solid var(--dsw-alias-border-l1);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}',
+    '.mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:calc(100% - var(--mf-dsh-sidebar,55px) - var(--mf-dsh-composer,clamp(380px,31vw,520px)));min-width:0;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size;background:var(--dsw-alias-bg-layer-1,#0d0e11);border-right:1px solid var(--dsw-alias-border-l1);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1),width .2s ease;pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}',
     '.mf-bubble.on .mf-bubble-panel{transform:translateX(0)}',
     '.mf-orb{position:fixed;right:18px;bottom:18px;width:46px;height:46px;border:0;border-radius:50%;background:var(--dsw-alias-state-business-primary,#4d8dff);color:#fff;cursor:pointer;font:700 17px/1 sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:auto;z-index:95;transition:transform .2s ease,background .2s ease,opacity .2s ease}',
     '.mf-orb:hover{transform:scale(1.08)}.mf-orb.on{background:var(--dsw-alias-label-secondary,#6b6b74)}',
@@ -118,11 +118,12 @@ export function createClient(require) {
     '.mf-bubble.on .mf-orb{opacity:0;pointer-events:none}',
     // 变形时：官方侧栏由官方机制收成窄条，并显式放到 DSH 助手右侧。
     // 不能隐藏官方 grid 列：这样会触发 grid 自动排版，反而会压扁整页。
-    'body.mf-transform [class*="_frame"]{grid-template-columns:minmax(0,1fr) 55px 0 !important}',
+    'body.mf-transform{--mf-dsh-sidebar:55px;--mf-dsh-composer:clamp(380px,31vw,520px)}body.mf-transform.mf-sidebar-expanded{--mf-dsh-sidebar:280px}',
+    'body.mf-transform [class*="_frame"]{grid-template-columns:minmax(0,1fr) var(--mf-dsh-sidebar) 0 !important}',
     'body.mf-transform [class*="centerCol"]{grid-column:1 !important;grid-row:1 !important}',
-    'body.mf-transform [class*="hHd-Xa_root"]{grid-column:2 !important;grid-row:1 !important;width:55px !important;min-width:55px !important;max-width:55px !important;overflow:hidden !important}',
-    // centerCol 与对话根之间隔着 display:contents 包装层，故用后代选择器而非直接子选择器。
-    'body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:calc(100% - clamp(460px,31vw,520px)) !important;transition:padding-left .32s cubic-bezier(.22,.61,.36,1)}',
+    'body.mf-transform [class*="hHd-Xa_root"]{grid-column:2 !important;grid-row:1 !important;width:var(--mf-dsh-sidebar) !important;min-width:var(--mf-dsh-sidebar) !important;max-width:var(--mf-dsh-sidebar) !important;overflow:hidden !important}',
+    // centerCol 本身已经排除了官方侧栏，内层只需为 Composer 预留空间；重复扣侧栏会让 Composer 被工作台遮住。
+    'body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:calc(100% - var(--mf-dsh-composer)) !important;transition:padding-left .2s ease}',
     // 右侧仍是官方 composer，只收紧容器并用同一套分隔线把它收为助手栏。
     'body.mf-transform [class*="scrollBody"]{background:var(--dsw-alias-bg-layer-1,#101115);border-left:1px solid var(--dsw-alias-border-l1)}',
     'body.mf-transform [class*="composerSeat"]{padding:0 16px 18px !important}',
@@ -134,13 +135,19 @@ export function createClient(require) {
     'body.mf-transform [class*="composerHero"] [class*="heroWorkspaceRow"]{margin-top:2px;padding:0 2px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px !important;line-height:1.5 !important;color:var(--dsw-alias-label-secondary) !important}',
     'body.mf-transform [class*="composerHero"] [class*="card"]{border-radius:8px !important;box-shadow:0 10px 28px rgba(0,0,0,.28)}',
     'body.mf-transform [class*="composerHero"] [class*="card"],body.mf-transform [class*="composerHero"] [class*="row"]{width:100%;max-width:100%}',
+    // 窄屏优先保留墨扉编辑区；官方会话切换仍在右侧 55px 窄轨中可达。
+    '@media(max-width:760px){body.mf-transform,body.mf-transform.mf-sidebar-expanded{--mf-dsh-sidebar:55px;--mf-dsh-composer:0px}body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:0 !important}}',
     // 墨扉工作台：扁平的目录、编辑器与 DSH 助手三栏，不使用悬浮卡片来分区。
     '.mf-panel.mf-view{background:var(--dsw-alias-bg-layer-1,#0d0e11)}.mf-panel.mf-view .mf-head{position:relative;height:56px;padding:0 20px;background:var(--dsw-alias-bg-layer-2,#111217);border-bottom-color:var(--dsw-alias-border-l1)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:var(--dsw-alias-bg-layer-1,#0d0e11)}',
     '.mf-panel.mf-view .mf-activity,.mf-panel.mf-view .mf-gutter,.mf-panel.mf-view .mf-col.mf-mid{display:none}',
     '.mf-panel.mf-view .mf-col{width:286px;flex:none;border:0;border-right:1px solid var(--dsw-alias-border-l1);border-radius:0;background:var(--dsw-alias-bg-layer-1,#101115);overflow:hidden;box-shadow:none}',
     '.mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:var(--dsw-alias-bg-base,#0d0e11);overflow:hidden;box-shadow:none}',
     '@media(max-width:1140px){.mf-panel.mf-view .mf-col{width:228px}.mf-panel.mf-view .mf-text{padding-inline:30px}}',
+    // 官方会话栏展开后，墨扉使用紧凑工作态而不是把编辑区压成窄缝。
+    'body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-col{width:204px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-head{height:48px;padding-inline:12px}body.mf-transform.mf-sidebar-expanded .mf-head-context{max-width:140px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-text{padding-inline:22px;font-size:15px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-mininav{padding-inline:6px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-proj{padding:7px 8px}',
     '.mf-head-main{display:flex;align-items:center;gap:10px;min-width:0}.mf-head-main strong{font-size:15px;font-weight:680;letter-spacing:0}.mf-head-context{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}.mf-head-actions .mf-btn{min-height:30px}.mf-head-actions .mf-primary{padding-inline:11px}.mf-action-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-action-icon:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-head-actions .mf-stylebar{margin-right:6px}.mf-head-actions .mf-stylebar select{max-width:104px;border:0;background:transparent;padding:4px;color:var(--dsw-alias-label-secondary)}',
+    '@container (max-width:680px){.mf-panel.mf-view .mf-col{width:190px}.mf-panel.mf-view .mf-head{height:48px;padding-inline:10px}.mf-head-context{display:none}.mf-panel.mf-view .mf-text{padding-inline:18px;font-size:15px}.mf-panel.mf-view .mf-mininav{padding-inline:5px}.mf-panel.mf-view .mf-proj{padding:7px}.mf-panel.mf-view .mf-proj-meta{gap:5px}}',
+    '@container (max-width:510px){.mf-panel.mf-view .mf-col{width:164px}.mf-panel.mf-view .mf-mininav{display:none}.mf-panel.mf-view .mf-head-actions .mf-stylebar{display:none}.mf-panel.mf-view .mf-text{padding-inline:14px;font-size:14px}.mf-panel.mf-view .mf-proj-meta{display:none}.mf-panel.mf-view .mf-list{padding:5px}}',
     '.mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:var(--dsw-alias-bg-overlay,#141416);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}.mf-writer-session-menu .mf-btn.danger{color:#f87171;border-color:rgba(248,113,113,.3)}.mf-writer-session-menu-sep{height:1px;margin:8px 2px;background:var(--dsw-alias-border-l1)}.mf-writer-session-item .badge{flex:none;width:18px;text-align:center;color:var(--dsw-alias-state-success-primary,#55c98d);font-size:12px}',
     // v0.13.1 预览对齐：迷你导航移入左内栏底部横排（此前为 col/editor 间竖向窄条）
     '.mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}',
@@ -159,9 +166,9 @@ export function createClient(require) {
     '.mf-panel.mf-view .mf-col .mf-minis{opacity:0;pointer-events:none;transition:opacity .12s ease}',
     '.mf-panel.mf-view .mf-col .mf-item:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-vol-head:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-proj:hover .mf-minis{opacity:1;pointer-events:auto}',
     // v0.13.1 预览对齐：项目行 = 标题 + 元信息（无封面块/进度条）
-    '.mf-panel.mf-view .mf-col .mf-proj{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid transparent;border-radius:11px;cursor:pointer;transition:background .12s ease,border-color .12s ease}',
-    '.mf-panel.mf-view .mf-col .mf-proj:hover{background:rgba(255,255,255,.045)}',
-    '.mf-panel.mf-view .mf-col .mf-proj.active{background:var(--dsw-alias-state-business-tertiary);border-color:rgba(77,141,255,.26)}',
+    '.mf-panel.mf-view .mf-col .mf-proj{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid transparent;border-radius:5px;cursor:pointer;transition:background .12s ease,border-color .12s ease}',
+    '.mf-panel.mf-view .mf-col .mf-proj:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+    '.mf-panel.mf-view .mf-col .mf-proj.active{background:var(--dsw-alias-state-business-tertiary);border-color:var(--dsw-alias-border-l1)}',
     '.mf-panel.mf-view .mf-col .mf-proj-head{display:flex;align-items:center;gap:6px;min-width:0}',
     '.mf-panel.mf-view .mf-col .mf-proj-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.mf-panel.mf-view .mf-col .mf-proj-meta{display:flex;gap:8px;font-size:10.5px;color:var(--dsw-alias-label-secondary)}',
@@ -207,6 +214,20 @@ export function createClient(require) {
   const panel = { open: false, listeners: [] }
   let dshClientSessions = null
   let dshClientConnection = null
+  let dshClientWorkspaces = null
+  function currentDshWorkspacePath() {
+    try {
+      const sessions = dshClientSessions
+      const snapshot = sessions && sessions.list && typeof sessions.list.getSnapshot === 'function' ? sessions.list.getSnapshot() : null
+      const current = snapshot && snapshot.current && snapshot.byId && snapshot.byId[snapshot.current]
+      if (current && typeof current.cwd === 'string' && current.cwd.trim()) return current.cwd.trim()
+      const workspaces = dshClientWorkspaces
+      const workspaceSnapshot = workspaces && workspaces.list && typeof workspaces.list.getSnapshot === 'function' ? workspaces.list.getSnapshot() : null
+      const recent = workspaceSnapshot && workspaceSnapshot.recentWorkspaceId
+      const item = recent && Array.isArray(workspaceSnapshot.items) ? workspaceSnapshot.items.find((entry) => entry && entry.workspaceId === recent) : null
+      return item && typeof item.path === 'string' ? item.path.trim() : ''
+    } catch (error) { return '' }
+  }
   function setOpen(value) { panel.open = value; panel.listeners.slice().forEach((listener) => listener(value)) }
   function useOpen() { const state = React.useState(panel.open); React.useEffect(() => { panel.listeners.push(state[1]); return () => { panel.listeners = panel.listeners.filter((listener) => listener !== state[1]) } }, []); return state[0] }
   function OpenButton(props) { return h('button', { className: props && props.float ? 'mf-open mf-float' : 'mf-open', type: 'button', onClick: () => { ensureStyles(); setOpen(true) } }, '打开 墨扉') }
@@ -288,18 +309,13 @@ export function createClient(require) {
     }, [on])
     React.useEffect(() => {
       if (!on || typeof document === 'undefined') return undefined
-      const toggle = document.querySelector('[class*="hHd-Xa_toggle"]')
-      if (!toggle) return undefined
-      const leaveWritingMode = (event) => {
-        // A user's request to expand the DSH sidebar is a request to return to DSH.
-        // Programmatic clicks from syncOfficialSidebar are untrusted and pass through.
-        if (!event.isTrusted) return
-        event.preventDefault()
-        event.stopImmediatePropagation()
-        setBubbleOn(false)
-      }
-      toggle.addEventListener('click', leaveWritingMode, true)
-      return () => toggle.removeEventListener('click', leaveWritingMode, true)
+      const root = document.querySelector('[class*="hHd-Xa_root"]')
+      if (!root) return undefined
+      const syncSidebarWidth = () => document.body.classList.toggle('mf-sidebar-expanded', !String(root.className).includes('collapsed'))
+      syncSidebarWidth()
+      const observer = new MutationObserver(syncSidebarWidth)
+      observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+      return () => { observer.disconnect(); document.body.classList.remove('mf-sidebar-expanded') }
     }, [on])
     return h('div', { className: 'mf-bubble' + (on ? ' on' : '') },
       h('div', { className: 'mf-bubble-panel', 'aria-hidden': on ? undefined : 'true' }, h(ErrorBoundary, null, h(Workspace, { mode: 'web', onCollapse: () => setBubbleOn(false) }))),
@@ -688,9 +704,9 @@ export function createClient(require) {
     const [chatSessionsOpen, setChatSessionsOpen] = React.useState(false)
     const [chatSessionList, setChatSessionList] = React.useState({ ids: [], byId: {} })
     const [agentContextBound, setAgentContextBound] = React.useState(false)
-    // v0.18: 初始向导（空白状态引导选择小说文件夹）+ 会话菜单自动弹出
+    // 新项目默认继承当前 DSH 会话的工作区；作者可在向导中改为其他目录。
     const [onboardOpen, setOnboardOpen] = React.useState(false)
-    const [onboardFolder, setOnboardFolder] = React.useState('')
+    const [onboardFolder, setOnboardFolder] = React.useState(() => currentDshWorkspacePath())
     const [onboardTitle, setOnboardTitle] = React.useState('')
     const [onboardBusy, setOnboardBusy] = React.useState(false)
     const [onboardError, setOnboardError] = React.useState('')
@@ -1019,7 +1035,17 @@ export function createClient(require) {
         }
       }, 350)
     }
-    function createProject() { if (!newProject.trim()) return; call('create-project', { title: newProject }).then((result) => { if (result && result.project) { setNewProject(''); setProjectForm(false); setProjectId(result.project.id); try { if (typeof localStorage !== 'undefined') localStorage['mofei.lastProject'] = result.project.id } catch (persistError) { /* noop */ } reload() } }).catch((failure) => { setError('创建项目失败'); console.error(failure) }) }
+    function createProject() {
+      if (!newProject.trim()) return
+      const rootDir = currentDshWorkspacePath()
+      call('create-project', { title: newProject, ...(rootDir ? { rootDir } : {}) }).then((result) => {
+        if (result && result.project) {
+          setNewProject(''); setProjectForm(false); setProjectId(result.project.id)
+          try { if (typeof localStorage !== 'undefined') localStorage['mofei.lastProject'] = result.project.id } catch (persistError) { /* noop */ }
+          reload()
+        }
+      }).catch((failure) => { setError('创建项目失败'); console.error(failure) })
+    }
     function createChapter(volumeId) { if (!projectId || !newChapter.trim()) return; call('create-chapter', { projectId, title: newChapter, volumeId: volumeId || null }).then((result) => { if (result && result.chapter) { setNewChapter(''); setChapterForm(false); setProjects((items) => items.map((item) => item.id !== projectId ? item : { ...item, chapters: item.chapters.concat([result.chapter]) })); pickChapter(result.chapter) } }).catch((failure) => { setError('创建章节失败'); console.error(failure) }) }
     function startRename(kind, id, currentTitle) { setRename({ kind, id }); setRenameValue(currentTitle) }
     function commitRename() {
@@ -1203,11 +1229,15 @@ export function createClient(require) {
     function deleteCustomSkill(name) {
       call('delete-custom-skill', { name }).then(() => refreshSkillSettings()).catch(() => { /* noop */ })
     }
-    // v0.18: 空白状态 → 初始向导；有项目 → 关闭
+    // 空白状态 → 初始向导；有项目 → 关闭。工作区快照异步到达时补入默认小说目录。
     React.useEffect(() => {
       if (mode !== 'web' || loading) return
       setOnboardOpen(!projects.length)
-    }, [mode, loading, projects])
+      if (!onboardFolder) {
+        const workspacePath = currentDshWorkspacePath()
+        if (workspacePath) setOnboardFolder(workspacePath)
+      }
+    }, [mode, loading, projects, onboardFolder])
     // v0.18: 会话菜单自动弹出——打开墨菲且未绑定会话、存在历史会话时，直接可承接上次对话。
     // 注意：chatSessionList 快照频繁更新，不能整对象作依赖（会清掉 later 定时器）——
     // 用 ref 读取最新列表，依赖只含「列表是否非空」这一信号（冷启动快照为空，数据异步到达后触发一次）。
@@ -1690,6 +1720,7 @@ export function createClient(require) {
     reloadRef.current = reload
     const syncStoreRef = React.useRef(null)
     const syncFileRef = React.useRef(null)
+    const workspaceDiscoveryRef = React.useRef({ path: '', at: 0 })
     React.useEffect(() => {
       if (mode !== 'web') return undefined
       let alive = true
@@ -1698,6 +1729,12 @@ export function createClient(require) {
         if (busy || !alive) return
         busy = true
         try {
+          const workspaceRoot = currentDshWorkspacePath()
+          const discovery = workspaceDiscoveryRef.current
+          if (workspaceRoot && (workspaceRoot !== discovery.path || Date.now() - discovery.at > 5000)) {
+            workspaceDiscoveryRef.current = { path: workspaceRoot, at: Date.now() }
+            await timedCall('discover-workspace', { workspaceRoot }, 15000)
+          }
           const result = await timedCall('sync-status', {}, 5000)
           if (!alive || !result) return
           const storeStamp = (result && result.storeStamp) || ''
@@ -1784,7 +1821,8 @@ export function createClient(require) {
           }
         }
         const before = new Set((sessions.list.getSnapshot().ids) || [])
-        const created = await dshCall('session.create', { agentPreset: 'mofei-writer' })
+        const workspaceRoot = currentDshWorkspacePath()
+        const created = await dshCall('session.create', { agentPreset: 'mofei-writer', ...(workspaceRoot ? { cwd: workspaceRoot } : {}) })
         const sessionId = createdSessionId(created, sessions, before)
         if (!sessionId) { setChatError('创建项目写作会话失败'); setChatBusy(false); return null }
         const bound = await call('bind-writer-session', { projectId: targetProjectId, sessionId })
@@ -2214,12 +2252,12 @@ export function createClient(require) {
       h('header', { className: 'mf-head' },
         h('div', { className: 'mf-head-main' }, h('strong', null, '墨扉'), h('span', { className: 'mf-head-context', title: project ? project.title : '写作工作台' }, project ? project.title : '写作工作台')),
         h('span', { className: 'mf-head-actions' },
-          mode === 'web' ? h('button', { className: 'mf-wstate' + (writingSession ? ' on' : ''), type: 'button', title: '选择/切换历史会话或新建写作会话', onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, '会话') : null,
           h('button', { className: 'mf-action-icon', type: 'button', title: '命令面板（Ctrl+Shift+P）', onClick: () => setPaletteOpen(true) }, '⋯'),
           mode === 'web' ? h('button', { className: 'mf-btn mf-primary', type: 'button', title: project ? '在当前项目新建章节' : '新建项目', onClick: () => { if (project) { setChapterForm(true); setTab('projects') } else { setProjectForm(true); setTab('projects') } } }, '＋ 新建') : null,
           mode === 'web' && onCollapse ? h('button', { className: 'mf-action-icon', type: 'button', title: '收起墨扉，返回原版 web', onClick: onCollapse }, '×') : null,
           mode === 'web' ? null : h('button', { className: 'mf-close', type: 'button', onClick: close, title: '关闭' }, '×')),
-        mode === 'web' && chatSessionsOpen ? h('div', { className: 'mf-writer-session-menu', role: 'menu', 'aria-label': '墨扉会话' },
+        // Web 模式的会话选择统一交给右侧官方 DSH 侧栏；独立工作台仍可使用本地菜单。
+        mode !== 'web' && chatSessionsOpen ? h('div', { className: 'mf-writer-session-menu', role: 'menu', 'aria-label': '墨扉会话' },
           h('h3', null, project ? '《' + project.title + '》的写作会话' : '写作会话'),
           project ? h('div', { className: 'mf-writer-session-item on' }, h('span', { className: 'name' }, writingSession ? '项目专属写作会话已打开' : '项目专属写作会话'), h('span', { className: 'time' }, writingSession ? 'mofei-writer' : '正在关联')) : h('div', { className: 'mf-writer-session-empty' }, '先选择一本小说项目'),
           project ? h('button', { className: 'mf-btn', type: 'button', onClick: () => { enterWritingMode(); setChatSessionsOpen(false) } }, '打开项目会话') : null,
@@ -2264,7 +2302,7 @@ export function createClient(require) {
               ungrouped.map(renderChapterRow)
             )
           ) : h('div', { className: 'mf-list' },
-            h('div', { className: 'mf-sh' }, h('span', null, '项目'), h('span', { className: 'mf-eh-actions' }, mode === 'web' ? null : h('button', { className: 'mf-btn', type: 'button', title: projectWide ? '收起项目宽幅页' : '打开项目宽幅页', onClick: () => setProjectWide(!projectWide) }, projectWide ? '收起' : '宽幅'), h('button', { className: 'mf-btn', type: 'button', onClick: () => setProjectForm(!projectForm) }, '+ 新建'))),
+            h('div', { className: 'mf-sh' }, h('span', { title: currentDshWorkspacePath() || '当前会话未选择工作区' }, '项目'), h('span', { className: 'mf-eh-actions' }, mode === 'web' ? h('button', { className: 'mf-btn', type: 'button', title: '扫描当前 DSH 工作区中的墨扉项目文件', onClick: () => { const workspaceRoot = currentDshWorkspacePath(); if (workspaceRoot) call('discover-workspace', { workspaceRoot }).then(() => reload()) } }, '同步') : h('button', { className: 'mf-btn', type: 'button', title: projectWide ? '收起项目宽幅页' : '打开项目宽幅页', onClick: () => setProjectWide(!projectWide) }, projectWide ? '收起' : '宽幅'), h('button', { className: 'mf-btn', type: 'button', onClick: () => setProjectForm(!projectForm) }, '+ 新建'))),
             mode === 'web' ? h('div', { className: 'mf-search', style: { borderBottom: 0, padding: '0 10px 8px' } }, h('input', { className: 'mf-input', value: projQuery, placeholder: '搜索项目…', onChange: (event) => setProjQuery(event.target.value) })) : null,
             projectForm ? h('div', { className: 'mf-form' }, h('input', { className: 'mf-input', value: newProject, placeholder: '项目名称', onChange: (event) => setNewProject(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter') createProject() } }), h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: createProject }, '创建')) : null,
             loading ? h('div', { className: 'mf-empty' }, '正在加载…') : projects.length ? h('div', null,
@@ -2579,9 +2617,9 @@ export function createClient(require) {
       mode === 'web' && onboardOpen ? h('div', { className: 'mf-onboard', role: 'presentation' },
         h('div', { className: 'mf-onboard-card', role: 'dialog', 'aria-label': '开始写作' },
           h('h2', null, '开始你的第一本小说'),
-          h('p', null, '先选择一个小说的存放文件夹——之后这本小说的全部内容（章节、角色、世界书、笔记、链）都会保存在那里。'),
+          h('p', null, '小说默认保存在当前 DSH 会话已选择的工作区；你也可以改选专用小说文件夹。章节、角色、世界书、笔记和链都会写入该位置。'),
           h('div', { className: 'mf-onboard-folder' },
-            h('input', { value: onboardFolder, placeholder: '尚未选择文件夹（留空则使用默认位置）', readOnly: true, onChange: () => {} }),
+            h('input', { value: onboardFolder, placeholder: '当前会话未选择工作区，可选择小说文件夹', readOnly: true, onChange: () => {} }),
             h('button', { className: 'mf-btn', type: 'button', disabled: onboardPicking, onClick: pickOnboardFolder }, onboardPicking ? '选择中…' : '选择文件夹')),
           h('input', { type: 'text', value: onboardTitle, placeholder: '小说名（如：探案未至之境）', onChange: (event) => setOnboardTitle(event.target.value) }),
           onboardError ? h('div', { className: 'mf-onboard-error' }, onboardError) : null,
@@ -2602,6 +2640,7 @@ export function createClient(require) {
     if (slots === undefined) return
     try { dshClientSessions = ctx.get('sessions') || null } catch (error) { dshClientSessions = null }
     try { dshClientConnection = ctx.get('connection') || null } catch (error) { dshClientConnection = null }
+    try { dshClientWorkspaces = ctx.get('workspaces') || null } catch (error) { dshClientWorkspaces = null }
     slots.inject('sidebar.footer.action', () => slots.register({ name: 'sidebar.footer.action', id: 'mofei-workspace', order: 20, label: '墨扉' }, SideAction))
     // v0.14 变形金刚形态：原版 DSH web 完整保留（官方侧栏/官方对话/官方 composer 全部回归）；
     // 墨扉 = shell.overlay 气泡（右下角 orb 按钮，点击 → 官方侧栏原生折叠成窄条 +

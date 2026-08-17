@@ -1,4 +1,4 @@
-// src/client/project-grid.js
+// plugin/src/client/project-grid.js
 var reactBinding = null;
 var reactResolved = false;
 function resolveReact() {
@@ -314,7 +314,7 @@ function ProjectGrid(props) {
   return h("div", { className: "mf-grid-root" }, toolbar, body);
 }
 
-// src/client/project-page.js
+// plugin/src/client/project-page.js
 var MAX_DESCRIPTION_CHARS = 500;
 function normalizeDescription(text) {
   const s = String(text == null ? "" : text).trim();
@@ -471,7 +471,7 @@ function ProjectPage(props) {
   );
 }
 
-// src/client/summary-panel.js
+// plugin/src/client/summary-panel.js
 var reactBinding2 = null;
 var reactResolved2 = false;
 function resolveReact2() {
@@ -836,7 +836,7 @@ function SummaryPanel(props) {
   );
 }
 
-// src/client/prompt-chains.js
+// plugin/src/client/prompt-chains.js
 var reactBinding3 = null;
 var reactResolved3 = false;
 function resolveReact3() {
@@ -1068,7 +1068,7 @@ function PromptChainsPanel(props) {
   );
 }
 
-// src/client/writing-dashboard.js
+// plugin/src/client/writing-dashboard.js
 var reactBinding4 = null;
 var reactResolved4 = false;
 function resolveReact4() {
@@ -1333,7 +1333,7 @@ function WritingDashboard(props) {
   );
 }
 
-// src/client/skills-library.js
+// plugin/src/client/skills-library.js
 var reactBinding5 = null;
 var reactResolved5 = false;
 var WRITING_SKILL_LABELS = {
@@ -1552,7 +1552,7 @@ function WritingSkillsPanel(props) {
   );
 }
 
-// src/client/editor-limits.js
+// plugin/src/client/editor-limits.js
 var MAX_EDITOR_CONTENT_LINES = 2e3;
 var MAX_EDITOR_CONTENT_CHARACTERS = 1e5;
 var LINE_SEPARATORS = /* @__PURE__ */ new Set([
@@ -1598,7 +1598,7 @@ function formatContentLimitError(limit) {
   return `\u6B63\u6587\u8D85\u51FA\u4E0A\u9650\uFF1A\u5F53\u524D ${characterCount} \u5B57 / ${MAX_EDITOR_CONTENT_CHARACTERS} \u5B57\uFF0C${lineCount} \u884C / ${MAX_EDITOR_CONTENT_LINES} \u884C\u3002\u8BF7\u62C6\u5206\u7AE0\u8282\u540E\u518D\u4FDD\u5B58\u3002`;
 }
 
-// src/client/agent-bridge.js
+// plugin/src/client/agent-bridge.js
 var MENTION_MAX_EXCERPT = 4e3;
 function toText(value) {
   if (value == null) return "";
@@ -1667,7 +1667,7 @@ function buildReviewerMention(input) {
   return [REVIEWER_HEADER, "", buildChapterMention(source)].join("\n");
 }
 
-// src/client/worldbook-tools.js
+// plugin/src/client/worldbook-tools.js
 function idOf(item) {
   if (typeof item === "string") return item;
   if (item && typeof item === "object" && !Array.isArray(item) && typeof item.id === "string") return item.id;
@@ -1767,7 +1767,7 @@ function buildBulkDeletePlan(entries, selectedIds) {
   return { entryIds, count: entryIds.length };
 }
 
-// src/client/layout.js
+// plugin/src/client/layout.js
 var LAYOUT_DEFAULTS = { left: 210, middle: 250 };
 var LAYOUT_MIN = { left: 180, middle: 180 };
 var LAYOUT_MAX = { left: 420, middle: 640 };
@@ -1860,7 +1860,7 @@ function saveLayout(storage, key, layout) {
   }
 }
 
-// src/client/workspace-utils.js
+// plugin/src/client/workspace-utils.js
 function fmtTime(at) {
   try {
     return new Date(at).toLocaleString();
@@ -1875,7 +1875,7 @@ function countWords(text) {
   return String(text).replace(/\s+/g, "").length;
 }
 
-// src/client/chat-utils.js
+// plugin/src/client/chat-utils.js
 function chatTextOf(blocks) {
   const out = [];
   (Array.isArray(blocks) ? blocks : []).forEach((block) => {
@@ -1924,7 +1924,7 @@ function normalizeChatItems(snap) {
   return items;
 }
 
-// src/client/legacy.js
+// plugin/src/client/legacy.js
 function createClient(require2) {
   const module = { exports: {} };
   const exports = module.exports;
@@ -2037,7 +2037,7 @@ function createClient(require2) {
     // 工作态的阅读顺序固定为「墨扉工作台 | DSH 写作助手 | DSH 窄轨」。
     ".mf-bubble{position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden}",
     // 宽屏让原生 DSH composer 留在最右；空间不足时，优先完整保住写作区，只留下 DSH 窄轨供切回。
-    ".mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:min(calc(100% - 55px),max(920px,calc(100% - 55px - clamp(460px,31vw,520px))));min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--dsw-alias-bg-layer-1,#0d0e11);border-right:1px solid var(--dsw-alias-border-l1);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1);pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}",
+    ".mf-bubble-panel{position:absolute;top:0;left:0;bottom:0;width:calc(100% - var(--mf-dsh-sidebar,55px) - var(--mf-dsh-composer,clamp(380px,31vw,520px)));min-width:0;display:flex;flex-direction:column;overflow:hidden;container-type:inline-size;background:var(--dsw-alias-bg-layer-1,#0d0e11);border-right:1px solid var(--dsw-alias-border-l1);transform:translateX(-100%);transition:transform .32s cubic-bezier(.22,.61,.36,1),width .2s ease;pointer-events:auto;box-shadow:14px 0 36px rgba(0,0,0,.28)}",
     ".mf-bubble.on .mf-bubble-panel{transform:translateX(0)}",
     ".mf-orb{position:fixed;right:18px;bottom:18px;width:46px;height:46px;border:0;border-radius:50%;background:var(--dsw-alias-state-business-primary,#4d8dff);color:#fff;cursor:pointer;font:700 17px/1 sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.5);pointer-events:auto;z-index:95;transition:transform .2s ease,background .2s ease,opacity .2s ease}",
     ".mf-orb:hover{transform:scale(1.08)}.mf-orb.on{background:var(--dsw-alias-label-secondary,#6b6b74)}",
@@ -2045,11 +2045,12 @@ function createClient(require2) {
     ".mf-bubble.on .mf-orb{opacity:0;pointer-events:none}",
     // 变形时：官方侧栏由官方机制收成窄条，并显式放到 DSH 助手右侧。
     // 不能隐藏官方 grid 列：这样会触发 grid 自动排版，反而会压扁整页。
-    'body.mf-transform [class*="_frame"]{grid-template-columns:minmax(0,1fr) 55px 0 !important}',
+    "body.mf-transform{--mf-dsh-sidebar:55px;--mf-dsh-composer:clamp(380px,31vw,520px)}body.mf-transform.mf-sidebar-expanded{--mf-dsh-sidebar:280px}",
+    'body.mf-transform [class*="_frame"]{grid-template-columns:minmax(0,1fr) var(--mf-dsh-sidebar) 0 !important}',
     'body.mf-transform [class*="centerCol"]{grid-column:1 !important;grid-row:1 !important}',
-    'body.mf-transform [class*="hHd-Xa_root"]{grid-column:2 !important;grid-row:1 !important;width:55px !important;min-width:55px !important;max-width:55px !important;overflow:hidden !important}',
-    // centerCol 与对话根之间隔着 display:contents 包装层，故用后代选择器而非直接子选择器。
-    'body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:calc(100% - clamp(460px,31vw,520px)) !important;transition:padding-left .32s cubic-bezier(.22,.61,.36,1)}',
+    'body.mf-transform [class*="hHd-Xa_root"]{grid-column:2 !important;grid-row:1 !important;width:var(--mf-dsh-sidebar) !important;min-width:var(--mf-dsh-sidebar) !important;max-width:var(--mf-dsh-sidebar) !important;overflow:hidden !important}',
+    // centerCol 本身已经排除了官方侧栏，内层只需为 Composer 预留空间；重复扣侧栏会让 Composer 被工作台遮住。
+    'body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:calc(100% - var(--mf-dsh-composer)) !important;transition:padding-left .2s ease}',
     // 右侧仍是官方 composer，只收紧容器并用同一套分隔线把它收为助手栏。
     'body.mf-transform [class*="scrollBody"]{background:var(--dsw-alias-bg-layer-1,#101115);border-left:1px solid var(--dsw-alias-border-l1)}',
     'body.mf-transform [class*="composerSeat"]{padding:0 16px 18px !important}',
@@ -2061,13 +2062,19 @@ function createClient(require2) {
     'body.mf-transform [class*="composerHero"] [class*="heroWorkspaceRow"]{margin-top:2px;padding:0 2px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px !important;line-height:1.5 !important;color:var(--dsw-alias-label-secondary) !important}',
     'body.mf-transform [class*="composerHero"] [class*="card"]{border-radius:8px !important;box-shadow:0 10px 28px rgba(0,0,0,.28)}',
     'body.mf-transform [class*="composerHero"] [class*="card"],body.mf-transform [class*="composerHero"] [class*="row"]{width:100%;max-width:100%}',
+    // 窄屏优先保留墨扉编辑区；官方会话切换仍在右侧 55px 窄轨中可达。
+    '@media(max-width:760px){body.mf-transform,body.mf-transform.mf-sidebar-expanded{--mf-dsh-sidebar:55px;--mf-dsh-composer:0px}body.mf-transform [class*="centerCol"] [class*="root"]{padding-left:0 !important}}',
     // 墨扉工作台：扁平的目录、编辑器与 DSH 助手三栏，不使用悬浮卡片来分区。
     ".mf-panel.mf-view{background:var(--dsw-alias-bg-layer-1,#0d0e11)}.mf-panel.mf-view .mf-head{position:relative;height:56px;padding:0 20px;background:var(--dsw-alias-bg-layer-2,#111217);border-bottom-color:var(--dsw-alias-border-l1)}.mf-panel.mf-view .mf-body{display:flex;gap:0;padding:0;min-height:0;background:var(--dsw-alias-bg-layer-1,#0d0e11)}",
     ".mf-panel.mf-view .mf-activity,.mf-panel.mf-view .mf-gutter,.mf-panel.mf-view .mf-col.mf-mid{display:none}",
     ".mf-panel.mf-view .mf-col{width:286px;flex:none;border:0;border-right:1px solid var(--dsw-alias-border-l1);border-radius:0;background:var(--dsw-alias-bg-layer-1,#101115);overflow:hidden;box-shadow:none}",
     ".mf-panel.mf-view .mf-editor{flex:1;min-height:0;border:0;border-radius:0;background:var(--dsw-alias-bg-base,#0d0e11);overflow:hidden;box-shadow:none}",
     "@media(max-width:1140px){.mf-panel.mf-view .mf-col{width:228px}.mf-panel.mf-view .mf-text{padding-inline:30px}}",
+    // 官方会话栏展开后，墨扉使用紧凑工作态而不是把编辑区压成窄缝。
+    "body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-col{width:204px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-head{height:48px;padding-inline:12px}body.mf-transform.mf-sidebar-expanded .mf-head-context{max-width:140px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-text{padding-inline:22px;font-size:15px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-mininav{padding-inline:6px}body.mf-transform.mf-sidebar-expanded .mf-panel.mf-view .mf-proj{padding:7px 8px}",
     ".mf-head-main{display:flex;align-items:center;gap:10px;min-width:0}.mf-head-main strong{font-size:15px;font-weight:680;letter-spacing:0}.mf-head-context{min-width:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-secondary);font-size:12px}.mf-head-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;min-width:0}.mf-head-actions .mf-btn{min-height:30px}.mf-head-actions .mf-primary{padding-inline:11px}.mf-action-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font:18px/1 sans-serif}.mf-action-icon:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-head-actions .mf-stylebar{margin-right:6px}.mf-head-actions .mf-stylebar select{max-width:104px;border:0;background:transparent;padding:4px;color:var(--dsw-alias-label-secondary)}",
+    "@container (max-width:680px){.mf-panel.mf-view .mf-col{width:190px}.mf-panel.mf-view .mf-head{height:48px;padding-inline:10px}.mf-head-context{display:none}.mf-panel.mf-view .mf-text{padding-inline:18px;font-size:15px}.mf-panel.mf-view .mf-mininav{padding-inline:5px}.mf-panel.mf-view .mf-proj{padding:7px}.mf-panel.mf-view .mf-proj-meta{gap:5px}}",
+    "@container (max-width:510px){.mf-panel.mf-view .mf-col{width:164px}.mf-panel.mf-view .mf-mininav{display:none}.mf-panel.mf-view .mf-head-actions .mf-stylebar{display:none}.mf-panel.mf-view .mf-text{padding-inline:14px;font-size:14px}.mf-panel.mf-view .mf-proj-meta{display:none}.mf-panel.mf-view .mf-list{padding:5px}}",
     ".mf-writer-session-menu{position:absolute;right:12px;top:46px;z-index:115;width:260px;max-height:min(360px,calc(100vh - 80px));display:flex;flex-direction:column;gap:3px;padding:7px;background:var(--dsw-alias-bg-overlay,#141416);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;box-shadow:0 16px 42px rgba(0,0,0,.42);overflow:auto}.mf-writer-session-menu h3{margin:2px 5px 5px;font-size:11px;font-weight:650;color:var(--dsw-alias-label-secondary)}.mf-writer-session-item{display:flex;align-items:center;gap:8px;width:100%;min-width:0;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);padding:7px 8px;text-align:left;cursor:pointer;font:12px/1.35 sans-serif}.mf-writer-session-item:hover,.mf-writer-session-item.on{background:var(--dsw-alias-state-business-tertiary);color:var(--dsw-alias-label-primary)}.mf-writer-session-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-writer-session-item .time{flex:none;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-writer-session-empty{padding:10px 8px;color:var(--dsw-alias-label-tertiary);font-size:11.5px}.mf-writer-session-menu .mf-btn{margin:4px 1px 1px;text-align:center}.mf-writer-session-menu .mf-btn.danger{color:#f87171;border-color:rgba(248,113,113,.3)}.mf-writer-session-menu-sep{height:1px;margin:8px 2px;background:var(--dsw-alias-border-l1)}.mf-writer-session-item .badge{flex:none;width:18px;text-align:center;color:var(--dsw-alias-state-success-primary,#55c98d);font-size:12px}",
     // v0.13.1 预览对齐：迷你导航移入左内栏底部横排（此前为 col/editor 间竖向窄条）
     ".mf-panel.mf-view .mf-col .mf-list{flex:1;min-height:0}",
@@ -2086,9 +2093,9 @@ function createClient(require2) {
     ".mf-panel.mf-view .mf-col .mf-minis{opacity:0;pointer-events:none;transition:opacity .12s ease}",
     ".mf-panel.mf-view .mf-col .mf-item:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-vol-head:hover .mf-minis,.mf-panel.mf-view .mf-col .mf-proj:hover .mf-minis{opacity:1;pointer-events:auto}",
     // v0.13.1 预览对齐：项目行 = 标题 + 元信息（无封面块/进度条）
-    ".mf-panel.mf-view .mf-col .mf-proj{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid transparent;border-radius:11px;cursor:pointer;transition:background .12s ease,border-color .12s ease}",
-    ".mf-panel.mf-view .mf-col .mf-proj:hover{background:rgba(255,255,255,.045)}",
-    ".mf-panel.mf-view .mf-col .mf-proj.active{background:var(--dsw-alias-state-business-tertiary);border-color:rgba(77,141,255,.26)}",
+    ".mf-panel.mf-view .mf-col .mf-proj{display:flex;flex-direction:column;gap:2px;padding:9px 10px;border:1px solid transparent;border-radius:5px;cursor:pointer;transition:background .12s ease,border-color .12s ease}",
+    ".mf-panel.mf-view .mf-col .mf-proj:hover{background:var(--dsw-alias-interactive-bg-hover)}",
+    ".mf-panel.mf-view .mf-col .mf-proj.active{background:var(--dsw-alias-state-business-tertiary);border-color:var(--dsw-alias-border-l1)}",
     ".mf-panel.mf-view .mf-col .mf-proj-head{display:flex;align-items:center;gap:6px;min-width:0}",
     ".mf-panel.mf-view .mf-col .mf-proj-name{flex:1;min-width:0;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
     ".mf-panel.mf-view .mf-col .mf-proj-meta{display:flex;gap:8px;font-size:10.5px;color:var(--dsw-alias-label-secondary)}",
@@ -2155,6 +2162,22 @@ function createClient(require2) {
   const panel = { open: false, listeners: [] };
   let dshClientSessions = null;
   let dshClientConnection = null;
+  let dshClientWorkspaces = null;
+  function currentDshWorkspacePath() {
+    try {
+      const sessions = dshClientSessions;
+      const snapshot = sessions && sessions.list && typeof sessions.list.getSnapshot === "function" ? sessions.list.getSnapshot() : null;
+      const current = snapshot && snapshot.current && snapshot.byId && snapshot.byId[snapshot.current];
+      if (current && typeof current.cwd === "string" && current.cwd.trim()) return current.cwd.trim();
+      const workspaces = dshClientWorkspaces;
+      const workspaceSnapshot = workspaces && workspaces.list && typeof workspaces.list.getSnapshot === "function" ? workspaces.list.getSnapshot() : null;
+      const recent = workspaceSnapshot && workspaceSnapshot.recentWorkspaceId;
+      const item = recent && Array.isArray(workspaceSnapshot.items) ? workspaceSnapshot.items.find((entry) => entry && entry.workspaceId === recent) : null;
+      return item && typeof item.path === "string" ? item.path.trim() : "";
+    } catch (error) {
+      return "";
+    }
+  }
   function setOpen(value) {
     panel.open = value;
     panel.listeners.slice().forEach((listener) => listener(value));
@@ -2274,16 +2297,16 @@ function createClient(require2) {
     }, [on]);
     React.useEffect(() => {
       if (!on || typeof document === "undefined") return void 0;
-      const toggle = document.querySelector('[class*="hHd-Xa_toggle"]');
-      if (!toggle) return void 0;
-      const leaveWritingMode = (event) => {
-        if (!event.isTrusted) return;
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        setBubbleOn(false);
+      const root = document.querySelector('[class*="hHd-Xa_root"]');
+      if (!root) return void 0;
+      const syncSidebarWidth = () => document.body.classList.toggle("mf-sidebar-expanded", !String(root.className).includes("collapsed"));
+      syncSidebarWidth();
+      const observer = new MutationObserver(syncSidebarWidth);
+      observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+      return () => {
+        observer.disconnect();
+        document.body.classList.remove("mf-sidebar-expanded");
       };
-      toggle.addEventListener("click", leaveWritingMode, true);
-      return () => toggle.removeEventListener("click", leaveWritingMode, true);
     }, [on]);
     return h(
       "div",
@@ -2666,7 +2689,7 @@ function createClient(require2) {
     const [chatSessionList, setChatSessionList] = React.useState({ ids: [], byId: {} });
     const [agentContextBound, setAgentContextBound] = React.useState(false);
     const [onboardOpen, setOnboardOpen] = React.useState(false);
-    const [onboardFolder, setOnboardFolder] = React.useState("");
+    const [onboardFolder, setOnboardFolder] = React.useState(() => currentDshWorkspacePath());
     const [onboardTitle, setOnboardTitle] = React.useState("");
     const [onboardBusy, setOnboardBusy] = React.useState(false);
     const [onboardError, setOnboardError] = React.useState("");
@@ -3250,7 +3273,8 @@ function createClient(require2) {
     }
     function createProject() {
       if (!newProject.trim()) return;
-      call("create-project", { title: newProject }).then((result) => {
+      const rootDir = currentDshWorkspacePath();
+      call("create-project", { title: newProject, ...rootDir ? { rootDir } : {} }).then((result) => {
         if (result && result.project) {
           setNewProject("");
           setProjectForm(false);
@@ -3815,7 +3839,11 @@ function createClient(require2) {
     React.useEffect(() => {
       if (mode !== "web" || loading) return;
       setOnboardOpen(!projects.length);
-    }, [mode, loading, projects]);
+      if (!onboardFolder) {
+        const workspacePath = currentDshWorkspacePath();
+        if (workspacePath) setOnboardFolder(workspacePath);
+      }
+    }, [mode, loading, projects, onboardFolder]);
     const chatSessionListRef = React.useRef(chatSessionList);
     chatSessionListRef.current = chatSessionList;
     const sessionListNonEmpty = (chatSessionList.ids || []).length > 0;
@@ -4608,6 +4636,7 @@ function createClient(require2) {
     reloadRef.current = reload;
     const syncStoreRef = React.useRef(null);
     const syncFileRef = React.useRef(null);
+    const workspaceDiscoveryRef = React.useRef({ path: "", at: 0 });
     React.useEffect(() => {
       if (mode !== "web") return void 0;
       let alive = true;
@@ -4616,6 +4645,12 @@ function createClient(require2) {
         if (busy || !alive) return;
         busy = true;
         try {
+          const workspaceRoot = currentDshWorkspacePath();
+          const discovery = workspaceDiscoveryRef.current;
+          if (workspaceRoot && (workspaceRoot !== discovery.path || Date.now() - discovery.at > 5e3)) {
+            workspaceDiscoveryRef.current = { path: workspaceRoot, at: Date.now() };
+            await timedCall("discover-workspace", { workspaceRoot }, 15e3);
+          }
           const result = await timedCall("sync-status", {}, 5e3);
           if (!alive || !result) return;
           const storeStamp = result && result.storeStamp || "";
@@ -4730,7 +4765,8 @@ function createClient(require2) {
           }
         }
         const before = new Set(sessions.list.getSnapshot().ids || []);
-        const created = await dshCall("session.create", { agentPreset: "mofei-writer" });
+        const workspaceRoot = currentDshWorkspacePath();
+        const created = await dshCall("session.create", { agentPreset: "mofei-writer", ...workspaceRoot ? { cwd: workspaceRoot } : {} });
         const sessionId = createdSessionId(created, sessions, before);
         if (!sessionId) {
           setChatError("\u521B\u5EFA\u9879\u76EE\u5199\u4F5C\u4F1A\u8BDD\u5931\u8D25");
@@ -5485,7 +5521,6 @@ function createClient(require2) {
           h(
             "span",
             { className: "mf-head-actions" },
-            mode === "web" ? h("button", { className: "mf-wstate" + (writingSession ? " on" : ""), type: "button", title: "\u9009\u62E9/\u5207\u6362\u5386\u53F2\u4F1A\u8BDD\u6216\u65B0\u5EFA\u5199\u4F5C\u4F1A\u8BDD", onClick: () => setChatSessionsOpen(!chatSessionsOpen) }, "\u4F1A\u8BDD") : null,
             h("button", { className: "mf-action-icon", type: "button", title: "\u547D\u4EE4\u9762\u677F\uFF08Ctrl+Shift+P\uFF09", onClick: () => setPaletteOpen(true) }, "\u22EF"),
             mode === "web" ? h("button", { className: "mf-btn mf-primary", type: "button", title: project ? "\u5728\u5F53\u524D\u9879\u76EE\u65B0\u5EFA\u7AE0\u8282" : "\u65B0\u5EFA\u9879\u76EE", onClick: () => {
               if (project) {
@@ -5499,7 +5534,8 @@ function createClient(require2) {
             mode === "web" && onCollapse ? h("button", { className: "mf-action-icon", type: "button", title: "\u6536\u8D77\u58A8\u6249\uFF0C\u8FD4\u56DE\u539F\u7248 web", onClick: onCollapse }, "\xD7") : null,
             mode === "web" ? null : h("button", { className: "mf-close", type: "button", onClick: close, title: "\u5173\u95ED" }, "\xD7")
           ),
-          mode === "web" && chatSessionsOpen ? h(
+          // Web 模式的会话选择统一交给右侧官方 DSH 侧栏；独立工作台仍可使用本地菜单。
+          mode !== "web" && chatSessionsOpen ? h(
             "div",
             { className: "mf-writer-session-menu", role: "menu", "aria-label": "\u58A8\u6249\u4F1A\u8BDD" },
             h("h3", null, project ? "\u300A" + project.title + "\u300B\u7684\u5199\u4F5C\u4F1A\u8BDD" : "\u5199\u4F5C\u4F1A\u8BDD"),
@@ -5582,7 +5618,10 @@ function createClient(require2) {
             ) : h(
               "div",
               { className: "mf-list" },
-              h("div", { className: "mf-sh" }, h("span", null, "\u9879\u76EE"), h("span", { className: "mf-eh-actions" }, mode === "web" ? null : h("button", { className: "mf-btn", type: "button", title: projectWide ? "\u6536\u8D77\u9879\u76EE\u5BBD\u5E45\u9875" : "\u6253\u5F00\u9879\u76EE\u5BBD\u5E45\u9875", onClick: () => setProjectWide(!projectWide) }, projectWide ? "\u6536\u8D77" : "\u5BBD\u5E45"), h("button", { className: "mf-btn", type: "button", onClick: () => setProjectForm(!projectForm) }, "+ \u65B0\u5EFA"))),
+              h("div", { className: "mf-sh" }, h("span", { title: currentDshWorkspacePath() || "\u5F53\u524D\u4F1A\u8BDD\u672A\u9009\u62E9\u5DE5\u4F5C\u533A" }, "\u9879\u76EE"), h("span", { className: "mf-eh-actions" }, mode === "web" ? h("button", { className: "mf-btn", type: "button", title: "\u626B\u63CF\u5F53\u524D DSH \u5DE5\u4F5C\u533A\u4E2D\u7684\u58A8\u6249\u9879\u76EE\u6587\u4EF6", onClick: () => {
+                const workspaceRoot = currentDshWorkspacePath();
+                if (workspaceRoot) call("discover-workspace", { workspaceRoot }).then(() => reload());
+              } }, "\u540C\u6B65") : h("button", { className: "mf-btn", type: "button", title: projectWide ? "\u6536\u8D77\u9879\u76EE\u5BBD\u5E45\u9875" : "\u6253\u5F00\u9879\u76EE\u5BBD\u5E45\u9875", onClick: () => setProjectWide(!projectWide) }, projectWide ? "\u6536\u8D77" : "\u5BBD\u5E45"), h("button", { className: "mf-btn", type: "button", onClick: () => setProjectForm(!projectForm) }, "+ \u65B0\u5EFA"))),
               mode === "web" ? h("div", { className: "mf-search", style: { borderBottom: 0, padding: "0 10px 8px" } }, h("input", { className: "mf-input", value: projQuery, placeholder: "\u641C\u7D22\u9879\u76EE\u2026", onChange: (event) => setProjQuery(event.target.value) })) : null,
               projectForm ? h("div", { className: "mf-form" }, h("input", { className: "mf-input", value: newProject, placeholder: "\u9879\u76EE\u540D\u79F0", onChange: (event) => setNewProject(event.target.value), onKeyDown: (event) => {
                 if (event.key === "Enter") createProject();
@@ -6237,11 +6276,11 @@ function createClient(require2) {
           "div",
           { className: "mf-onboard-card", role: "dialog", "aria-label": "\u5F00\u59CB\u5199\u4F5C" },
           h("h2", null, "\u5F00\u59CB\u4F60\u7684\u7B2C\u4E00\u672C\u5C0F\u8BF4"),
-          h("p", null, "\u5148\u9009\u62E9\u4E00\u4E2A\u5C0F\u8BF4\u7684\u5B58\u653E\u6587\u4EF6\u5939\u2014\u2014\u4E4B\u540E\u8FD9\u672C\u5C0F\u8BF4\u7684\u5168\u90E8\u5185\u5BB9\uFF08\u7AE0\u8282\u3001\u89D2\u8272\u3001\u4E16\u754C\u4E66\u3001\u7B14\u8BB0\u3001\u94FE\uFF09\u90FD\u4F1A\u4FDD\u5B58\u5728\u90A3\u91CC\u3002"),
+          h("p", null, "\u5C0F\u8BF4\u9ED8\u8BA4\u4FDD\u5B58\u5728\u5F53\u524D DSH \u4F1A\u8BDD\u5DF2\u9009\u62E9\u7684\u5DE5\u4F5C\u533A\uFF1B\u4F60\u4E5F\u53EF\u4EE5\u6539\u9009\u4E13\u7528\u5C0F\u8BF4\u6587\u4EF6\u5939\u3002\u7AE0\u8282\u3001\u89D2\u8272\u3001\u4E16\u754C\u4E66\u3001\u7B14\u8BB0\u548C\u94FE\u90FD\u4F1A\u5199\u5165\u8BE5\u4F4D\u7F6E\u3002"),
           h(
             "div",
             { className: "mf-onboard-folder" },
-            h("input", { value: onboardFolder, placeholder: "\u5C1A\u672A\u9009\u62E9\u6587\u4EF6\u5939\uFF08\u7559\u7A7A\u5219\u4F7F\u7528\u9ED8\u8BA4\u4F4D\u7F6E\uFF09", readOnly: true, onChange: () => {
+            h("input", { value: onboardFolder, placeholder: "\u5F53\u524D\u4F1A\u8BDD\u672A\u9009\u62E9\u5DE5\u4F5C\u533A\uFF0C\u53EF\u9009\u62E9\u5C0F\u8BF4\u6587\u4EF6\u5939", readOnly: true, onChange: () => {
             } }),
             h("button", { className: "mf-btn", type: "button", disabled: onboardPicking, onClick: pickOnboardFolder }, onboardPicking ? "\u9009\u62E9\u4E2D\u2026" : "\u9009\u62E9\u6587\u4EF6\u5939")
           ),
@@ -6276,6 +6315,11 @@ function createClient(require2) {
       dshClientConnection = ctx.get("connection") || null;
     } catch (error) {
       dshClientConnection = null;
+    }
+    try {
+      dshClientWorkspaces = ctx.get("workspaces") || null;
+    } catch (error) {
+      dshClientWorkspaces = null;
     }
     slots.inject("sidebar.footer.action", () => slots.register({ name: "sidebar.footer.action", id: "mofei-workspace", order: 20, label: "\u58A8\u6249" }, SideAction));
     slots.inject("shell.overlay", () => slots.register({ name: "shell.overlay", id: "mofei-draft-workspace", order: 20, label: "\u58A8\u6249 Workspace" }, () => h(ErrorBoundary, null, h(MofeiBubble, null))));
@@ -6344,6 +6388,6 @@ function createClient(require2) {
   return module.exports;
 }
 
-// src/client/index.js
+// plugin/src/client/index.js
 window.__ModuleLoader__.load({ id: "mofei-dsh", factory: createClient });
 //# sourceMappingURL=client.js.map

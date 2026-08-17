@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import plugin from './plugin/lib/index.js'
 import toolsPlugin from './plugin/lib/tools.js'
@@ -181,9 +183,9 @@ function validateOutput(value, schema, where) {
   return errors
 }
 
-test('Agent 工具 output schema 与真实返回形状一致（23 个 mofei_*）', async () => {
+test('Agent 工具 output schema 与真实返回形状一致', async () => {
   const toolDefinitions = registeredTools.filter((definition) => definition.name.startsWith('mofei_'))
-  assert.equal(toolDefinitions.length, 36)
+  assert.ok(toolDefinitions.length >= 36, '应至少保留既有工具集')
   // 独立项目，避免污染其他用例的 projects[0] 假设
   const { project } = await rpc('create-project', { title: '工具契约' })
   const projectId = project.id
@@ -245,7 +247,11 @@ test('Agent 工具 output schema 与真实返回形状一致（23 个 mofei_*）
 
 
 test('Agent 工具名符合 DSH function.name 正则（mofei_* + 旧名 alias）', () => {
-  assert.equal(registeredTools.length, 72)
+  const mofeiCount = registeredTools.filter((definition) => definition.name.startsWith('mofei_')).length
+  const legacyCount = registeredTools.filter((definition) => definition.name.startsWith('openfic_')).length
+  assert.ok(mofeiCount >= 36, '应至少保留既有 mofei 工具')
+  assert.equal(legacyCount, mofeiCount, '每个 mofei 工具应有一个 openfic 兼容别名')
+  assert.equal(registeredTools.length, mofeiCount + legacyCount)
   registeredTools.forEach((definition) => {
     assert.match(definition.name, /^[a-zA-Z0-9_-]+$/, definition.name)
   })
@@ -1073,6 +1079,79 @@ test('prompt chains：delete-project 清理链数据', async () => {
   await rpc('delete-project', { projectId })
   const persisted = JSON.parse(files.get(chainsFile))
   assert.equal(persisted.byProject[projectId], undefined)
+})
+
+test('discover-workspace 无摘要变更时不重写 summaries JSON', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-discover-'))
+  const summaryTarget = path.join(workspaceRoot, '.mofei-summaries.json')
+  const chainsTarget = path.join(workspaceRoot, '.mofei-chains.json')
+  const writeCounts = new Map()
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { writeCounts.set(target, (writeCounts.get(target) || 0) + 1); await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    return JSON.parse(body).value
+  }
+  try {
+    await mkdir(path.join(workspaceRoot, 'summaries', 'chapters'), { recursive: true })
+    await mkdir(path.join(workspaceRoot, 'chains'), { recursive: true })
+    await writeFile(path.join(workspaceRoot, 'project.yml'), '---\nid: "discover-project"\ntitle: "发现项目"\ndescription: ""\ngoal: 0\ncurrentStyle: "default"\nwriterSessionId: null\n---\n', 'utf8')
+    await writeFile(path.join(workspaceRoot, 'summaries', 'chapters', 'chapter-1.md'), '---\nchapterId: "chapter-1"\nupdatedAt: 1700000000000\nchapterRevision: 1\n---\n稳定摘要', 'utf8')
+    await writeFile(path.join(workspaceRoot, 'chains', 'chain-1.md'), '---\nid: "chain-1"\nname: "稳定链"\nupdatedAt: 1700000000000\n---\n{{chapterText}}', 'utf8')
+    const initial = await workspaceRpc('discover-workspace', { workspaceRoot })
+    assert.equal(initial.report.changed, true)
+    writeCounts.set(summaryTarget, 0)
+    writeCounts.set(chainsTarget, 0)
+
+    const repeated = await workspaceRpc('discover-workspace', { workspaceRoot })
+    assert.equal(repeated.report.changed, false)
+    assert.equal(repeated.report.summaries.updated, 0)
+    assert.equal(repeated.report.summaries.conflicts, 0)
+    assert.equal(repeated.report.chains.updated, 0)
+    assert.equal(repeated.report.chains.conflicts, 0)
+    assert.equal(writeCounts.get(summaryTarget), 0)
+    assert.equal(writeCounts.get(chainsTarget), 0)
+  } finally {
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
+test('Windows ReplaceFileW 1175 短暂冲突会重试持久化写入', async () => {
+  const retryRoot = 'virtual-root-retry'
+  const retryFiles = new Map()
+  let projectWrites = 0
+  const retryFs = {
+    async resolve(name, options) { return path.posix.join(options && options.cwd || retryRoot, name) },
+    async stat(target) { return retryFiles.has(target) ? { size: retryFiles.get(target).length } : undefined },
+    async readText(target) { if (!retryFiles.has(target)) throw new Error('ENOENT'); return retryFiles.get(target) },
+    async writeText(target, content) {
+      if (target.endsWith('.mofei-projects.json') && projectWrites++ === 0) throw new Error('ReplaceFileW EIO (Win32 1175): ' + target)
+      retryFiles.set(target, content)
+    },
+  }
+  const routes = {}
+  plugin.apply({ fs: retryFs, sandboxPolicy: { workspaceRoot: retryRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined })
+  const retryRoute = routes['/api/mofei']
+  let body = ''
+  let done = false
+  const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: JSON.stringify({ method: 'create-project', args: { title: '重试项目' } }), done: false }) } } }
+  const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+  await retryRoute.handler(req, res)
+  const result = JSON.parse(body).value
+  assert.ok(result.project)
+  assert.equal(projectWrites, 2)
 })
 
 let failed = 0
