@@ -2,7 +2,7 @@
 
 墨扉是运行在 DeepSeek Harness（DSH）中的小说写作工作台插件。它把项目、卷章、角色、世界书、笔记、摘要和提示词链放在同一套写作数据模型里，并将 `mofei-writer` 写作会话与 DSH 原生工作区连接起来。
 
-当前固定插件版本：`mofei-dsh v0.19.0`。
+当前固定插件版本：`mofei-dsh v0.24.0`。
 
 ## 能做什么
 
@@ -20,8 +20,11 @@
 
 ```powershell
 cd F:\game\SillyTavern-1.13.2\OpenFic-DSH
-dsh --profile novel web --port 3088
+dsh --profile novel --port 3088
 ```
+
+> 注意：不要写中间的 `web` 子命令（`dsh --profile novel web ...` 是错误写法）；
+> 3081 是 WSL DSH 专用端口，勿占用。
 
 打开 `http://127.0.0.1:3088/`，点击 DSH 侧栏底部的「墨扉」进入工作台。新建项目时，默认保存到当前 DSH 工作区；项目栏右侧的「同步」按钮可立即扫描工作区中的墨扉项目。
 
@@ -45,23 +48,30 @@ dsh --profile novel web --port 3088
 
 没有选择工作区时，插件会继续使用兼容缓存 `.mofei-*.json` 和默认的 `.mofei/projects/` 存储。运行时缓存、日志和浏览器截图不会进入 Git；稳定的验证脚本仍保存在 `verify-shots/`。
 
+> **数据与 Git**：`.mofei/` 文件树（章节/角色/世界书等小说数据）**默认随本仓库 Git 版本化**——
+> 插件每次保存会自动 `git add .mofei` 并提交（`墨扉 项目保存`），这是刻意的版本管理设计
+> （v0.10.1 文件优先）。如果你希望小说数据与代码分仓，请把项目 `rootDir` 指向独立 Git 仓库，
+> 或调整 `.gitignore` 并停用自动提交。
+
 ## 项目结构
 
 ```text
 plugin/
   package.json                  插件元数据、DSH client 声明和构建脚本
-  lib/index.js                  Host 半体：RPC、SSE、文件同步和持久化
-  lib/client.js                 生成的 Client bundle
-  lib/summary.js                章节/区间摘要逻辑
-  src/client/legacy.js          工作台、变形布局和 UI 编排
-  src/client/*.js               可复用的项目网格、编辑器、摘要和 Agent 组件
+  lib/index.js                  Host 半体：webServer RPC、SSE、文件同步和持久化
+  lib/client.js                 生成的 Client bundle（由 src/client/ 构建）
+  lib/tools.js                  73 个 mofei_* 工具注册（消费 ctx.get('mofei') 服务）
+  lib/subagent-max.js           subagent_with_model 子代理工具（角色/模型/推理强度）
+  lib/{ai,summary,prompt-chain,roles,instructions,rag,local-retrieval,txt,world}.js
+                                业务子模块
+  src/client/*.js               工作台、项目网格、编辑器、摘要、技能库等组件源码
+  web/index.html                墨扉独立站入口（/mofei）
 tools/                          Client 契约和辅助验证
-test-host.mjs                   Host/RPC 全量回归
-verify-v0.18-onboard.cjs        工作区、官方侧栏、Composer 边界和窄屏回归
-docs/                           验收报告和项目说明
-HANDOFF-2026-08-17-workspace-mode.md
-                                当前工作区联动交接记录
-v0.19-changelog.md              v0.19 变更说明
+tests/verify-p0-lifecycle.mjs   Host 生命周期回归（mock ctx）
+docs/ARCHITECTURE.md            架构说明（Host/Client 两半体与装配）
+docs/ACCEPTANCE-2026-08.md      整体验收报告
+AGENTS.md                       Agent 协作约定（mofei_* 工具与写作流水线）
+v0.24-changelog.md              最新变更说明
 ```
 
 ## 开发与验收
@@ -86,10 +96,11 @@ node verify-v0.18-onboard.cjs
 
 ## 文档导航
 
-- [v0.19 变更说明](v0.19-changelog.md)
-- [工作区模式交接](HANDOFF-2026-08-17-workspace-mode.md)
+- [v0.24 变更说明](v0.24-changelog.md)
+- [架构说明](docs/ARCHITECTURE.md)
 - [整体验收报告](docs/ACCEPTANCE-2026-08.md)
 - [Agent 协作约定](AGENTS.md)
+- 历史交接与规划文档已归档至 `docs/archive/`
 
 ## 许可与来源
 

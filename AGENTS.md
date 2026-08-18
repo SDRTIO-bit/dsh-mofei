@@ -2,7 +2,8 @@
 
 > 目标：让会话 agent（或子代理）通过 `mofei_*` 工具直接读写 墨扉 项目，
 > 实现「人写草稿 → Agent 润色 → Reviewer 把关」的写作流水线。
-> 前置：在「写作环境」中使用——`dsh --profile novel web --port 3088`（默认 web profile 为纯 coding，不加载 mofei-dsh）；
+> 前置：在「写作环境」中使用——`dsh --profile novel --port 3088`（注意：不要写中间的 `web` 子命令；
+> 3081 是 WSL DSH，勿占用。默认 web profile 为纯 coding，不加载 mofei-dsh）；
 > 工具注册成功（`Tool.listTools` 中可见 `mofei_*` 即注册成功）。
 
 ## 工具清单（Host 注册）
@@ -27,6 +28,26 @@
 | `mofei_get-range-summaries` | 列出区间摘要分组（默认 10 章一组） | v0.5.0 |
 | `mofei_save-range-summary` | 写入某个区间摘要 | v0.5.0 |
 | `mofei_summarize-ranges` | 批量区间摘要（只重算过期区间） | v0.5.0 |
+
+> 全表共 73 个 `mofei_*` 工具（另带 `openfic_*` 旧名兼容别名），完整清单以
+> `plugin/lib/tools.js` 的 `buildTools` 为准。上表未列的高频工具：
+> `mofei_get-active-context`（当前绑定项目/章节上下文，写作会话首调）、
+> `mofei_write-chapter` / `mofei_edit-chapter` / `mofei_update-chapter-meta` /
+> `mofei_delete-chapter` / `mofei_move-chapter` / `mofei_set-chapter-volume` /
+> `mofei_reorder-chapters`、`mofei_read-character` / `mofei_write-character` /
+> `mofei_delete-character`、`mofei_read-note` / `mofei_write-note` /
+> `mofei_create-note` / `mofei_update-note-category`、`mofei_read-world-entry` /
+> `mofei_write-world-entry` / `mofei_create-world-entry` / `mofei_update-world-entries` /
+> `mofei_delete-world-entries`、`mofei_rag-status` / `mofei_build-rag-index` /
+> `mofei_search-rag` / `mofei_get-rag-context`、`mofei_history` / `mofei_revert` /
+> `mofei_diff-revision` / `mofei_project-history` / `mofei_revert-project`、
+> `mofei_summarize`、`mofei_retrieve`、`mofei_list`、
+> `mofei_list-prompt-chains` / `mofei_save-prompt-chain` / `mofei_delete-prompt-chain` /
+> `mofei_compile-prompt-chain`、`mofei_list-roles` / `mofei_read-role` /
+> `mofei_write-role` / `mofei_delete-role`、卷管理 `mofei_create-volume` /
+> `mofei_update-volume` / `mofei_move-volume` / `mofei_delete-volume` /
+> `mofei_reorder-volumes`、项目管理 `mofei_create-project` / `mofei_update-project` /
+> `mofei_delete-project`。
 
 ## 写作流水线（子代理协作）
 
@@ -64,11 +85,14 @@
   应重新 `read-chapter` 后合并再提交。
 - 数据文件唯一，不要绕过插件直接改 `.mofei-projects.json`。
 
-## 写作技能（v0.3.1）
+## 写作指令与技能（v0.24 现状）
 
-17 个 runtime skills 随插件自动注册：`mofei-character-design` / `mofei-dialogue-design` /
-`mofei-story-quality` / `mofei-story-hooks` / `mofei-deslop-writing` 等。
-写作或审稿前按需调用 skill 工具加载；至少遵循 `mofei-writing` 红线。
+- 「17 个 mofei-* 写作指令」**不再注册为 DSH runtime skills**：它们是
+  `plugin/lib/instructions.js` 里的私有指令，派生子代理（`subagent_with_model`）时
+  按角色注入 `request.persona`；写作或审稿前按需使用，至少遵循 `mofei-writing` 红线。
+- 用户自创技能写在 `~/.dsh/skills/*.md`，由 DSH skill-filesystem 发现（墨扉工作台
+  的技能库面板可开关/自建）；禁用名单存于 `.mofei-skill-settings.json`。
+- 完整写作技能内容见仓库 `skills/`（如 `skills/mofei-writing.md`）。
 
 ## @提及桥接（v0.8）
 

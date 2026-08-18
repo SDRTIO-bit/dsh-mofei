@@ -1,4 +1,4 @@
-﻿---
+---
 name: mofei-writing
 description: 墨扉 小说写作技能——续写、改写、一致性检查与角色把控。配合 mofei_* 工具使用（read-chapter / update-chapter / list-characters / list-notes / search-chapters）。当会话 agent 需要为 墨扉 项目写作、修改正文或检查设定一致性时使用。
 ---
@@ -6,7 +6,8 @@ description: 墨扉 小说写作技能——续写、改写、一致性检查与
 # 墨扉 写作技能
 
 > 来源：mofei-main skills/*.yaml 的 DSH 化精简版（Apache-2.0，保留署名）。
-> 完整 16 个技能已由 `tools/migrate-skills.mjs` 生成到 `plugin/lib/skills.js`，与本文档一起作为 runtime skills 注册。
+> v0.24 现状：17 个 mofei-* 写作指令位于 `plugin/lib/instructions.js`，派生子代理时按角色注入
+> `request.persona`（不再注册为 DSH runtime skills）；用户自创技能写 `~/.dsh/skills/*.md`。
 
 ## 目标
 
