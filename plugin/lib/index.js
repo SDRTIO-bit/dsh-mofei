@@ -15,14 +15,41 @@ import { mofeiInstructions } from './instructions.js'
 import { buildIndex, queryIndex, indexStatus, DEFAULT_RAG_CONFIG } from './rag.js'
 import { embedTexts, localRetrievalStatus, rerankResultItems, DEFAULT_LOCAL_RETRIEVAL } from './local-retrieval.js'
 const pluginRoot = fileURLToPath(new URL('..', import.meta.url))
+// v0.24: 行为参数可配（cordis.yml config）。与 subagent-max 同款手动归一化，
+// 缺省值 = 原硬编码值，行为零变化。完整 schema 校验（schemastery Config）留作后续。
+const DEFAULT_CORE_CONFIG = {
+  historyCap: 20,
+  entityHistoryMax: 50,
+  gitCommitIntervalMs: 10000,
+  rag: { ...DEFAULT_RAG_CONFIG },
+}
+function normalizeCoreConfig(config) {
+  const source = config && typeof config === 'object' ? config : {}
+  const rag = source.rag && typeof source.rag === 'object' ? source.rag : {}
+  const positive = (value, fallback) => (typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback)
+  const number = (value, fallback) => (typeof value === 'number' && Number.isFinite(value) ? value : fallback)
+  return {
+    historyCap: positive(source.historyCap, DEFAULT_CORE_CONFIG.historyCap),
+    entityHistoryMax: positive(source.entityHistoryMax, DEFAULT_CORE_CONFIG.entityHistoryMax),
+    gitCommitIntervalMs: positive(source.gitCommitIntervalMs, DEFAULT_CORE_CONFIG.gitCommitIntervalMs),
+    rag: {
+      chunkSize: positive(rag.chunkSize, DEFAULT_CORE_CONFIG.rag.chunkSize),
+      chunkOverlap: positive(rag.chunkOverlap, DEFAULT_CORE_CONFIG.rag.chunkOverlap),
+      candidateLimit: positive(rag.candidateLimit, DEFAULT_CORE_CONFIG.rag.candidateLimit),
+      resultLimit: positive(rag.resultLimit, DEFAULT_CORE_CONFIG.rag.resultLimit),
+      confidenceThreshold: number(rag.confidenceThreshold, DEFAULT_CORE_CONFIG.rag.confidenceThreshold),
+    },
+  }
+}
 export default {
   inject: ['fs', 'sandboxPolicy', 'webServer'],
-  apply(ctx) {
+  apply(ctx, config) {
     const fs = ctx.fs
     const cwd = ctx.sandboxPolicy.workspaceRoot
     const policy = ctx.sandboxPolicy.resolve()
-    const HISTORY_CAP = 20
-    const ENTITY_HISTORY_MAX = 50
+    const coreConfig = normalizeCoreConfig(config)
+    const HISTORY_CAP = coreConfig.historyCap
+    const ENTITY_HISTORY_MAX = coreConfig.entityHistoryMax
     const AI_MESSAGE_CAP = 80
     let projectTarget, draftTarget, statsTarget, aiSessionsTarget, summaryTarget, chainsTarget, skillSettingsTarget, rolesTarget, instructionsTarget, modelsTarget, ragTarget, loading
     let queue = Promise.resolve()
@@ -1055,7 +1082,7 @@ export default {
     // v0.10.2: 节流（最多每 10s 一次 commit，尾随合并）+ 串行队列。
     // saveProjects 会等待 git 提交完成，避免「git add 进行中写入被并入前一个提交」的竞态；
     // 链保存/删除用 force=true 立即提交（离散操作，不受节流）。
-    const GIT_COMMIT_INTERVAL_MS = 10000
+    const GIT_COMMIT_INTERVAL_MS = coreConfig.gitCommitIntervalMs
     let gitPendingMessage = '墨扉 更新'
     let gitCommitTimer = null
     let gitLastCommitAt = 0
@@ -2475,9 +2502,14 @@ export default {
         res.end(JSON.stringify({ ok: false, error: error instanceof Error ? error.message : String(error) }))
       }
     }
-    ctx.webServer.register({ kind: 'prefix', path: '/api/mofei', handler: rpcHandler })
+    // v0.24 P0: register 返回 disposer；历史版本残留路由（无 disposer 时代）只告警不崩溃。
+    const routeDisposers = []
+    const safeRegister = (route) => {
+      try { routeDisposers.push(ctx.webServer.register(route)) } catch (error) { console.error('墨扉 route 注册失败: ' + route.path, error) }
+    }
+    safeRegister({ kind: 'prefix', path: '/api/mofei', handler: rpcHandler })
     // 旧品牌兼容路由（过渡期保留，可在后续版本移除）
-    ctx.webServer.register({ kind: 'prefix', path: '/api/openfic', handler: rpcHandler })
+    safeRegister({ kind: 'prefix', path: '/api/openfic', handler: rpcHandler })
     // P0 独立站点：/mofei 前缀静态 SPA（与官方 Web 完全隔离）
     const WEB_FILES = {
       'index.html': { file: path.join(pluginRoot, 'web', 'index.html'), type: 'text/html; charset=utf-8' },
@@ -2485,7 +2517,7 @@ export default {
       'vendor/react.js': { file: path.join(pluginRoot, 'web', 'vendor', 'react.js'), type: 'text/javascript; charset=utf-8' },
       'vendor/react-dom.js': { file: path.join(pluginRoot, 'web', 'vendor', 'react-dom.js'), type: 'text/javascript; charset=utf-8' },
     }
-    ctx.webServer.register({
+    safeRegister({
       kind: 'prefix',
       path: '/mofei',
       handler: async (req, res) => {
@@ -2554,8 +2586,8 @@ export default {
          if (missing.length) throw new Error('REQUIRED_INSTRUCTION_UNAVAILABLE:' + missing.join(','))
          return { instructionIds: ids, persona: ids.map((id) => instructionById(id).content).filter(Boolean).join('\n\n') }
        },
-       ragStatus: async (projectId, config) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return indexStatus(ragIndexFor(project.id), project, projectSummaries(project.id), config) },
-       buildRagIndex: async (projectId, config) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const index = buildIndex(project, projectSummaries(project.id), { ...DEFAULT_RAG_CONFIG, ...(config || {}) }); ragStore = { version: 1, byProject: { ...(ragStore.byProject || {}), [project.id]: index } }; await saveRag(); return indexStatus(index, project, projectSummaries(project.id), config) },
+       ragStatus: async (projectId, config) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return indexStatus(ragIndexFor(project.id), project, projectSummaries(project.id), { ...coreConfig.rag, ...(config || {}) }) },
+       buildRagIndex: async (projectId, config) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const merged = { ...coreConfig.rag, ...(config || {}) }; const index = buildIndex(project, projectSummaries(project.id), merged); ragStore = { version: 1, byProject: { ...(ragStore.byProject || {}), [project.id]: index } }; await saveRag(); return indexStatus(index, project, projectSummaries(project.id), merged) },
        listModelCatalog: async () => modelCatalog(),
        resolveSubagentModel: async (projectId, roleId) => { await load(); await queue; return resolvedModel(projectId, roleId) },
        listModelSettings: async () => { await load(); await queue; return modelStore },
@@ -2569,5 +2601,12 @@ export default {
       const jobs = ctx.get('jobs')
       if (jobs && typeof jobs.attachController === 'function') jobs.attachController('mofei-dsh')
     } catch (error) { console.warn('墨扉 jobs attachController 失败', error) }
+    // v0.24 P0: 可逆副作用——卸载/热重载时回收 webServer 路由、git 节流定时器与代理上下文。
+    // 此前路由 disposer 被丢弃，重装配会因 duplicate prefix route 崩溃。
+    ctx.effect(() => () => {
+      for (const dispose of routeDisposers) { try { dispose() } catch (error) { /* noop */ } }
+      if (gitCommitTimer) { clearTimeout(gitCommitTimer); gitCommitTimer = null }
+      agentContexts.clear()
+    })
   },
 }
