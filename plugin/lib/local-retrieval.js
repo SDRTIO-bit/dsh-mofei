@@ -7,14 +7,18 @@ import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 const execFileAsync = promisify(execFile)
 const dynamicImport = new Function('specifier', 'return import(specifier)')
 let rerankRuntime = null
+// v0.24: 本机路径 env 可覆盖（MOFEI_PYTHON_PATH / MOFEI_EMBED_CACHE_DIR / MOFEI_EMBED_MODEL /
+// MOFEI_EMBED_DIMENSIONS / MOFEI_RERANK_MODEL / MOFEI_RERANK_MODEL_PATH），缺省 = 原硬编码值，行为不变。
+const envString = (name, fallback) => { const value = process.env[name]; return typeof value === 'string' && value.trim() ? value.trim() : fallback }
+const envNumber = (name, fallback) => { const value = Number(process.env[name]); return Number.isFinite(value) && value > 0 ? value : fallback }
 export const DEFAULT_LOCAL_RETRIEVAL = {
   mode: 'local',
-  pythonPath: 'C:/Users/zhao/AppData/Roaming/openfic-desktop/runtime/venv/Scripts/python.exe',
-  cacheDir: 'C:/Users/zhao/AppData/Roaming/openfic-desktop/fastembed_cache',
-  embeddingModel: 'BAAI/bge-small-zh-v1.5',
-  embeddingDimensions: 512,
-  rerankModel: 'Xenova/ms-marco-MiniLM-L-6-v2',
-  rerankModelPath: 'C:/Users/zhao/.cache/modelscope/models/Xenova--ms-marco-MiniLM-L-6-v2/snapshots/master',
+  pythonPath: envString('MOFEI_PYTHON_PATH', 'C:/Users/zhao/AppData/Roaming/openfic-desktop/runtime/venv/Scripts/python.exe'),
+  cacheDir: envString('MOFEI_EMBED_CACHE_DIR', 'C:/Users/zhao/AppData/Roaming/openfic-desktop/fastembed_cache'),
+  embeddingModel: envString('MOFEI_EMBED_MODEL', 'BAAI/bge-small-zh-v1.5'),
+  embeddingDimensions: envNumber('MOFEI_EMBED_DIMENSIONS', 512),
+  rerankModel: envString('MOFEI_RERANK_MODEL', 'Xenova/ms-marco-MiniLM-L-6-v2'),
+  rerankModelPath: envString('MOFEI_RERANK_MODEL_PATH', 'C:/Users/zhao/.cache/modelscope/models/Xenova--ms-marco-MiniLM-L-6-v2/snapshots/master'),
 }
 
 const PY_EMBED = String.raw`import os
