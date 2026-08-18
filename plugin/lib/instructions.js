@@ -1,6 +1,6 @@
-﻿// 由 tools/migrate-skills.mjs 自动生成，勿手改。
-// 来源：OpenFic-main/backend/app/skills/*.yaml（Apache-2.0，保留署名）。
-export const mofeiSkills = [
+﻿// 墨扉私有写作指令库：不注册 DSH skills 服务，不进入公共 skill 目录。
+// 来源：OpenFic-main/backend/app/skills/*.yaml（Apache-2.0，保留署名）。这些文本只由墨扉在创建子代理时强制注入。
+export const mofeiInstructions = [
   {
     name: "mofei-character-design",
     description: "设计主角、配角和反派的动机、缺陷、反差、功能与成长轨迹。",

@@ -36,6 +36,10 @@ function buildTools(mofei) {
     tool('mofei_search-chapters', '在 墨扉项目的章节正文中全文搜索，返回命中章节与行号。',
       obj({ projectId: str(), query: str('搜索词') }, ['projectId', 'query']),
       obj({ results: arr() }, ['results']), run('search-chapters')),
+     tool('mofei_rag-status', '读取项目 RAG 索引状态；写作前需要确认索引是否 fresh。', obj({ projectId: str() }, ['projectId']), obj({ status: str(), indexedChunks: num() }, ['status', 'indexedChunks']), run('rag-status')),
+     tool('mofei_build-rag-index', '建立或重建项目 RAG 索引；章节发生变化或索引 stale 时使用。', obj({ projectId: str(), chunkSize: num(), chunkOverlap: num() }, ['projectId']), obj({ status: str(), indexedChunks: num() }, ['status', 'indexedChunks']), run('rag-build-index')),
+     tool('mofei_search-rag', '在项目 RAG 索引中检索与问题最相关的正文 chunk、角色、笔记、世界书和摘要。索引 stale 时先更新，或明确使用 force。', obj({ projectId: str(), query: str('检索问题'), limit: num(), force: bool() }, ['projectId', 'query']), obj({ query: str(), results: arr(), status: str(), indexedChunks: num() }, ['query', 'results', 'status']), run('search-rag')),
+     tool('mofei_get-rag-context', '把项目 RAG 检索结果整理成带来源引用的上下文文本，供 writer/reviewer/analyzer 使用。索引 stale 时先更新。', obj({ projectId: str(), query: str('检索问题'), limit: num(), force: bool() }, ['projectId', 'query']), obj({ query: str(), contextText: str(), sources: arr(), status: str() }, ['query', 'contextText', 'sources', 'status']), run('rag-context')),
     tool('mofei_list-characters', '列出 墨扉项目的角色（名称/收藏/描述）。', obj({ projectId: str() }, ['projectId']), obj({ characters: arr() }, ['characters']),
       async (args) => mofei.listCharacters(args && args.projectId)),
     tool('mofei_write-character', '创建或整体更新角色。',
@@ -175,6 +179,11 @@ function buildTools(mofei) {
     tool('mofei_save-prompt-chain', '创建或更新项目提示词链。', obj({ projectId: str(), chainId: str(), name: str(), content: str() }, ['projectId', 'name', 'content']), any(), run('save-prompt-chain')),
     tool('mofei_delete-prompt-chain', '删除提示词链。高风险：必须先取得作者明确确认。', obj({ projectId: str(), chainId: str() }, ['projectId', 'chainId']), any(), run('delete-prompt-chain')),
     tool('mofei_compile-prompt-chain', '以当前项目与可选章节编译提示词链，先预览再运行。', obj({ projectId: str(), chainId: str(), chapterId: str(), instruction: str() }, ['projectId', 'chainId']), any(), run('compile-prompt-chain')),
+    // v0.20: 角色定义——人工可编辑、组装；subagent_with_model 使用时拼接注入。
+    tool('mofei_list-roles', '列出这本小说项目的角色定义（id/名称/条目数/启用条目数）。', obj({ projectId: str() }, ['projectId']), any(), run('list-roles')),
+    tool('mofei_read-role', '读取一个角色定义的完整条目（含 content/.isEnabled/order），用于编辑或查看。', obj({ projectId: str(), roleId: str() }, ['projectId', 'roleId']), any(), run('read-role')),
+    tool('mofei_write-role', '创建或更新角色定义。entries 为条目数组，每条 {name, content, order, isEnabled}；isEnabled 默认 true。roleId 留空时新建。', obj({ projectId: str(), roleId: str(), name: str(), entries: arr(obj({ name: str(), content: str(), order: num(), isEnabled: bool() })) }, ['projectId', 'name', 'entries']), any(), run('save-role')),
+    tool('mofei_delete-role', '删除角色定义。高风险：必须先取得作者明确确认。', obj({ projectId: str(), roleId: str() }, ['projectId', 'roleId']), any(), run('delete-role')),
   ]
   defs.push(...legacy, ...authoring)
   return defs

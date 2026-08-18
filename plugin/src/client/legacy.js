@@ -3,8 +3,11 @@ import { ProjectGrid, sortProjects, filterProjects } from './project-grid.js'
 import { ProjectPage } from './project-page.js'
 import { SummaryPanel } from './summary-panel.js'
 import { PromptChainsPanel } from './prompt-chains.js'
+import { RolesPanel } from './roles-panel.js'
 import { WritingDashboard } from './writing-dashboard.js'
 import { WritingSkillsPanel } from './skills-library.js'
+import { SettingsPanel, SETTINGS_PANEL_CSS } from './settings-panel.js'
+import { AgentModelsPanel, AGENT_MODELS_PANEL_CSS } from './agent-models-panel.js'
 import { getEditorContentLimit, formatContentLimitError } from './editor-limits.js'
 import { buildChapterMention, buildSelectionMention, buildWriterMention, buildReviewerMention } from './agent-bridge.js'
 import { filterWorldEntries, worldNameConflict, toggleAllSelection, buildBulkTogglePlan, buildBulkDeletePlan } from './worldbook-tools.js'
@@ -55,6 +58,8 @@ export function createClient(require) {
   }
 
   const css = [
+     'body.mf-standalone{--dsw-alias-bg-base:rgb(21,21,23);--dsw-alias-bg-layer-1:rgb(35,35,36);--dsw-alias-bg-layer-2:rgb(44,44,46);--dsw-alias-bg-elevated:rgb(44,44,46);--dsw-alias-bg-overlay:rgb(97,102,107);--dsw-alias-label-primary:rgb(249,250,251);--dsw-alias-label-secondary:rgb(207,211,214);--dsw-alias-label-tertiary:rgb(173,178,184);--dsw-alias-border-l1:rgba(255,255,255,.06);--dsw-alias-border-l2:rgba(255,255,255,.12);--dsw-alias-interactive-bg-hover:rgba(255,255,255,.08);--dsw-alias-state-business-primary:rgb(103,158,254);--dsw-alias-state-business-tertiary:rgb(52,65,91);--dsw-alias-state-success-primary:rgb(34,197,94);--dsw-alias-state-warn-primary:rgb(251,191,36);--dsw-alias-state-warning-primary:rgb(251,191,36);--dsw-alias-state-error-primary:rgb(242,90,90);--dsw-specific-bubble:rgb(44,44,46);--dsw-specific-input-major:rgb(44,44,46);background:rgb(21,21,23);color:rgb(249,250,251);font-family:-apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,Hiragino Sans GB,Microsoft YaHei,Helvetica Neue,Helvetica,Arial,sans-serif;color-scheme:dark}',
+     'body.mf-standalone button,body.mf-standalone input,body.mf-standalone textarea,body.mf-standalone select{font-family:inherit}',
     '.mf-open{pointer-events:auto;border:0;border-radius:6px;background:var(--dsw-alias-state-business-primary);color:#fff;padding:8px 12px;cursor:pointer;font:600 13px/1.2 sans-serif}',
     '.mf-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}.mf-card span{font-size:12px;color:var(--dsw-alias-label-secondary)}',
     '.mf-float{position:fixed;right:16px;bottom:16px;z-index:80;pointer-events:auto;box-shadow:0 8px 28px rgba(0,0,0,.25)}',
@@ -180,7 +185,9 @@ export function createClient(require) {
     '.mf-panel.mf-view .mf-chat-input{padding:8px 12px 12px;border-top:0}.mf-panel.mf-view .mf-chat-input textarea{border-radius:16px;background:var(--dsw-alias-bg-base);font-size:13px}',
     // v0.18: 初始向导
     '.mf-onboard{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}.mf-onboard-card{width:min(560px,calc(100vw - 40px));display:grid;gap:14px;padding:28px 30px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 26px 80px rgba(0,0,0,.5)}.mf-onboard-card h2{margin:0;font-size:18px}.mf-onboard-card p{margin:0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.7}.mf-onboard-folder{display:flex;gap:8px;align-items:center}.mf-onboard-folder input{flex:1;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1.4 sans-serif;outline:0}.mf-onboard-folder input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard input[type="text"]{box-sizing:border-box;width:100%;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:13px/1.4 sans-serif;outline:0}.mf-onboard input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}.mf-onboard-error{color:#f87171;font-size:12px}.mf-onboard-note{font-size:11.5px;color:var(--dsw-alias-label-secondary);line-height:1.6}',
-  ].join('\n')
+  SETTINGS_PANEL_CSS,
+     AGENT_MODELS_PANEL_CSS,
+   ].join('\n')
   let styleEl = null
   function ensureStyles() {
     if (!styleEl && typeof document !== 'undefined') {
@@ -322,197 +329,7 @@ export function createClient(require) {
       h('button', { className: 'mf-orb' + (on ? ' on' : ''), type: 'button', title: on ? '收起墨扉，返回原版 web' : '打开墨扉写作台（原版 web 变形）', onClick: () => setBubbleOn(!on) }, on ? '✕' : '墨'))
   }
 
-  // —— 墨韵双色板（v0.12.1 完整令牌）——
-  // MOFEI_INK：墨色底 + 米色文字 + 茶金品牌（dark）；MOFEI_PAPER：宣纸浅色变体（light）。
-  // 覆盖官方 design-platform.css 全部 --dsw-alias-*/--dsw-specific-* 令牌。
-  const MOFEI_INK = {
-    '--dsw-alias-bg-base': '#0a0a0a',
-    '--dsw-alias-bg-layer-1': '#101012',
-    '--dsw-alias-bg-layer-2': '#161619',
-    '--dsw-alias-bg-layer-3': '#1c1c1f',
-    '--dsw-alias-bg-module-platform': '#131315',
-    '--dsw-alias-bg-multi-select': '#161619',
-    '--dsw-alias-bg-overlay': '#141416',
-    '--dsw-alias-bg-skeleton': 'rgba(255,255,255,0.06)',
-    '--dsw-alias-bg-mask-1': 'rgba(0,0,0,0.55)',
-    '--dsw-alias-bg-mask-2': 'rgba(0,0,0,0.25)',
-    '--dsw-alias-bg-mask-3': 'rgba(0,0,0,0.5)',
-    '--dsw-alias-bg-mask-photo': 'rgba(0,0,0,0.88)',
-    '--dsw-alias-bg-mask-drop': 'rgba(20,20,22,0.7)',
-    '--dsw-alias-border-l1': 'rgba(255,255,255,0.07)',
-    '--dsw-alias-border-l2': 'rgba(255,255,255,0.11)',
-    '--dsw-alias-border-l2-darkmode-thin': 'rgba(255,255,255,0.06)',
-    '--dsw-alias-border-l3': 'rgba(255,255,255,0.15)',
-    '--dsw-alias-border-l4': 'rgba(255,255,255,0.19)',
-    '--dsw-alias-border-inverted': 'rgba(255,255,255,0.05)',
-    '--dsw-alias-border-inverted2': 'rgba(255,255,255,0.07)',
-    '--dsw-alias-brand-primary': '#4d8dff',
-    '--dsw-alias-brand-primary-invert': '#f2f2f2',
-    '--dsw-alias-brand-primary-new-colorprimary-new-color': '#3b6fe0',
-    '--dsw-alias-brand-text': '#f2f2f2',
-    '--dsw-alias-button-contrast-fill': '#e8e8e8',
-    '--dsw-alias-button-elevated-fill': '#161619',
-    '--dsw-alias-button-floating-fill': '#161619',
-    '--dsw-alias-button-floating-hover': '#1c1c1f',
-    '--dsw-alias-button-ghost-active-border': '#4d8dff',
-    '--dsw-alias-button-ghost-active-fill': 'rgba(77,141,255,0.16)',
-    '--dsw-alias-button-ghost-active-hover': 'rgba(77,141,255,0.24)',
-    '--dsw-alias-button-info-fill': '#3b6fe0',
-    '--dsw-alias-button-info-hover': '#4d8dff',
-    '--dsw-alias-button-primary-dimmed': '#22262e',
-    '--dsw-alias-button-primary-fill': '#3b6fe0',
-    '--dsw-alias-button-primary-hover': '#2f5bc4',
-    '--dsw-alias-button-tool-bar-fill': 'rgba(84,85,87,0.5)',
-    '--dsw-alias-button-tool-bar-hover': 'rgba(84,85,87,0.6)',
-    '--dsw-alias-button-tool-bar-fill-invisible': 'rgba(31,31,31,0.36)',
-    '--dsw-alias-interactive-bg-active': 'rgba(255,255,255,0.12)',
-    '--dsw-alias-interactive-bg-hover': 'rgba(255,255,255,0.06)',
-    '--dsw-alias-interactive-bg-hover-accent': 'rgba(77,141,255,0.16)',
-    '--dsw-alias-interactive-bg-hover-danger': 'rgba(248,113,113,0.12)',
-    '--dsw-alias-interactive-bg-hover-solid': '#1c1c1f',
-    '--dsw-alias-label-primary': '#f2f2f2',
-    '--dsw-alias-label-secondary': '#a8a8b0',
-    '--dsw-alias-label-tertiary': '#8a8a92',
-    '--dsw-alias-label-caption': '#6b6b74',
-    '--dsw-alias-label-dimmed': '#5c5c64',
-    '--dsw-alias-label-primary-bluish': '#f2f2f2',
-    '--dsw-alias-label-primary-dimmed': '#d6d6da',
-    '--dsw-alias-label-primary-foreground': '#0a0a0a',
-    '--dsw-alias-label-primary-inverted': '#0a0a0a',
-    '--dsw-alias-markdown-citation': '#161619',
-    '--dsw-alias-markdown-code-block': '#101012',
-    '--dsw-alias-markdown-code-block-banner': '#101012',
-    '--dsw-alias-markdown-code-segment-selected': '#1c1c1f',
-    '--dsw-alias-markdown-code-segment-unselected': '#161619',
-    '--dsw-alias-markdown-inline-code': '#19191c',
-    '--dsw-alias-markdown-placeholder': '#0e0e10',
-    '--dsw-alias-markdown-tag': '#161619',
-    '--dsw-alias-scrollbar-bg-l1': '#161619',
-    '--dsw-alias-scrollbar-bg-l2': '#1c1c1f',
-    '--dsw-alias-scrollbar-hover-l1': '#242428',
-    '--dsw-alias-scrollbar-hover-l2': '#2e2e33',
-    '--dsw-alias-state-business-primary': '#4d8dff',
-    '--dsw-alias-state-business-tertiary': 'rgba(77,141,255,0.16)',
-    '--dsw-alias-state-error-primary': '#f87171',
-    '--dsw-alias-state-error-secondary': '#ef4444',
-    '--dsw-alias-state-success-primary': '#4ade80',
-    '--dsw-alias-state-success-secondary': '#22c55e',
-    '--dsw-alias-state-success-tertiary': 'rgba(74,222,128,0.14)',
-    '--dsw-alias-state-warn-label': '#fbbf24',
-    '--dsw-alias-state-warn-primary': '#fbbf24',
-    '--dsw-alias-state-warn-secondary': '#f59e0b',
-    '--dsw-alias-state-warn-tertiary': 'rgba(251,191,36,0.14)',
-    '--dsw-alias-toast-bg': '#1c1c1f',
-    '--dsw-alias-tooltip-bg': '#242428',
-    '--dsw-specific-bubble': '#1a1a1d',
-    '--dsw-specific-bubble-highlight': 'rgba(77,141,255,0.2)',
-    '--dsw-specific-input-major': '#141416',
-    '--dsw-specific-login-input': '#101012',
-    '--dsw-specific-menu': '#1c1c1f',
-    '--dsw-specific-selector': '#161619',
-    '--dsw-specific-sidebar-fill': '#0d0d0f',
-    '--dsw-specific-sidebar-nav-item-active': 'rgba(77,141,255,0.16)',
-    '--dsw-specific-sidebar-nav-item-active-accent': '#4d8dff',
-    '--dsw-specific-sidebar-nav-item-hover': 'rgba(255,255,255,0.05)',
-    '--dsw-specific-tip': '#161619',
-  }
-  const MOFEI_PAPER = {
-    '--dsw-alias-bg-base': '#fafafa',
-    '--dsw-alias-bg-layer-1': '#f2f2f3',
-    '--dsw-alias-bg-layer-2': '#e9e9eb',
-    '--dsw-alias-bg-layer-3': '#e0e0e3',
-    '--dsw-alias-bg-module-platform': '#f5f5f6',
-    '--dsw-alias-bg-multi-select': '#e9e9eb',
-    '--dsw-alias-bg-overlay': 'rgba(250,250,250,0.92)',
-    '--dsw-alias-bg-skeleton': 'rgba(0,0,0,0.06)',
-    '--dsw-alias-bg-mask-1': 'rgba(0,0,0,0.45)',
-    '--dsw-alias-bg-mask-2': 'rgba(0,0,0,0.16)',
-    '--dsw-alias-bg-mask-3': 'rgba(0,0,0,0.4)',
-    '--dsw-alias-bg-mask-photo': 'rgba(0,0,0,0.8)',
-    '--dsw-alias-bg-mask-drop': 'rgba(90,90,95,0.5)',
-    '--dsw-alias-border-l1': 'rgba(0,0,0,0.08)',
-    '--dsw-alias-border-l2': 'rgba(0,0,0,0.13)',
-    '--dsw-alias-border-l2-darkmode-thin': 'rgba(0,0,0,0.08)',
-    '--dsw-alias-border-l3': 'rgba(0,0,0,0.18)',
-    '--dsw-alias-border-l4': 'rgba(0,0,0,0.24)',
-    '--dsw-alias-border-inverted': 'rgba(0,0,0,0.06)',
-    '--dsw-alias-border-inverted2': 'rgba(0,0,0,0.07)',
-    '--dsw-alias-brand-primary': '#3b6fe0',
-    '--dsw-alias-brand-primary-invert': '#fafafa',
-    '--dsw-alias-brand-primary-new-colorprimary-new-color': '#4d8dff',
-    '--dsw-alias-brand-text': '#1a1a1a',
-    '--dsw-alias-button-contrast-fill': '#1a1a1a',
-    '--dsw-alias-button-elevated-fill': '#e9e9eb',
-    '--dsw-alias-button-floating-fill': '#ffffff',
-    '--dsw-alias-button-floating-hover': '#f2f2f3',
-    '--dsw-alias-button-ghost-active-border': '#3b6fe0',
-    '--dsw-alias-button-ghost-active-fill': 'rgba(59,111,224,0.12)',
-    '--dsw-alias-button-ghost-active-hover': 'rgba(59,111,224,0.18)',
-    '--dsw-alias-button-info-fill': '#3b6fe0',
-    '--dsw-alias-button-info-hover': '#4d8dff',
-    '--dsw-alias-button-primary-dimmed': '#d8dde8',
-    '--dsw-alias-button-primary-fill': '#3b6fe0',
-    '--dsw-alias-button-primary-hover': '#2f5bc4',
-    '--dsw-alias-button-tool-bar-fill': 'rgba(84,85,87,0.5)',
-    '--dsw-alias-button-tool-bar-hover': 'rgba(84,85,87,0.6)',
-    '--dsw-alias-button-tool-bar-fill-invisible': 'rgba(31,31,31,0.36)',
-    '--dsw-alias-interactive-bg-active': 'rgba(0,0,0,0.1)',
-    '--dsw-alias-interactive-bg-hover': 'rgba(0,0,0,0.05)',
-    '--dsw-alias-interactive-bg-hover-accent': 'rgba(59,111,224,0.1)',
-    '--dsw-alias-interactive-bg-hover-danger': 'rgba(220,60,50,0.06)',
-    '--dsw-alias-interactive-bg-hover-solid': '#e0e0e3',
-    '--dsw-alias-label-primary': '#1a1a1a',
-    '--dsw-alias-label-secondary': '#52525a',
-    '--dsw-alias-label-tertiary': '#8a8a92',
-    '--dsw-alias-label-caption': '#9c9ca4',
-    '--dsw-alias-label-dimmed': '#b4b4bb',
-    '--dsw-alias-label-primary-bluish': '#1a1a1a',
-    '--dsw-alias-label-primary-dimmed': '#3a3a40',
-    '--dsw-alias-label-primary-foreground': '#fafafa',
-    '--dsw-alias-label-primary-inverted': '#fafafa',
-    '--dsw-alias-markdown-citation': '#e9e9eb',
-    '--dsw-alias-markdown-code-block': '#f2f2f3',
-    '--dsw-alias-markdown-code-block-banner': '#e9e9eb',
-    '--dsw-alias-markdown-code-segment-selected': '#e0e0e3',
-    '--dsw-alias-markdown-code-segment-unselected': '#e9e9eb',
-    '--dsw-alias-markdown-inline-code': '#e4e4e7',
-    '--dsw-alias-markdown-placeholder': '#f5f5f6',
-    '--dsw-alias-markdown-tag': '#e9e9eb',
-    '--dsw-alias-scrollbar-bg-l1': '#e9e9eb',
-    '--dsw-alias-scrollbar-bg-l2': '#e0e0e3',
-    '--dsw-alias-scrollbar-hover-l1': '#d4d4d9',
-    '--dsw-alias-scrollbar-hover-l2': '#c9c9cf',
-    '--dsw-alias-state-business-primary': '#3b6fe0',
-    '--dsw-alias-state-business-tertiary': 'rgba(59,111,224,0.1)',
-    '--dsw-alias-state-error-primary': '#b3473f',
-    '--dsw-alias-state-error-secondary': '#c95f58',
-    '--dsw-alias-state-success-primary': '#3f7d52',
-    '--dsw-alias-state-success-secondary': '#4f925f',
-    '--dsw-alias-state-success-tertiary': 'rgba(63,125,82,0.12)',
-    '--dsw-alias-state-warn-label': '#9a6b1f',
-    '--dsw-alias-state-warn-primary': '#b8860b',
-    '--dsw-alias-state-warn-secondary': '#a06c10',
-    '--dsw-alias-state-warn-tertiary': 'rgba(184,134,11,0.12)',
-    '--dsw-alias-toast-bg': '#1c1c1f',
-    '--dsw-alias-tooltip-bg': '#242428',
-    '--dsw-specific-bubble': '#ececef',
-    '--dsw-specific-bubble-highlight': 'rgba(59,111,224,0.12)',
-    '--dsw-specific-input-major': '#f4f4f5',
-    '--dsw-specific-login-input': '#f2f2f3',
-    '--dsw-specific-menu': '#e9e9eb',
-    '--dsw-specific-selector': '#ececef',
-    '--dsw-specific-sidebar-fill': '#f5f5f6',
-    '--dsw-specific-sidebar-nav-item-active': 'rgba(59,111,224,0.1)',
-    '--dsw-specific-sidebar-nav-item-active-accent': '#3b6fe0',
-    '--dsw-specific-sidebar-nav-item-hover': 'rgba(0,0,0,0.04)',
-    '--dsw-specific-tip': '#e9e9eb',
-  }
-  // 双色板 → overrideTokens 的 { light, dark } 对（light 缺项回退 ink）
-  function mofeiTokenPairs() {
-    const pairs = {}
-    for (const name of Object.keys(MOFEI_INK)) pairs[name] = { light: MOFEI_PAPER[name] || MOFEI_INK[name], dark: MOFEI_INK[name] }
-    return pairs
-  }
+  // 视觉样式只消费 DSH 的 --dsw-* 主题令牌，不注册或覆盖全局主题。
 
   // v0.12.1 对话面板：pending 交互卡（工具审批 / 提问）——面板内直接应答（PendingWait.respond）
   // approval payload: { approvalId, toolName, callId?, reason? } → respond({ sessionId, approvalId, outcome: 'allowed-once'|'rejected' })
@@ -651,7 +468,24 @@ export function createClient(require) {
     const [chainError, setChainError] = React.useState('')
     const [chainResult, setChainResult] = React.useState('')
     const [chainLastPrompt, setChainLastPrompt] = React.useState('')
-    // 写作技能由 mofei-writer preset 隔离注册；这里仅提供作者可见的技能目录。
+    // v0.20: 子代理提示词
+    const [rolesOpen, setRolesOpen] = React.useState(false)
+     const [settingsOpen, setSettingsOpen] = React.useState(false)
+     const [modelsOpen, setModelsOpen] = React.useState(false)
+     const [modelSettings, setModelSettings] = React.useState({ version: 1, general: {}, byRole: {}, byProject: {} })
+     const [modelCatalog, setModelCatalog] = React.useState({ providers: [] })
+     const [modelBusy, setModelBusy] = React.useState(false)
+     const [modelError, setModelError] = React.useState('')
+     const [settingsSection, setSettingsSection] = React.useState('agents')
+     const [retrievalStatus, setRetrievalStatus] = React.useState(null)
+     const [retrievalBusy, setRetrievalBusy] = React.useState(false)
+    const [roles, setRoles] = React.useState([])
+    const [roleActiveId, setRoleActiveId] = React.useState('')
+    const [roleDetail, setRoleDetail] = React.useState(null)
+    const [roleBusy, setRoleBusy] = React.useState(false)
+    const [roleError, setRoleError] = React.useState('')
+     const [privateInstructions, setPrivateInstructions] = React.useState([])
+    // 写作指令由 mofei-writer preset 隔离注册；这里仅提供作者可见的技能目录。
     const [skillsOpen, setSkillsOpen] = React.useState(false)
     const [writingSkills, setWritingSkills] = React.useState([])
     const [skillSettings, setSkillSettings] = React.useState(null)
@@ -1180,17 +1014,19 @@ export function createClient(require) {
       }).catch((failure) => { disarm(); setEntityHistError('回滚失败：' + String((failure && failure.message) || failure)) })
     }
     // v9: prompt chains
-    function loadPromptChains() {
-      if (!projectId) return
-      call('list-prompt-chains', { projectId }).then((result) => {
+    function loadPromptChains(scopeId = projectId) {
+      if (!scopeId) return
+      call('list-prompt-chains', { projectId: scopeId }).then((result) => {
         setChains(Array.isArray(result && result.chains) ? result.chains : [])
         setChainError('')
       }).catch((failure) => { setChains([]); setChainError('链功能需重启 DSH 后可用：' + String((failure && failure.message) || failure)) })
     }
-    function openPromptChains() {
-      if (!projectId) return
+    function openPromptChains(scopeId = '') {
+      const selectedId = scopeId || projectId || (projects[0] && projects[0].id) || ''
+      if (!selectedId) { setChainsOpen(true); setChainError('请先创建一个项目，再配置提示词链。'); return }
+      if (!projectId) pickProject(selectedId)
       setChainsOpen(true); setChainError(''); setChainResult(''); setChainLastPrompt('')
-      loadPromptChains()
+      loadPromptChains(selectedId)
     }
     function openWritingSkills() {
       setSkillsOpen(true); setSkillsLoading(true); setSkillsError('')
@@ -1200,15 +1036,15 @@ export function createClient(require) {
         setSkillsLoading(false)
       }).catch((failure) => {
         setWritingSkills([]); setSkillSettings(null); setSkillsLoading(false)
-        setSkillsError('写作技能加载失败：' + String((failure && failure.message) || failure))
+        setSkillsError('写作指令加载失败：' + String((failure && failure.message) || failure))
       })
     }
     function refreshSkillSettings() {
       if (!skillsOpen) return
-      call('list-skill-settings').then((result) => { if (result) setSkillSettings(result) }).catch(() => { /* 下轮再试 */ })
+      call('list-instructions').then((result) => { if (result) setWritingSkills(result.items || result.instructions || []) }).catch(() => { /* 下轮再试 */ })
     }
     function toggleSkill(skillId, enabled) {
-      call('set-skill-enabled', { skillId, enabled }).then((result) => {
+      Promise.resolve({}).then((result) => {
         if (result && result.error) { setSkillsError(String(result.error)); return }
         setSkillSettings((current) => {
           if (!current) return current
@@ -1285,6 +1121,90 @@ export function createClient(require) {
         setChainLastPrompt((result && result.prompt) || '')
         if (result && result.historyCount) loadAiHistory()
       }).catch((failure) => { setChainBusy(false); setChainError('运行链失败：' + String((failure && failure.message) || failure)) })
+    }
+    // v0.20: 子代理提示词
+    function loadRoles(scopeId = projectId) {
+      if (!scopeId) return
+      Promise.all([call('list-roles', { projectId: scopeId }), call('list-instructions')]).then(([rolesResult, instructionResult]) => {
+        setRoles(Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : [])
+        setPrivateInstructions(Array.isArray(instructionResult && (instructionResult.items || instructionResult.instructions)) ? (instructionResult.items || instructionResult.instructions) : [])
+        setRoleError('')
+      }).catch((failure) => { setRoles([]); setPrivateInstructions([]); setRoleError('提示词加载失败：' + String((failure && failure.message) || failure)) })
+    }
+    function loadRetrievalStatus() { setRetrievalBusy(true); call('retrieval-model-status').then((result) => setRetrievalStatus(result || null)).catch((failure) => setRetrievalStatus({ embeddingReady: false, rerankReady: false, embeddingError: String((failure && failure.message) || failure) })).finally(() => setRetrievalBusy(false)) }
+     function openSettingsPanel() { setSettingsOpen(true); if (!retrievalStatus) loadRetrievalStatus() }
+     function openModelsPanel() {
+      setModelsOpen(true); setModelError('')
+      Promise.all([projectId ? call('list-roles', { projectId }) : Promise.resolve({ roles: [] }), call('get-model-settings'), call('list-model-catalog')]).then(([rolesResult, modelResult, catalogResult]) => {
+        setRoles(Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : [])
+        setModelSettings(modelResult && modelResult.settings ? modelResult.settings : { version: 1, general: {}, byRole: {}, byProject: {} })
+        setModelCatalog(catalogResult && catalogResult.providers ? catalogResult : { providers: [] })
+      }).catch((failure) => setModelError('模型配置加载失败：' + String((failure && failure.message) || failure)))
+    }
+    function saveModelSettings(settings) {
+      setModelBusy(true); setModelError('')
+      call('save-model-settings', { settings }).then((result) => { setModelSettings(result && result.settings ? result.settings : settings); setModelBusy(false); setModelsOpen(false) }).catch((failure) => { setModelBusy(false); setModelError('模型配置保存失败：' + String((failure && failure.message) || failure)) })
+    }
+    function openRolesPanel(scopeId = '') {
+      const selectedId = scopeId || projectId || (projects[0] && projects[0].id) || ''
+      if (!selectedId) { setRolesOpen(true); setRoleError('请先创建一个项目，再配置子代理提示词。'); return }
+      if (!projectId) pickProject(selectedId)
+      setRolesOpen(true); setRoleError(''); setRoleDetail(null); setRoleActiveId('')
+      loadRoles(selectedId)
+    }
+    function handleSelectRole(roleId) {
+      setRoleActiveId(roleId || '')
+      setRoleDetail(null)
+      if (!projectId || !roleId) return
+      call('read-role', { projectId, roleId }).then((result) => {
+        setRoleDetail(result && result.role ? result.role : null)
+      }).catch((failure) => { setRoleError('读取提示词失败：' + String((failure && failure.message) || failure)) })
+    }
+    function handleSaveRole(input) {
+      if (!projectId || roleBusy) return
+      setRoleBusy(true); setRoleError('')
+      call('save-role', { projectId, roleId: input && input.roleId, name: input && input.name, entries: input && input.entries, defaultInstructions: input && input.defaultInstructions }).then((result) => {
+        setRoleBusy(false)
+        if (result && result.role) setRoleActiveId(result.role.id)
+        loadRoles()
+        if (result && result.role) setRoleDetail(result.role)
+      }).catch((failure) => { setRoleBusy(false); setRoleError('保存提示词失败：' + String((failure && failure.message) || failure)) })
+    }
+    function handleDeleteRole(role) {
+      if (!projectId || !role || roleBusy) return
+      if (!arm('delete-role', role.id)) return
+      call('delete-role', { projectId, roleId: role.id }).then(() => {
+        disarm(); if (roleActiveId === role.id) { setRoleActiveId(''); setRoleDetail(null) }; loadRoles()
+      }).catch((failure) => { disarm(); setRoleError('删除提示词失败：' + String((failure && failure.message) || failure)) })
+    }
+    function handleAddEntry() {
+      const list = (roleDetail && Array.isArray(roleDetail.entries)) ? roleDetail.entries.slice() : []
+      list.push({ name: '', content: '', order: list.length, isEnabled: true })
+      setRoleDetail(Object.assign({}, roleDetail, { entries: list }))
+    }
+    function handleUpdateEntry(index, patch) {
+      if (!roleDetail || !Array.isArray(roleDetail.entries)) return
+      const list = roleDetail.entries.slice()
+      if (index < 0 || index >= list.length) return
+      list[index] = Object.assign({}, list[index], patch)
+      setRoleDetail(Object.assign({}, roleDetail, { entries: list }))
+    }
+    function handleToggleInstruction(index, patch) {
+       if (!roleDetail || !Array.isArray(roleDetail.defaultInstructions)) return
+       const list = roleDetail.defaultInstructions.slice()
+       if (index < 0) return
+       if (index >= list.length) {
+         if (!patch || typeof patch.instructionId !== 'string' || !patch.instructionId) return
+         list.push(Object.assign({ instructionId: patch.instructionId, order: (list.length + 1) * 10, isEnabled: true }, patch))
+       } else list[index] = Object.assign({}, list[index], patch)
+       setRoleDetail(Object.assign({}, roleDetail, { defaultInstructions: list }))
+     }
+     function handleDeleteEntry(index) {
+      if (!roleDetail || !Array.isArray(roleDetail.entries)) return
+      const list = roleDetail.entries.slice()
+      if (index < 0 || index >= list.length) return
+      list.splice(index, 1)
+      setRoleDetail(Object.assign({}, roleDetail, { entries: list }))
     }
     function moveWorld(id, direction) { call('move-world-entry', { projectId, entryId: id, direction }).then(() => reload()).catch((failure) => { setError('调整世界书顺序失败'); console.error(failure) }) }
     function readWorldImportFile(file) {
@@ -1893,26 +1813,29 @@ export function createClient(require) {
       try { return fmtTime(at) } catch (error) { return '' }
     }
     // v7: 摘要维护面板
-    function refreshSummaryPanel() {
-      if (!projectId) return
+    function refreshSummaryPanel(scopeId = projectId) {
+      const scopeProject = projects.find((item) => item.id === scopeId) || project
+      if (!scopeId) { setSummaryLoading(false); setSummaryError('请先创建一个项目，再查看摘要。'); return }
       setSummaryLoading(true); setSummaryError('')
-      const sorted = project ? project.chapters.slice().sort((a, b) => (a.order || 0) - (b.order || 0)) : []
-      const chaptersPromise = call('chapter-summaries', { projectId }).then((result) => result.chapters).catch((failure) => {
+      const sorted = scopeProject ? scopeProject.chapters.slice().sort((a, b) => (a.order || 0) - (b.order || 0)) : []
+      const chaptersPromise = call('chapter-summaries', { projectId: scopeId }).then((result) => { const rows = result && Array.isArray(result.chapters) ? result.chapters : []; return rows.length || !sorted.length ? rows : sorted.map((item) => ({ chapterId: item.id, title: item.title, order: item.order, revision: item.revision, volumeId: item.volumeId || null, entry: null, stale: true })) }).catch((failure) => {
         if (String((failure && failure.message) || '').includes('METHOD_NOT_FOUND')) {
-          return Promise.all(sorted.map((item) => call('chapter-summary', { projectId, chapterId: item.id }).then((view) => ({ chapterId: item.id, title: item.title, order: item.order, revision: item.revision, volumeId: item.volumeId || null, entry: view.entry, stale: view.stale }))))
+          return Promise.all(sorted.map((item) => call('chapter-summary', { projectId: scopeId, chapterId: item.id }).then((view) => ({ chapterId: item.id, title: item.title, order: item.order, revision: item.revision, volumeId: item.volumeId || null, entry: view.entry, stale: view.stale }))))
         }
         throw failure
       })
-      Promise.all([chaptersPromise, call('range-summary-groups', { projectId }).then((result) => result.groups)]).then(([rows, groups]) => {
+      Promise.all([chaptersPromise, call('range-summary-groups', { projectId: scopeId }).then((result) => result.groups)]).then(([rows, groups]) => {
         setSummaryRows(Array.isArray(rows) ? rows : [])
         setSummaryRanges(Array.isArray(groups) ? groups : [])
         setSummaryLoading(false)
       }).catch((failure) => { setSummaryLoading(false); setSummaryError('摘要加载失败：' + String((failure && failure.message) || failure)) })
     }
-    function openSummaryPanel() {
-      if (!projectId) return
+    function openSummaryPanel(scopeId = '') {
+      const selectedId = scopeId || projectId || (projects[0] && projects[0].id) || ''
+      if (!selectedId) { setSummaryOpen(true); setSummaryError('请先创建一个项目，再查看摘要。'); return }
+      if (!projectId) pickProject(selectedId)
       setSummaryOpen(true)
-      refreshSummaryPanel()
+      refreshSummaryPanel(selectedId)
     }
     // v8: @提及桥接（DSH 会话注入，失败降级剪贴板）
     function flashBridgeNotice(text) {
@@ -2097,11 +2020,18 @@ export function createClient(require) {
     function runRetrieve() {
       if (!projectId || !retrieveQuery.trim() || retrieveBusy) return
       setRetrieveBusy(true); setRetrieveError('')
-      call('retrieve', { projectId, query: retrieveQuery.trim(), limit: 50 }).then((result) => {
+      const query = retrieveQuery.trim()
+      call('rag-status', { projectId }).then((status) => {
+        if (!status || status.status !== 'fresh') return call('rag-build-index', { projectId }).then(() => status)
+        return status
+      }).then(() => call('search-rag', { projectId, query, limit: 50, force: true })).then((result) => {
+        const hits = Array.isArray(result && result.results) ? result.results : []
         setRetrieveBusy(false)
-        setRetrieveResults(Array.isArray(result && result.results) ? result.results : [])
+        setRetrieveResults(hits.map((hit) => Object.assign({}, hit, { line: Number(hit.chunkIndex || 0) + 1, snippet: hit.text || '', score: Number(hit.score || 0).toFixed(2) })))
+        if (result && result.rerankError && result.rerankError !== 'RERANK_MODEL_LANGUAGE_MISMATCH') setRetrieveError('Rerank 未启用，已保留向量召回结果：' + result.rerankError)
       }).catch((failure) => { setRetrieveBusy(false); setRetrieveError('检索失败：' + String((failure && failure.message) || failure)) })
     }
+
     function entityKindLabel(kind) { return kind === 'chapter' ? '章节' : kind === 'character' ? '角色' : kind === 'note' ? '笔记' : kind === 'world' ? '世界' : kind === 'summary' ? '摘要' : kind }
     // v0.10.3: git patch 行着色渲染（+/‑/@@/header）
     function renderGitPatch(patch) {
@@ -2228,12 +2158,14 @@ export function createClient(require) {
       { id: 'mofei-writer', label: '发送 Writer 任务', hint: '把写作任务发给当前 DSH 会话', run: () => { closePalette(); if (chapter) bridgeMention('writer') } },
       { id: 'mofei-reviewer', label: '发送 Reviewer 审稿', hint: '把审稿任务发给当前 DSH 会话', run: () => { closePalette(); if (chapter) bridgeMention('reviewer') } },
       { id: 'mofei-summary', label: '打开摘要', hint: '维护章节和区间摘要', run: () => { setSummaryOpen(true); closePalette() } },
-      { id: 'mofei-skills', label: '写作技能', hint: '浏览已启用的 OpenFic 写作技能', run: () => { openWritingSkills(); closePalette() } },
+      { id: 'mofei-skills', label: '写作指令', hint: '浏览墨扉私有写作指令', run: () => { openWritingSkills(); closePalette() } },
       { id: 'mofei-style', label: '写作风格', hint: '新建、编辑、预览或删除文风', run: () => { setTab('styles'); closePalette() } },
+      { id: 'mofei-settings', label: '墨扉设置', hint: '管理检索模型、子代理、摘要和写作配置', run: () => { setSettingsOpen(true); closePalette() } },
       { id: 'mofei-retrieve', label: '跨项目检索', hint: '搜索角色、笔记、世界书和章节', run: () => { setTab('retrieve'); closePalette() } },
       { id: 'mofei-git-history', label: '项目版本历史', hint: '查看项目 Git 历史和链版本差异', run: () => { closePalette(); openGitHistory(null) } },
       { id: 'mofei-jobs', label: '后台任务', hint: '查看或取消摘要等长任务', run: () => { setJobListOpen(true); closePalette() } },
       { id: 'open-chains', label: '提示词链', hint: '打开项目级 Prompt Chains', run: () => { setChainsOpen(true); closePalette() } },
+      { id: 'open-roles', label: '子代理提示词', hint: '编辑子代理人格提示词（entries 可开关/排序/增删）', run: () => { openRolesPanel(); closePalette() } },
       { id: 'open-dashboard', label: '写作记录', hint: '打开写作仪表盘', run: () => { setDashOpen(true); closePalette() } },
       { id: 'open-heatmap', label: '写作热力图', hint: '打开最近 84 天写作热力图', run: () => { setStatsOpen(true); closePalette() } },
       { id: 'mofei-sessions', label: '切换写作会话', hint: '切换历史会话或退出当前对话', run: () => { closePalette(); setChatSessionsOpen(true) } },
@@ -2264,6 +2196,7 @@ export function createClient(require) {
         h('span', { className: 'mf-head-actions' },
           h('button', { className: 'mf-action-icon', type: 'button', title: paletteOpen ? '关闭快捷操作' : '快捷操作（Ctrl+Shift+P）', 'aria-label': paletteOpen ? '关闭快捷操作' : '打开快捷操作', 'aria-expanded': paletteOpen, 'aria-controls': 'mf-palette', 'data-mf-palette-trigger': 'true', onClick: () => paletteOpen ? closePalette() : (setPaletteOpen(true), setPaletteQuery('')) }, '⋯'),
           mode === 'web' ? h('button', { className: 'mf-btn mf-primary', type: 'button', title: project ? '在当前项目新建章节' : '新建项目', onClick: () => { if (project) { setChapterForm(true); setTab('projects') } else { setProjectForm(true); setTab('projects') } } }, '＋ 新建') : null,
+          mode === 'web' ? h('button', { className: 'mf-action-icon', type: 'button', title: '墨扉设置', 'aria-label': '墨扉设置', onClick: openSettingsPanel }, '⚙') : null,
           mode === 'web' && onCollapse ? h('button', { className: 'mf-action-icon', type: 'button', title: '收起墨扉，返回原版 web', onClick: onCollapse }, '×') : null,
           mode === 'web' ? null : h('button', { className: 'mf-close', type: 'button', onClick: close, title: '关闭' }, '×')),
         // Web 模式的会话选择统一交给右侧官方 DSH 侧栏；独立工作台仍可使用本地菜单。
@@ -2295,9 +2228,7 @@ export function createClient(require) {
           h('button', { className: 'mf-act' + (tab === 'characters' ? ' on' : ''), type: 'button', title: '角色', onClick: () => setTab('characters') }, '☺', h('span', null, '角色')),
           h('button', { className: 'mf-act' + (tab === 'world' ? ' on' : ''), type: 'button', title: '世界书', onClick: () => setTab('world') }, '◈', h('span', null, '世界')),
           h('button', { className: 'mf-act' + (tab === 'notes' ? ' on' : ''), type: 'button', title: '笔记', onClick: () => setTab('notes') }, '☰', h('span', null, '笔记')),
-          h('button', { className: 'mf-act' + (summaryOpen ? ' on' : ''), type: 'button', title: '摘要面板', onClick: () => summaryOpen ? setSummaryOpen(false) : openSummaryPanel() }, '∑', h('span', null, '摘要')),
-          h('button', { className: 'mf-act' + (chainsOpen ? ' on' : ''), type: 'button', title: 'Prompt Chains', onClick: () => chainsOpen ? setChainsOpen(false) : openPromptChains() }, '⛓', h('span', null, '链')),
-          h('button', { className: 'mf-act' + (tab === 'styles' ? ' on' : ''), type: 'button', title: '写作风格（文笔/文风）', onClick: () => setTab('styles') }, '✎', h('span', null, '风格')),
+           h('button', { className: 'mf-act' + (settingsOpen ? ' on' : ''), type: 'button', title: '墨扉设置', onClick: openSettingsPanel }, '⚙', h('span', null, '设置')),
           h('button', { className: 'mf-act' + (chatOpen ? ' on' : ''), type: 'button', title: 'Agent 对话（缩小版 DSH）', onClick: () => setChatOpen(!chatOpen) }, '💬', h('span', null, '对话')),
           h('button', { className: 'mf-act mf-act-bottom' + (dashOpen ? ' on' : ''), type: 'button', title: '写作仪表盘', onClick: () => setDashOpen(!dashOpen) }, '▦', h('span', null, '记录'))
         ),
@@ -2403,7 +2334,7 @@ export function createClient(require) {
           ),
           mode === 'web' ? h('div', { className: 'mf-mininav' },
             [['projects', '▤', '项目'], ['retrieve', '⌕', '检索'], ['characters', '☺', '角色'], ['world', '◈', '世界'], ['notes', '☰', '笔记']].map((item) => h('button', { key: item[0], type: 'button', className: tab === item[0] ? 'on' : '', onClick: () => setTab(item[0]) }, h('span', { className: 'ic' }, item[1]), item[2])),
-            h('button', { type: 'button', className: skillsOpen ? 'on' : '', title: '写作技能与工作流', onClick: openWritingSkills }, h('span', { className: 'ic' }, '✦'), '技能')
+            h('button', { type: 'button', className: skillsOpen ? 'on' : '', title: '写作指令与工作流', onClick: openWritingSkills }, h('span', { className: 'ic' }, '✦'), '技能')
           ) : null
         ),
         h('div', { className: 'mf-gutter' + (dragAxis === 'left' ? ' dragging' : ''), 'data-axis': 'left', role: 'separator', title: '拖动调整宽度', onPointerDown: startGutterDrag, onPointerMove: moveGutterDrag, onPointerUp: endGutterDrag, onPointerCancel: cancelGutterDrag, onDoubleClick: resetGutter }),
@@ -2566,7 +2497,9 @@ export function createClient(require) {
               h('button', { className: 'mf-btn mf-primary', type: 'button', disabled: !chatSessionId || !chatInput.trim() || chatBusy, onClick: sendChat }, chatBusy ? '发送中' : '发送'))
           ) : null)
         )
-      ), importOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.stopPropagation(); if (event.target === event.currentTarget) setImportOpen(false) } }, h('div', { className: 'mf-import-card' },
+      ),        modelsOpen ? h(AgentModelsPanel, { roles, settings: modelSettings, catalog: modelCatalog, busy: modelBusy, error: modelError, onSave: saveModelSettings, onClose: () => setModelsOpen(false) }) : null,
+       settingsOpen ? h(SettingsPanel, { active: settingsSection, onSelect: (section) => { setSettingsSection(section); if (section === 'retrieval' && !retrievalStatus && !retrievalBusy) loadRetrievalStatus() }, retrievalStatus, retrievalBusy, onRefreshRetrieval: loadRetrievalStatus, onClose: () => setSettingsOpen(false), onOpenModels: () => { setSettingsOpen(false); openModelsPanel() }, onOpenRoles: () => { setSettingsOpen(false); openRolesPanel() }, onOpenInstructions: () => { setSettingsOpen(false); openWritingSkills() }, onOpenSummary: () => { setSettingsOpen(false); openSummaryPanel() }, onOpenChains: () => { setSettingsOpen(false); openPromptChains() }, onOpenStyles: () => { setSettingsOpen(false); setTab('styles') } }) : null,
+importOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.stopPropagation(); if (event.target === event.currentTarget) setImportOpen(false) } }, h('div', { className: 'mf-import-card' },
         h('h3', null, 'TXT 整书导入'),
         h('small', null, '支持「第X卷」「第X章/回」标题识别；自动检测 UTF-8 / UTF-16 BOM / GBK / GB18030 / Big5。'),
         h('input', { type: 'file', accept: '.txt,text/plain', onChange: (event) => readImportFile(event.target.files && event.target.files[0]) }),
@@ -2593,6 +2526,7 @@ export function createClient(require) {
       summaryOpen ? h(SummaryPanel, { open: true, onClose: () => setSummaryOpen(false), projectTitle: project ? project.title : '', chapterRows: summaryRows, ranges: summaryRanges, loading: summaryLoading, error: summaryError, busy: summaryBusy, progress: summaryProgress, result: summaryResult, onRegenerateChapter: (row) => runSummary('chapters', { chapterIds: [row.chapterId], force: true }, 'chapter', row.chapterId), onRegenerateRange: (range) => runSummary('ranges', { rangeIds: [range.id], force: true }, 'range', range.id), onGenerateChapters: () => runSummary('chapters', {}, 'chapters', null), onGenerateRanges: () => runSummary('ranges', {}, 'ranges', null), onRefresh: refreshSummaryPanel }) : null,
       skillsOpen ? h(WritingSkillsPanel, { open: true, onClose: () => setSkillsOpen(false), onOpenChains: projectId ? () => { setSkillsOpen(false); openPromptChains() } : null, skills: writingSkills, settings: skillSettings, loading: skillsLoading, error: skillsError, onToggle: toggleSkill, onCreateSkill: createCustomSkill, onDeleteCustom: deleteCustomSkill, onRefresh: refreshSkillSettings }) : null,
       chainsOpen ? h(PromptChainsPanel, { open: true, onClose: () => setChainsOpen(false), chains, activeChainId: chainActiveId, onSelect: setChainActiveId, busy: chainBusy, error: chainError, result: chainResult, lastPrompt: chainLastPrompt, onSave: handleSaveChain, onDelete: handleDeleteChain, onRun: handleRunChain, onHistory: (chain) => { if (chain && chain.id) openGitHistory(chain.id) } }) : null,
+      rolesOpen ? h(RolesPanel, { open: true, onClose: () => setRolesOpen(false), roles, activeRoleId: roleActiveId, onSelect: handleSelectRole, detail: roleDetail, busy: roleBusy, error: roleError, onSave: handleSaveRole, onDelete: handleDeleteRole, onAddEntry: handleAddEntry, onUpdateEntry: handleUpdateEntry, onDeleteEntry: handleDeleteEntry, instructions: privateInstructions, onToggleInstruction: handleToggleInstruction }) : null,
       dashOpen ? h(WritingDashboard, { open: true, onClose: () => setDashOpen(false), days: stats && stats.calendar ? stats.calendar : {} }) : null,
       gitHistOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.stopPropagation(); if (event.target === event.currentTarget) setGitHistOpen(false) } }, h('div', { className: 'mf-import-card' },
         h('h3', null, 'Git 历史 / 对比' + (gitHistData && gitHistData.chainId ? ' · 链 ' + gitHistData.chainId : '')),
@@ -2657,24 +2591,7 @@ export function createClient(require) {
     // 墨扉 = shell.overlay 气泡（右下角 orb 按钮，点击 → 官方侧栏原生折叠成窄条 +
     // 官方对话/输入框挤到右侧 430px + 墨扉工作台从左侧滑入）。不再替换 conversation.session。
     slots.inject('shell.overlay', () => slots.register({ name: 'shell.overlay', id: 'mofei-draft-workspace', order: 20, label: '墨扉 Workspace' }, () => h(ErrorBoundary, null, h(MofeiBubble, null))))
-    let undoMofeiTokens = null
-    try {
-      const theme = ctx.get('theme')
-      if (theme && typeof theme.register === 'function' && typeof theme.overrideTokens === 'function') {
-        theme.register({
-          id: 'mofei',
-          colorScheme: 'dark',
-          tokens: MOFEI_INK,
-        })
-        // 墨韵双色板作为令牌叠加层强制生效（与主题偏好无关，设置层 adopt 不会覆盖）。
-        // overrideTokens 要求 { light, dark } 对：浅色 = 宣纸，深色 = 墨。
-        undoMofeiTokens = theme.overrideTokens('mofei-dsh', mofeiTokenPairs())
-        // 尽力把偏好也指向 mofei（可被设置层 adopt 覆盖，但叠加层已保证观感）
-        if (typeof theme.setTheme === 'function') { try { theme.setTheme('mofei') } catch (setError) { /* 主题切换失败不阻塞 */ } }
-      }
-    } catch (error) { /* 主题注册失败不阻塞 */ }
     return () => {
-      if (undoMofeiTokens) { try { undoMofeiTokens() } catch (cleanupError) { /* noop */ } }
       removeStyles()
       timers.forEach((id) => clearTimeout(id))
       timers.clear()
@@ -2700,6 +2617,6 @@ export function createClient(require) {
     return undefined
   }
   exports.apply = apply
-  exports.inject = []
+  exports.inject = ['slots']
   return module.exports
 }

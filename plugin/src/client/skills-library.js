@@ -1,4 +1,4 @@
-// 墨扉写作技能目录（v0.17：技能开关 + 自创技能入口）。
+// 墨扉写作指令目录（v0.17：技能开关 + 自创技能入口）。
 // 技能由 mofei-writer preset 在隔离 realm 内注册（可按开关过滤）；自创技能写入
 // ~/.dsh/skills/（DSH skill-filesystem 自动发现），此组件提供作者可见的产品层。
 
@@ -120,7 +120,7 @@ export function WritingSkillsPanel(props) {
   }
 
   const list = loading
-    ? h('div', { className: 'mf-sk-empty' }, '正在读取写作技能…')
+    ? h('div', { className: 'mf-sk-empty' }, '正在读取写作指令…')
     : error
       ? h('div', { className: 'mf-sk-empty' }, error)
       : filtered.length
@@ -128,10 +128,10 @@ export function WritingSkillsPanel(props) {
           const off = disabled.has(skill.name)
           return h('button', { key: skill.name, className: 'mf-sk-item' + (selected && selected.name === skill.name ? ' on' : '') + (off ? ' mf-sk-item-off' : ''), type: 'button', onClick: () => setSelectedName(skill.name) },
             h('strong', null, writingSkillLabel(skill.name)),
-            h('small', null, skill.description || '写作技能'),
+            h('small', null, skill.description || '写作指令'),
             toggleFor(skill.name))
         })
-        : h('div', { className: 'mf-sk-empty' }, '没有匹配的写作技能')
+        : h('div', { className: 'mf-sk-empty' }, '没有匹配的写作指令')
 
   const detail = selected
     ? h('article', { className: 'mf-sk-detail' },
@@ -143,11 +143,11 @@ export function WritingSkillsPanel(props) {
       h('p', { className: 'mf-sk-when' }, selected.whenToUse || '写作助手会在相关任务中按需加载。'),
       selected.content ? h('pre', { className: 'mf-sk-content' }, selected.content) : null,
       toggleFor(selected.name))
-    : h('div', { className: 'mf-sk-empty' }, loading ? '正在读取写作技能…' : '选择一项技能查看详情')
+    : h('div', { className: 'mf-sk-empty' }, loading ? '正在读取写作指令…' : '选择一项技能查看详情')
 
   const customBlock = custom.length
     ? h('div', null,
-      h('div', { className: 'mf-sk-section' }, '自创技能（~/.dsh/skills/，AI 可直接加载）'),
+      h('div', { className: 'mf-sk-section' }, '自创技能（墨扉私有指令库）'),
       custom.map((item) => h('div', { key: item.name, className: 'mf-sk-item' + (selected && selected.name === item.name ? ' on' : '') },
         h('strong', null, item.name),
         h('small', null, item.description || ''),
@@ -157,7 +157,7 @@ export function WritingSkillsPanel(props) {
 
   const submitForm = () => {
     if (!formName.trim() || !formDesc.trim()) { setFormMsg('名称与描述必填'); return }
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formName.trim())) { setFormMsg('技能名须为小写 kebab-case（如 my-style-check）'); return }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(formName.trim())) { setFormMsg('指令名须为小写 kebab-case（如 my-style-check）'); return }
     setFormBusy(true); setFormMsg('')
     const result = onCreateSkill({ name: formName.trim(), description: formDesc.trim(), whenToUse: formWhen.trim(), content: formContent })
     if (result && typeof result.then === 'function') {
@@ -170,19 +170,19 @@ export function WritingSkillsPanel(props) {
   }
 
   const form = formOpen ? h('div', { className: 'mf-sk-form', role: 'presentation', onClick: () => { if (!formBusy) setFormOpen(false) } },
-    h('div', { className: 'mf-sk-form-card', role: 'dialog', 'aria-label': '新建自创技能', onClick: (event) => event.stopPropagation() },
-      h('h3', null, '新建自创技能（写入 ~/.dsh/skills/，DSH 自动发现）'),
-      h('label', null, '技能名（小写 kebab-case，如 my-style-check）', h('input', { value: formName, placeholder: 'my-style-check', onChange: (event) => setFormName(event.target.value) })),
+    h('div', { className: 'mf-sk-form-card', role: 'dialog', 'aria-label': '新建写作指令', onClick: (event) => event.stopPropagation() },
+      h('h3', null, '新建写作指令（写入 ~/.dsh/skills/，仅保存在墨扉项目数据中）'),
+      h('label', null, '指令名（小写 kebab-case，如 my-style-check）', h('input', { value: formName, placeholder: 'my-style-check', onChange: (event) => setFormName(event.target.value) })),
       h('label', null, '描述（必填）', h('input', { value: formDesc, placeholder: '一句话说明这个技能做什么', onChange: (event) => setFormDesc(event.target.value) })),
       h('label', null, '适用场景（whenToUse）', h('input', { value: formWhen, placeholder: '何时使用（如：审稿时检查…）', onChange: (event) => setFormWhen(event.target.value) })),
-      h('label', null, '技能正文（写作助手加载后遵循的规则）', h('textarea', { value: formContent, placeholder: '写技能规则/红线/步骤…', onChange: (event) => setFormContent(event.target.value) })),
+      h('label', null, '指令正文（子代理被选中后强制注入的规则）', h('textarea', { value: formContent, placeholder: '写技能规则/红线/步骤…', onChange: (event) => setFormContent(event.target.value) })),
       formMsg ? h('div', { className: 'mf-sk-form-msg' }, formMsg) : null,
-      h('div', { className: 'mf-sk-form-actions' }, h('button', { className: 'mf-sk-link', type: 'button', onClick: () => setFormOpen(false) }, '取消'), h('button', { className: 'mf-sk-link primary', type: 'button', disabled: formBusy, onClick: submitForm }, formBusy ? '创建中…' : '创建技能'))))
+      h('div', { className: 'mf-sk-form-actions' }, h('button', { className: 'mf-sk-link', type: 'button', onClick: () => setFormOpen(false) }, '取消'), h('button', { className: 'mf-sk-link primary', type: 'button', disabled: formBusy, onClick: submitForm }, formBusy ? '创建中…' : '创建指令'))))
     : null
 
   return h('div', { className: 'mf-sk-overlay', role: 'presentation', onClick: () => { if (onClose) onClose() } },
-    h('section', { className: 'mf-sk', role: 'dialog', 'aria-label': '墨扉写作技能', onClick: (event) => event.stopPropagation() },
-      h('header', { className: 'mf-sk-head' }, h('div', { className: 'mf-sk-title' }, h('strong', null, '写作技能'), h('small', null, String(skills.length) + ' 项内置能力 · ' + String(custom.length) + ' 项自创')), h('div', { className: 'mf-sk-head-actions' }, onOpenChains ? h('button', { className: 'mf-sk-link', type: 'button', onClick: onOpenChains }, '提示词链') : null, h('button', { className: 'mf-sk-link primary', type: 'button', onClick: () => { setFormOpen(true); setFormMsg('') } }, '＋ 新建技能'), h('button', { className: 'mf-sk-close', type: 'button', title: '关闭写作技能', onClick: () => { if (onClose) onClose() } }, '×'))),
+    h('section', { className: 'mf-sk', role: 'dialog', 'aria-label': '墨扉写作指令', onClick: (event) => event.stopPropagation() },
+      h('header', { className: 'mf-sk-head' }, h('div', { className: 'mf-sk-title' }, h('strong', null, '写作指令'), h('small', null, String(skills.length) + ' 项内置能力 · ' + String(custom.length) + ' 项自创')), h('div', { className: 'mf-sk-head-actions' }, onOpenChains ? h('button', { className: 'mf-sk-link', type: 'button', onClick: onOpenChains }, '提示词链') : null, h('button', { className: 'mf-sk-link primary', type: 'button', onClick: () => { setFormOpen(true); setFormMsg('') } }, '＋ 新建技能'), h('button', { className: 'mf-sk-close', type: 'button', title: '关闭写作指令', onClick: () => { if (onClose) onClose() } }, '×'))),
       h('div', { className: 'mf-sk-body' }, h('aside', { className: 'mf-sk-list' }, h('input', { className: 'mf-sk-search', value: query, placeholder: '搜索技能…', onChange: (event) => setQuery(event.target.value) }), list, customBlock), detail),
       form))
 }

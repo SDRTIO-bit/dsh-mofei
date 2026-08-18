@@ -10,7 +10,10 @@ import { parseWorldInfoJson, buildChapterContext, normalizeWorldEntry, normalize
 import { normalizeAiSession, aiSessionView, appendAiMessage, buildAiMessages, chapterSelection, summaryRequest, sseEvent } from './ai.js'
 import { normalizeSummaryStore, chapterSummaryView, isChapterSummaryStale, applyChapterSummary, buildRangeGroups, applyRangeSummary, planSummaryBatch } from './summary.js'
 import { normalizeChainStore, compilePromptChain, promptChainView } from './prompt-chain.js'
-import { mofeiSkills } from './skills.js'
+import { normalizeRoleStore, compileRolePersona, roleSummaryView, roleDetailView } from './roles.js'
+import { mofeiInstructions } from './instructions.js'
+import { buildIndex, queryIndex, indexStatus, DEFAULT_RAG_CONFIG } from './rag.js'
+import { embedTexts, localRetrievalStatus, rerankResultItems, DEFAULT_LOCAL_RETRIEVAL } from './local-retrieval.js'
 const pluginRoot = fileURLToPath(new URL('..', import.meta.url))
 export default {
   inject: ['fs', 'sandboxPolicy', 'webServer'],
@@ -21,7 +24,7 @@ export default {
     const HISTORY_CAP = 20
     const ENTITY_HISTORY_MAX = 50
     const AI_MESSAGE_CAP = 80
-    let projectTarget, draftTarget, statsTarget, aiSessionsTarget, summaryTarget, chainsTarget, skillSettingsTarget, loading
+    let projectTarget, draftTarget, statsTarget, aiSessionsTarget, summaryTarget, chainsTarget, skillSettingsTarget, rolesTarget, instructionsTarget, modelsTarget, ragTarget, loading
     let queue = Promise.resolve()
     let store = { version: 4, nextId: 1, projects: [] }
     let draftStore = { version: 1, items: [] }
@@ -29,11 +32,31 @@ export default {
     let aiSessions = { version: 1, sessions: {} }
     let summaryStore = normalizeSummaryStore(undefined)
     let chainStore = normalizeChainStore(undefined)
+    let rolesStore = normalizeRoleStore(undefined)
+     let instructionStore = { version: 1, custom: [] }
+     let modelStore = { version: 1, general: { provider: '', model: '' }, byRole: {}, byProject: {} }
+     let ragStore = { version: 1, byProject: {} }
     // v0.17: 写作技能开关（禁用名单；自创技能直接写 ~/.dsh/skills/，由 DSH skill-filesystem 发现）。
     let skillSettings = { version: 1, disabledSkills: [] }
     // 当前浏览器工作台与 DSH 写作会话之间的短生命周期关联；不写入小说数据。
     const agentContexts = new Map()
     function text(value, fallback) { const result = typeof value === 'string' ? value.trim() : ''; return result || fallback }
+     function modelRef(value) { const source = value && typeof value === 'object' ? value : {}; return { mode: source.mode === 'dedicated' ? 'dedicated' : 'general', provider: typeof source.provider === 'string' ? source.provider.trim() : '', model: typeof source.model === 'string' ? source.model.trim() : '' } }
+     function normalizeModelStore(value) { const source = value && typeof value === 'object' ? value : {}; const out = { version: 1, general: modelRef(source.general), byRole: {}, byProject: {} }; const roles = source.byRole && typeof source.byRole === 'object' ? source.byRole : {}; Object.keys(roles).forEach((id) => { if (id !== '__proto__' && id !== 'constructor' && id !== 'prototype') out.byRole[id] = modelRef(roles[id]) }); const projects = source.byProject && typeof source.byProject === 'object' ? source.byProject : {}; Object.keys(projects).forEach((projectId) => { if (projectId !== '__proto__' && projectId !== 'constructor' && projectId !== 'prototype') { const item = projects[projectId] && typeof projects[projectId] === 'object' ? projects[projectId] : {}; out.byProject[projectId] = { general: modelRef(item.general), byRole: {} }; const projectRoles = item.byRole && typeof item.byRole === 'object' ? item.byRole : {}; Object.keys(projectRoles).forEach((id) => { out.byProject[projectId].byRole[id] = modelRef(projectRoles[id]) }) } }); return out }
+     function resolvedModel(projectId, roleId) { const project = projectId && modelStore.byProject[projectId]; const dedicated = project && project.byRole && project.byRole[roleId] && project.byRole[roleId].model ? project.byRole[roleId] : modelStore.byRole[roleId]; if (dedicated && dedicated.model) return { ...dedicated, source: 'role' }; const general = project && project.general && project.general.model ? project.general : modelStore.general; return { ...general, source: general && general.model ? 'general' : 'dsh-default' } }
+     function ragIndexFor(projectId) { return ragStore.byProject && ragStore.byProject[projectId] ? ragStore.byProject[projectId] : null }
+     function projectSummaries(projectId) { const out = {}; Object.keys(summaryStore.chapters || {}).forEach((id) => { const item = summaryStore.chapters[id]; if (item && (!projectId || item.projectId === projectId || !item.projectId)) out[id] = item }); return out }
+     async function modelCatalog() {
+       const llm = ctx.get('llm')
+       if (!llm || typeof llm.listProviders !== 'function' || typeof llm.listModels !== 'function') return { providers: [], error: 'LLM_CATALOG_UNAVAILABLE' }
+       const providers = llm.listProviders()
+       const result = []
+       for (const provider of providers) {
+         try { const models = await llm.listModels(provider.id); result.push({ id: provider.id, name: provider.name || provider.id, models: (Array.isArray(models) ? models : []).map((item) => ({ id: item.id, name: item.name || item.id, description: item.description || '' })) }) }
+         catch (error) { result.push({ id: provider.id, name: provider.name || provider.id, models: [], error: String((error && error.message) || error) }) }
+       }
+       return { providers: result }
+     }
     function slice200(value) { const result = typeof value === 'string' ? value : ''; return result.length > 200 ? result.slice(0, 200) : result }
     function pad(value) { return value < 10 ? '0' + String(value) : String(value) }
     function dayKey(date) { return String(date.getFullYear()) + '-' + pad(date.getMonth() + 1) + '-' + pad(date.getDate()) }
@@ -195,6 +218,16 @@ export default {
         if (skillSettingsData && Array.isArray(skillSettingsData.disabledSkills)) {
           skillSettings = { version: 1, disabledSkills: skillSettingsData.disabledSkills.filter((item) => typeof item === 'string') }
         }
+        rolesTarget = await fs.resolve('.mofei-roles.json', { cwd })
+        rolesStore = normalizeRoleStore(await readJson(rolesTarget, rolesStore))
+        instructionsTarget = await fs.resolve('.mofei-instructions.json', { cwd })
+        modelsTarget = await fs.resolve('.mofei-models.json', { cwd })
+        modelStore = normalizeModelStore(await readJson(modelsTarget, modelStore))
+        ragTarget = await fs.resolve('.mofei-rag-index.json', { cwd })
+        const ragData = await readJson(ragTarget, ragStore)
+        ragStore = ragData && typeof ragData === 'object' && ragData.byProject && typeof ragData.byProject === 'object' ? { version: 1, byProject: ragData.byProject } : { version: 1, byProject: {} }
+        const instructionData = await readJson(instructionsTarget, instructionStore)
+        instructionStore = { version: 1, custom: Array.isArray(instructionData && instructionData.custom) ? instructionData.custom.filter((item) => item && typeof item.name === 'string' && item.name) : [] }
         const projects = await readJson(projectTarget, store)
         const drafts = await readJson(draftTarget, draftStore)
         const statsData = await readJson(statsTarget, stats)
@@ -300,6 +333,10 @@ export default {
     async function saveAiSessions() { await writePersisted(aiSessionsTarget, aiSessions) }
     async function saveSummaries() { await writePersisted(summaryTarget, summaryStore); await mirrorFileTree() }
     async function saveChains() { await writePersisted(chainsTarget, chainStore); await mirrorFileTree() }
+    async function saveRoles() { await writePersisted(rolesTarget, rolesStore); await mirrorFileTree() }
+     async function saveInstructions() { await writePersisted(instructionsTarget, instructionStore); await mirrorFileTree() }
+     async function saveModels() { await writePersisted(modelsTarget, modelStore); await mirrorFileTree() }
+     async function saveRag() { await writePersisted(ragTarget, ragStore); await mirrorFileTree() }
     async function saveSkillSettings() { await writePersisted(skillSettingsTarget, skillSettings) }
     // v0.17: 自创技能目录 = DSH skill-filesystem 的用户技能根（~/.dsh/skills/*.md）。
     function customSkillDir() { return path.join(os.homedir(), '.dsh', 'skills') }
@@ -689,6 +726,17 @@ export default {
       chainStore = { version: 1, byProject }
       await saveChains()
     }
+    async function dropRolesFor(projectId) {
+      if (typeof projectId !== 'string' || !projectId) return
+      if (!rolesStore.byProject[projectId]) return
+      const byProject = {}
+      Object.keys(rolesStore.byProject).forEach((id) => {
+        if (id === projectId) return
+        Object.defineProperty(byProject, id, { value: rolesStore.byProject[id], enumerable: true, writable: true, configurable: true })
+      })
+      rolesStore = { version: 1, byProject }
+      await saveRoles()
+    }
     async function dropSummariesFor(chapterIds) {
       const doomed = new Set(Array.isArray(chapterIds) ? chapterIds : [])
       if (!doomed.size) return
@@ -971,6 +1019,14 @@ export default {
       const list = chainStore.byProject[projectId]
       return Array.isArray(list) ? list : []
     }
+    // v0.20: 角色定义（纯逻辑见 roles.js；此处负责持久化 + RPC + subagent-max 读取）
+    function instructionById(id) { return mofeiInstructions.find((item) => item && item.name === id) || instructionStore.custom.find((item) => item && item.name === id) || null }
+     function instructionItems() { return mofeiInstructions.concat(instructionStore.custom) }
+     function instructionView(item) { return { id: item.name, name: item.name, description: item.description || '', whenToUse: item.whenToUse || '', content: item.content || '', source: mofeiInstructions.includes(item) ? 'builtin' : 'project' } }
+     function roleList(projectId) {
+      const list = rolesStore.byProject[projectId]
+      return Array.isArray(list) ? list : []
+    }
     // v0.10.1: 链上下文包含当前写作风格（{{style}} 宏 + 系统提示注入）。
     async function buildPromptChainContext(project, args) {
       const chapter = chapterBy(project, args && args.chapterId)
@@ -1235,19 +1291,19 @@ export default {
         agentContexts.set(binding.sessionId, { projectId: binding.projectId, chapterId: binding.chapterId, updatedAt: Date.now() })
         return { bound: true, project: { id: project.id, title: project.title }, chapter: chapter ? { id: chapter.id, title: chapter.title, revision: chapter.revision } : null }
       },
-      'list-entities': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const kind = args && args.kind; if (!project) return { error: 'PROJECT_NOT_FOUND' }; if (kind === 'volumes') return { items: (project.volumes || []).map((item) => volumeView(item, project.chapters)) }; if (kind === 'chapters') return { items: project.chapters.map(chapterView) }; if (kind === 'characters') return { items: (project.characters || []).map(characterView) }; if (kind === 'notes') return { items: (project.notes || []).map(noteView) }; if (kind === 'world') return { items: (project.worldEntries || []).map(worldEntryView) }; if (kind === 'summaries') return { items: summaryStore.ranges || [] }; if (kind === 'chains') return { items: (chainStore.projects && chainStore.projects[project.id] || []) }; return { error: 'INVALID_KIND' } },
+      'list-entities': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const kind = args && args.kind; if (!project) return { error: 'PROJECT_NOT_FOUND' }; if (kind === 'volumes') return { items: (project.volumes || []).map((item) => volumeView(item, project.chapters)) }; if (kind === 'chapters') return { items: project.chapters.map(chapterView) }; if (kind === 'characters') return { items: (project.characters || []).map(characterView) }; if (kind === 'notes') return { items: (project.notes || []).map(noteView) }; if (kind === 'world') return { items: (project.worldEntries || []).map(worldEntryView) }; if (kind === 'summaries') return { items: summaryStore.ranges || [] }; if (kind === 'chains') return { items: (chainStore.projects && chainStore.projects[project.id] || []) }; if (kind === 'roles') return { items: roleList(project.id).map(roleSummaryView) }; return { error: 'INVALID_KIND' } },
       'read-character': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const character = characterBy(project, args && args.characterId); if (!character) return { error: project ? 'CHARACTER_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; return { character: characterView(character) } },
       'read-note': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const note = noteBy(project, args && args.noteId); if (!note) return { error: project ? 'NOTE_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; if (note.isHidden) return { error: 'NOTE_HIDDEN' }; return { note: noteView(note) } },
       'read-world-entry': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const entry = worldEntryBy(project, args && args.entryId); if (!entry) return { error: project ? 'WORLD_ENTRY_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; return { entry: worldEntryView(entry) } },
       // 技能只在 mofei-writer preset 中注册；此处仅向写作工作台提供可浏览的目录，
       // 让作者清楚当前写作助手实际具备哪些 OpenFic 写作能力。
-      'list-writing-skills': async () => ({ skills: mofeiSkills.map((skill) => ({ name: skill.name, description: skill.description, whenToUse: skill.whenToUse, invocation: skill.invocation, provider: skill.provider, content: skill.content })) }),
+      'list-writing-skills': async () => ({ skills: instructionItems().map((skill) => ({ name: skill.name, description: skill.description, whenToUse: skill.whenToUse, invocation: skill.invocation, provider: skill.provider, content: skill.content })) }),
       // v0.17: 技能开关 + 自创技能（写入 ~/.dsh/skills/，DSH skill-filesystem 自动发现）。
       'list-skill-settings': async () => {
         await load(); await queue
         const disabled = new Set(skillSettings.disabledSkills)
         return {
-          skills: mofeiSkills.map((skill) => ({ name: skill.name, description: skill.description, whenToUse: skill.whenToUse, enabled: !disabled.has(skill.name) })),
+          skills: instructionItems().map((skill) => ({ name: skill.name, description: skill.description, whenToUse: skill.whenToUse, enabled: !disabled.has(skill.name) })),
           disabledSkills: skillSettings.disabledSkills.slice(),
           custom: await listCustomSkills(),
         }
@@ -1255,7 +1311,7 @@ export default {
       'set-skill-enabled': async (args) => mutate(async () => {
         await load()
         const skillId = typeof (args && args.skillId) === 'string' ? args.skillId : ''
-        if (!skillId || !mofeiSkills.some((skill) => skill.name === skillId)) return { error: 'SKILL_NOT_FOUND' }
+        if (!skillId || !mofeiInstructions.some((skill) => skill.name === skillId)) return { error: 'SKILL_NOT_FOUND' }
         const enabled = (args && args.enabled) === false ? false : true
         skillSettings.disabledSkills = skillSettings.disabledSkills.filter((item) => item !== skillId)
         if (!enabled) skillSettings.disabledSkills.push(skillId)
@@ -1264,22 +1320,22 @@ export default {
       }),
       'create-custom-skill': async (args) => mutate(async () => {
         const name = typeof (args && args.name) === 'string' ? args.name.trim() : ''
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { error: 'INVALID_SKILL_NAME', hint: '技能名须为小写 kebab-case（如 my-style-check）' }
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { error: 'INVALID_INSTRUCTION_NAME', hint: '指令名须为小写 kebab-case（如 scene-style-check）' }
         const description = typeof (args && args.description) === 'string' ? args.description.trim() : ''
         if (!description) return { error: 'DESCRIPTION_REQUIRED' }
-        const whenToUse = typeof (args && args.whenToUse) === 'string' ? args.whenToUse.trim() : ''
-        const content = typeof (args && args.content) === 'string' ? args.content : ''
-        const dir = customSkillDir()
-        await mkdir(dir, { recursive: true })
-        const front = '---\nname: ' + name + '\ndescription: ' + JSON.stringify(description) + '\n' + (whenToUse ? 'whenToUse: ' + JSON.stringify(whenToUse) + '\n' : '') + '---\n\n'
-        await writeFile(path.join(dir, name + '.md'), front + content + '\n', 'utf8')
-        return { saved: true, name, file: name + '.md' }
+        if (instructionById(name)) return { error: 'INSTRUCTION_EXISTS' }
+        const item = { name, description, whenToUse: typeof (args && args.whenToUse) === 'string' ? args.whenToUse.trim() : '', content: typeof (args && args.content) === 'string' ? args.content : '' }
+        instructionStore.custom = instructionStore.custom.concat([item])
+        await saveInstructions()
+        return { saved: true, instruction: instructionView(item) }
       }),
       'delete-custom-skill': async (args) => mutate(async () => {
         const name = typeof (args && args.name) === 'string' ? args.name.trim() : ''
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(name)) return { error: 'INVALID_SKILL_NAME' }
-        try { await rm(path.join(customSkillDir(), name + '.md')); return { deleted: true, name } }
-        catch (error) { return { deleted: false, name } }
+        const before = instructionStore.custom.length
+        instructionStore.custom = instructionStore.custom.filter((item) => item.name !== name)
+        if (instructionStore.custom.length === before) return { error: 'INSTRUCTION_NOT_FOUND' }
+        await saveInstructions()
+        return { deleted: true, name }
       }),
       // v0.10.1: styles 列表支持项目级覆盖（projectId 提供时合并，项目级优先显示在全局之前）。
       'list-styles': async (args) => { await load(); await queue; const result = []; try { const { readdir } = await import('node:fs/promises'); const pushDir = async (dir, scope) => { let names = []; try { names = await readdir(dir) } catch (error) { return } for (const name of names.sort()) if (name.endsWith('.md')) { const item = parseStyle(await readFile(path.join(dir, name), 'utf8'), name.replace(/\.md$/, '')); if (scope === 'project' && result.some((existing) => existing.id === item.id)) continue; result.push({ id: item.id, name: item.name, description: item.description, tags: item.tags, file: name, content: item.content, scope }) } }; const projectId = args && args.projectId && projectBy(args.projectId) ? args.projectId : null; if (projectId) await pushDir(path.join(mofeiFileRoot, 'projects', safeFileSegment(projectId, 'project'), 'styles'), 'project'); await pushDir(path.join(cwd, '.mofei', 'styles'), 'global') } catch (error) { result.push({ id: 'default', name: '默认', file: 'default.md', content: '保持已有文风。', scope: 'global' }) } return { styles: result } },
@@ -1320,6 +1376,7 @@ export default {
         await saveProjects()
         await saveSummaries()
         await saveChains()
+        await saveRoles()
         return report
       }),
       // v0.10.1: 每个实体文件与内存 store 的同步状态（revision 比较）。
@@ -1462,6 +1519,7 @@ export default {
         if (before !== draftStore.items.length) await saveDrafts()
         await dropSummariesFor(removedChapterIds)
         await dropChainsFor(project.id)
+        await dropRolesFor(project.id)
         await saveProjects()
         if (!String(cwd).startsWith('virtual-root')) { try { await rm(path.join(mofeiFileRoot, 'projects', safeFileSegment(project.id, 'project')), { recursive: true, force: true }) } catch (error) { console.error('墨扉 mirror delete failed', error) } }
         return { deleted: true, projectId: project.id }
@@ -2159,6 +2217,7 @@ export default {
         await saveProjects()
         await saveSummaries()
         await saveChains()
+        await saveRoles()
         return { available: true, reverted: true, to, report }
       }),
       // v0.10.2: DSH Jobs——摘要后台任务（可查询状态/取消；无 jobs 服务返回 JOBS_UNAVAILABLE）。
@@ -2280,6 +2339,86 @@ export default {
         gitCommitAll('墨扉 链删除: ' + chainId, true).catch(() => { /* 非 git 工作区忽略 */ })
         return { deleted: true, chainId }
       }),
+      // v0.20: 角色定义（人工可编辑、组装；subagent-max 使用时拼接注入）
+        'retrieval-model-status': async (args) => { return localRetrievalStatus({ ...DEFAULT_LOCAL_RETRIEVAL, ...(args && args.config || {}) }) },
+        'rag-status': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); if (!project) return { error: 'PROJECT_NOT_FOUND' }; const config = args && args.config ? args.config : {}; return { projectId: project.id, ...indexStatus(ragIndexFor(project.id), project, projectSummaries(project.id), config) } },
+        'rag-build-index': async (args) => mutate(async () => { const project = projectBy(args && args.projectId); if (!project) return { error: 'PROJECT_NOT_FOUND' }; const config = { ...DEFAULT_RAG_CONFIG, ...(args && args.config || {}) }; if (args && Number.isFinite(args.chunkSize)) config.chunkSize = args.chunkSize; if (args && Number.isFinite(args.chunkOverlap)) config.chunkOverlap = args.chunkOverlap; const index = buildIndex(project, projectSummaries(project.id), config); let embeddingReady = false; let embeddingError = ''; try { const vectors = await embedTexts(index.chunks.map((item) => item.text), { ...DEFAULT_LOCAL_RETRIEVAL, ...(args && args.retrieval || {}) }); if (vectors.length === index.chunks.length) { index.chunks = index.chunks.map((item, i) => ({ ...item, vector: vectors[i] })); index.embeddingModel = (args && args.retrieval && args.retrieval.embeddingModel) || DEFAULT_LOCAL_RETRIEVAL.embeddingModel; index.embeddingDimensions = vectors[0] ? vectors[0].length : 0; embeddingReady = true } } catch (error) { embeddingError = String(error && error.message || error) } ragStore = { version: 1, byProject: { ...(ragStore.byProject || {}), [project.id]: index } }; await saveRag(); return { projectId: project.id, ...indexStatus(index, project, projectSummaries(project.id), config), builtAt: index.builtAt, embeddingReady, embeddingModel: index.embeddingModel || null, embeddingError } }),
+        'search-rag': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); if (!project) return { error: 'PROJECT_NOT_FOUND' }; const index = ragIndexFor(project.id); const config = { ...(args && args.config || {}) }; if (args && Number.isFinite(args.limit)) config.resultLimit = args.limit; if (index && index.embeddingModel) { try { const vectors = await embedTexts([args && args.query || ''], { ...DEFAULT_LOCAL_RETRIEVAL, ...(args && args.retrieval || {}), embeddingModel: index.embeddingModel }); config.queryVector = vectors[0] } catch {} } const status = indexStatus(index, project, projectSummaries(project.id), config); if (!index) return { query: args && args.query || '', results: [], status: status.status, indexedChunks: 0 }; if (status.status === 'stale' && !(args && args.force)) return { query: args && args.query || '', results: [], status: status.status, indexedChunks: status.indexedChunks, message: '索引已过期，请先更新索引或使用 force=true。' }; const found = queryIndex(index, args && args.query, { ...config, resultLimit: config.candidateLimit || 40 }); const reranked = await rerankResultItems(args && args.query, found.results, { ...DEFAULT_LOCAL_RETRIEVAL, ...(args && args.retrieval || {}) }, config.resultLimit || 5); return { ...found, results: reranked.items, rerankReady: reranked.ready, rerankError: reranked.error, status: status.status, indexedChunks: status.indexedChunks, embeddingModel: index.embeddingModel || null } },
+        'rag-context': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); if (!project) return { error: 'PROJECT_NOT_FOUND' }; const index = ragIndexFor(project.id); const config = { ...(args && args.config || {}) }; if (args && Number.isFinite(args.limit)) config.resultLimit = args.limit; if (index && index.embeddingModel) { try { const vectors = await embedTexts([args && args.query || ''], { ...DEFAULT_LOCAL_RETRIEVAL, ...(args && args.retrieval || {}), embeddingModel: index.embeddingModel }); config.queryVector = vectors[0] } catch {} } const status = indexStatus(index, project, projectSummaries(project.id), config); if (!index) return { query: args && args.query || '', contextText: '', sources: [], status: status.status, indexedChunks: 0 }; if (status.status === 'stale' && !(args && args.force)) return { query: args && args.query || '', contextText: '', sources: [], status: status.status, indexedChunks: status.indexedChunks, message: '索引已过期，请先更新索引或使用 force=true。' }; const candidate = queryIndex(index, args && args.query, { ...config, resultLimit: config.candidateLimit || 40 }); const reranked = await rerankResultItems(args && args.query, candidate.results, { ...DEFAULT_LOCAL_RETRIEVAL, ...(args && args.retrieval || {}) }, config.resultLimit || 5); const found = { ...candidate, results: reranked.items }; const sources = found.results.map((item) => ({ id: item.id, entityType: item.entityType, entityId: item.entityId, title: item.title, chunkIndex: item.chunkIndex, score: item.score, matchedBy: item.matchedBy })); const contextText = found.results.map((item, index) => '【RAG来源 ' + (index + 1) + '】' + item.title + ' · chunk ' + item.chunkIndex + ' · 相关度 ' + item.score.toFixed(2) + '\n' + item.text).join('\n\n'); return { query: found.query, contextText, sources, status: status.status, indexedChunks: status.indexedChunks, mode: found.mode, rerankReady: reranked.ready, rerankError: reranked.error } },
+      'list-instructions': async () => { await load(); return { items: instructionItems().map(instructionView) } },
+      'read-instruction': async (args) => { await load(); const item = instructionById(args && args.instructionId); if (!item) return { error: 'INSTRUCTION_NOT_FOUND' }; return { instruction: instructionView(item) } },
+       'list-model-catalog': async () => { await load(); return modelCatalog() },
+       'get-model-settings': async () => { await load(); await queue; return { settings: modelStore } },
+       'save-model-settings': async (args) => mutate(async () => { const source = args && args.settings && typeof args.settings === 'object' ? args.settings : args; modelStore = normalizeModelStore(source); await saveModels(); return { settings: modelStore } }),
+       'resolve-subagent-model': async (args) => { await load(); await queue; return resolvedModel(args && args.projectId, args && args.roleId) },
+      'list-roles': async (args) => {
+        await load(); await queue
+        const project = projectBy(args && args.projectId)
+        if (!project) return { error: 'PROJECT_NOT_FOUND' }
+        return { roles: roleList(project.id).map(roleSummaryView) }
+      },
+      'read-role': async (args) => {
+        await load(); await queue
+        const project = projectBy(args && args.projectId)
+        if (!project) return { error: 'PROJECT_NOT_FOUND' }
+        const roleId = typeof (args && args.roleId) === 'string' ? args.roleId : ''
+        const role = roleList(project.id).find((item) => item.id === roleId)
+        if (!role) return { error: 'ROLE_NOT_FOUND' }
+        return { role: roleDetailView(role) }
+      },
+      'save-role': async (args) => mutate(async () => {
+        const project = projectBy(args && args.projectId)
+        if (!project) return { error: 'PROJECT_NOT_FOUND' }
+        const roleId = typeof (args && args.roleId) === 'string' && args.roleId.trim() ? args.roleId.trim() : ''
+        const name = text(args && args.name, '未命名角色')
+        if (!Array.isArray(args && args.entries)) return { error: 'ROLE_ENTRIES_REQUIRED' }
+        const entries = args.entries.map((entry) => ({
+          name: text(entry && entry.name, ''),
+          content: text(entry && entry.content, ''),
+          order: typeof (entry && entry.order) === 'number' && isFinite(entry.order) ? Math.floor(entry.order) : 0,
+          isEnabled: entry && entry.isEnabled !== false,
+        }))
+         const defaultInstructions = Array.isArray(args && args.defaultInstructions) ? args.defaultInstructions.map((item) => ({ instructionId: text(item && item.instructionId, ''), order: typeof (item && item.order) === 'number' && isFinite(item.order) ? Math.floor(item.order) : 0, isEnabled: item && item.isEnabled !== false })).filter((item) => item.instructionId) : []
+        const list = roleList(project.id).slice()
+        const index = roleId ? list.findIndex((item) => item.id === roleId) : -1
+        let role
+        if (roleId && index < 0) {
+          role = { id: roleId, name, entries, defaultInstructions, updatedAt: Date.now() }
+          list.push(role)
+        } else if (index >= 0) {
+          role = { id: list[index].id, name, entries, defaultInstructions, updatedAt: Date.now() }
+          list[index] = role
+        } else {
+          role = { id: allocate('role'), name, entries, defaultInstructions, updatedAt: Date.now() }
+          list.push(role)
+        }
+        const byProject = {}
+        Object.keys(rolesStore.byProject).forEach((id) => {
+          Object.defineProperty(byProject, id, { value: rolesStore.byProject[id], enumerable: true, writable: true, configurable: true })
+        })
+        Object.defineProperty(byProject, project.id, { value: list, enumerable: true, writable: true, configurable: true })
+        rolesStore = { version: 1, byProject }
+        await saveRoles()
+        gitCommitAll('墨扉 角色保存: ' + name, true).catch(() => { /* 非 git 工作区或 git 失败时忽略 */ })
+        return { role: roleDetailView(role) }
+      }),
+      'delete-role': async (args) => mutate(async () => {
+        const project = projectBy(args && args.projectId)
+        if (!project) return { error: 'PROJECT_NOT_FOUND' }
+        const roleId = typeof (args && args.roleId) === 'string' ? args.roleId : ''
+        if (!roleId) return { error: 'ROLE_NOT_FOUND' }
+        const list = roleList(project.id)
+        if (!list.some((item) => item.id === roleId)) return { error: 'ROLE_NOT_FOUND' }
+        const byProject = {}
+        Object.keys(rolesStore.byProject).forEach((id) => {
+          Object.defineProperty(byProject, id, { value: rolesStore.byProject[id], enumerable: true, writable: true, configurable: true })
+        })
+        Object.defineProperty(byProject, project.id, { value: list.filter((item) => item.id !== roleId), enumerable: true, writable: true, configurable: true })
+        rolesStore = { version: 1, byProject }
+        await saveRoles()
+        gitCommitAll('墨扉 角色删除: ' + roleId, true).catch(() => { /* 非 git 工作区忽略 */ })
+        return { deleted: true, roleId }
+      }),
       'compile-prompt-chain': async (args) => {
         await load(); await queue
         const project = projectBy(args && args.projectId)
@@ -2399,6 +2538,30 @@ export default {
       zone: async () => ({ active: true, workspaceRoot: cwd }),
       // v0.17: 技能插件按此过滤禁用技能（skills-plugin.js 注册时调用）。
       listSkillSettings: async () => { await load(); return { disabledSkills: skillSettings.disabledSkills.slice() } },
+      // v0.20: 角色定义——subagent-max 按 projectId+roleId 读取并拼接 persona。
+      listInstructions: async () => { await load(); return { instructions: instructionItems().map(instructionView) } },
+       compileInstructionPersona: async (projectId, roleId, additionalIds) => {
+         await load(); await queue
+         const project = projectBy(projectId)
+         if (!project) throw new Error('PROJECT_NOT_FOUND')
+         const role = roleList(project.id).find((item) => item.id === roleId)
+         if (!role) throw new Error('ROLE_NOT_FOUND')
+         const requested = Array.isArray(additionalIds) ? additionalIds : []
+         const bindings = role.defaultInstructions.filter((item) => item.isEnabled).sort((a, b) => a.order - b.order).map((item) => item.instructionId).concat(requested)
+         const ids = []
+         for (const id of bindings) if (typeof id === 'string' && id && !ids.includes(id)) ids.push(id)
+         const missing = ids.filter((id) => !instructionById(id))
+         if (missing.length) throw new Error('REQUIRED_INSTRUCTION_UNAVAILABLE:' + missing.join(','))
+         return { instructionIds: ids, persona: ids.map((id) => instructionById(id).content).filter(Boolean).join('\n\n') }
+       },
+       ragStatus: async (projectId, config) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return indexStatus(ragIndexFor(project.id), project, projectSummaries(project.id), config) },
+       buildRagIndex: async (projectId, config) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const index = buildIndex(project, projectSummaries(project.id), { ...DEFAULT_RAG_CONFIG, ...(config || {}) }); ragStore = { version: 1, byProject: { ...(ragStore.byProject || {}), [project.id]: index } }; await saveRag(); return indexStatus(index, project, projectSummaries(project.id), config) },
+       listModelCatalog: async () => modelCatalog(),
+       resolveSubagentModel: async (projectId, roleId) => { await load(); await queue; return resolvedModel(projectId, roleId) },
+       listModelSettings: async () => { await load(); await queue; return modelStore },
+       listRoles: async (projectId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return { roles: roleList(project.id).map(roleSummaryView) } },
+      readRole: async (projectId, roleId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const role = roleList(project.id).find((item) => item.id === roleId); if (!role) throw new Error('ROLE_NOT_FOUND'); return roleDetailView(role) },
+      compileRolePersona: async (projectId, roleId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const role = roleList(project.id).find((item) => item.id === roleId); if (!role) throw new Error('ROLE_NOT_FOUND'); return { persona: compileRolePersona(role) } },
     }
     if (typeof ctx.provide === 'function') ctx.provide('mofei', mofeiService)
     // v0.10.2: 挂接 DSH jobs controller（使 unowned 后台任务可启动）；无 jobs 服务时忽略。
