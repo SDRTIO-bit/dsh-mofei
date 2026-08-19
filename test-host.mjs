@@ -4,7 +4,6 @@ import os from 'node:os'
 import path from 'node:path'
 import plugin from './plugin/lib/index.js'
 import toolsPlugin from './plugin/lib/tools.js'
-import skillsPlugin from './plugin/lib/skills-plugin.js'
 
 const root = 'virtual-root'
 const files = new Map()
@@ -21,14 +20,12 @@ let resEnd = null
 let llmCalls = 0
 const registeredRoutes = {}
 const registeredTools = []
-const registeredSkills = []
 const ctx = {
   fs: mockFs,
   sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) },
   webServer: { register: (definition) => { registeredRoutes[definition.path] = definition; route = definition } },
   get: (name) => {
     if (name === 'tools') return { register: (definition) => { registeredTools.push(definition) } }
-    if (name === 'skills') return { register: (skill) => { registeredSkills.push(skill) } }
     if (name === 'mofei') return ctx.mofei
     if (name === 'agentDefaultModel') return { currentSelection: () => ({ provider: 'mock', model: 'mock-chat' }) }
     if (name === 'llm') {
@@ -50,11 +47,11 @@ const ctx = {
     return undefined
   },
   provide: (name, value) => { ctx[name] = value },
+  effect: () => {},
 }
 
 plugin.apply(ctx)
 toolsPlugin.apply(ctx)
-skillsPlugin.apply(ctx)
 route = registeredRoutes['/api/mofei']
 assert.ok(route, 'mofei webServer route registered')
 assert.ok(registeredRoutes['/api/openfic'], 'legacy openfic route alias registered')
@@ -287,17 +284,18 @@ test('独立站点路由 /mofei 注册并可返回 HTML', async () => {
   assert.equal(missing.statusCode, 404)
 })
 
-test('写作技能注册：mofei-* 17 个 + 旧名 alias 17 个', () => {
-  assert.equal(registeredSkills.length, 34)
-  registeredSkills.forEach((skill) => {
+test('写作指令目录：内置 mofei-* 指令可见且内容完整（v0.24 起指令注入 persona，非 runtime skills）', async () => {
+  const { skills } = await rpc('list-writing-skills', {})
+  assert.ok(Array.isArray(skills))
+  assert.ok(skills.length >= 17, '内置写作指令应不少于 17 个，实际 ' + skills.length)
+  skills.forEach((skill) => {
     assert.match(skill.name, /^[a-z0-9][a-z0-9-]*$/, skill.name)
     assert.ok(skill.description.length > 0)
     assert.ok(skill.content.length > 100)
-    assert.equal(skill.invocation.modelInvocable, true)
   })
-  assert.ok(registeredSkills.some((skill) => skill.name === 'mofei-story-deconstruction'))
-  assert.ok(registeredSkills.some((skill) => skill.name === 'mofei-writing'))
-  assert.ok(registeredSkills.some((skill) => skill.name === 'openfic-writing'))
+  assert.ok(skills.some((skill) => skill.name === 'mofei-writing'))
+  const writing = skills.find((skill) => skill.name === 'mofei-writing')
+  assert.ok(writing.content.length > 100)
 })
 
 test('create-project 包含 worldEntries 并持久化', async () => {
@@ -527,7 +525,7 @@ test('delete-chapter 清理章节与区间摘要条目', async () => {
 test('数据重载后 worldEntries 保留（load 迁移）', async () => {
   // 新建一个 plugin 实例读取同一目录，验证持久化与 load 兼容
   const routes2 = {}
-  const ctx2 = { fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { routes2[d.path] = d } }, get: () => undefined }
+  const ctx2 = { fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { routes2[d.path] = d } }, get: () => undefined, effect: () => {} }
   plugin.apply(ctx2)
   const route2 = routes2['/api/mofei']
   assert.ok(route2, 'second instance api route')
@@ -551,7 +549,7 @@ test('旧 .openfic-*.json 自动迁移为 .mofei-*.json', async () => {
     async writeText(target, content) { legacyFiles.set(target, content) },
   }
   const legacyRoutes = {}
-  plugin.apply({ fs: legacyFs, sandboxPolicy: { workspaceRoot: legacyRoot, resolve: () => ({}) }, webServer: { register: (definition) => { legacyRoutes[definition.path] = definition } }, get: () => undefined })
+  plugin.apply({ fs: legacyFs, sandboxPolicy: { workspaceRoot: legacyRoot, resolve: () => ({}) }, webServer: { register: (definition) => { legacyRoutes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
   const legacyRoute = legacyRoutes['/api/mofei']
   assert.ok(legacyRoute, 'legacy data instance api route')
   let body = ''
@@ -897,7 +895,7 @@ test('实体历史持久化：rollback 后第二实例读取同一文件 history
   const hist = await rpc('entity-history', { projectId, kind: 'character', entityId: character.id })
   assert.equal(hist.history.length, 2)
   const routes2 = {}
-  plugin.apply({ fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { routes2[d.path] = d } }, get: () => undefined })
+  plugin.apply({ fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { routes2[d.path] = d } }, get: () => undefined, effect: () => {} })
   const route2 = routes2['/api/mofei']
   assert.ok(route2, 'persistence second instance route')
   let body = ''
@@ -968,7 +966,7 @@ test('prompt chains：list/delete 与第二实例持久化可读', async () => {
   assert.ok(listed.chains.every((c) => 'name' in c && 'content' in c && 'updatedAt' in c))
   // 第二实例读取同一文件
   const routes2 = {}
-  plugin.apply({ fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { routes2[d.path] = d } }, get: () => undefined })
+  plugin.apply({ fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { routes2[d.path] = d } }, get: () => undefined, effect: () => {} })
   const route2 = routes2['/api/mofei']
   let body = ''
   let done = false
@@ -1056,7 +1054,7 @@ test('prompt chains：错误码 PROJECT_NOT_FOUND/CHAIN_NOT_FOUND/CHAPTER_NOT_FO
   assert.equal(badChapterRun.error, 'CHAPTER_NOT_FOUND')
   // 无 llm 实例 → LLM_UNAVAILABLE
   const noLlmRoutes = {}
-  plugin.apply({ fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { noLlmRoutes[d.path] = d } }, get: () => undefined })
+  plugin.apply({ fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { noLlmRoutes[d.path] = d } }, get: () => undefined, effect: () => {} })
   const noLlmRoute = noLlmRoutes['/api/mofei']
   let body = ''
   let done = false
@@ -1144,7 +1142,7 @@ test('discover-workspace 无摘要变更时不重写 summaries JSON', async () =
     async writeText(target, content) { writeCounts.set(target, (writeCounts.get(target) || 0) + 1); await writeFile(target, content, 'utf8') },
   }
   const routes = {}
-  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined })
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
   const workspaceRoute = routes['/api/mofei']
   const workspaceRpc = async (method, args) => {
     let body = ''
@@ -1193,7 +1191,7 @@ test('Windows ReplaceFileW 1175 短暂冲突会重试持久化写入', async () 
     },
   }
   const routes = {}
-  plugin.apply({ fs: retryFs, sandboxPolicy: { workspaceRoot: retryRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined })
+  plugin.apply({ fs: retryFs, sandboxPolicy: { workspaceRoot: retryRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
   const retryRoute = routes['/api/mofei']
   let body = ''
   let done = false

@@ -2580,7 +2580,7 @@ export default {
         return { bound: true, boundAt: binding.updatedAt, project: result.project, chapter: result.chapter, contextText: result.contextText || '' }
       },
       zone: async () => ({ active: true, workspaceRoot: cwd }),
-      // v0.17: 技能插件按此过滤禁用技能（skills-plugin.js 注册时调用）。
+      // v0.17: 写作指令开关（禁用名单）。指令由 subagent-max 按角色注入 persona，不再注册为 runtime skills。
       listSkillSettings: async () => { await load(); return { disabledSkills: skillSettings.disabledSkills.slice() } },
       // v0.20: 角色定义——subagent-max 按 projectId+roleId 读取并拼接 persona。
       listInstructions: async () => { await load(); return { instructions: instructionItems().map(instructionView) } },
