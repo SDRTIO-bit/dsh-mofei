@@ -179,11 +179,11 @@ function buildTools(mofei) {
     tool('mofei_save-prompt-chain', '创建或更新项目提示词链。', obj({ projectId: str(), chainId: str(), name: str(), content: str() }, ['projectId', 'name', 'content']), any(), run('save-prompt-chain')),
     tool('mofei_delete-prompt-chain', '删除提示词链。高风险：必须先取得作者明确确认。', obj({ projectId: str(), chainId: str() }, ['projectId', 'chainId']), any(), run('delete-prompt-chain')),
     tool('mofei_compile-prompt-chain', '以当前项目与可选章节编译提示词链，先预览再运行。', obj({ projectId: str(), chainId: str(), chapterId: str(), instruction: str() }, ['projectId', 'chainId']), any(), run('compile-prompt-chain')),
-    // v0.20: 角色定义——人工可编辑、组装；subagent_with_model 使用时拼接注入。
-    tool('mofei_list-roles', '列出这本小说项目的角色定义（id/名称/条目数/启用条目数）。', obj({ projectId: str() }, ['projectId']), any(), run('list-roles')),
-    tool('mofei_read-role', '读取一个角色定义的完整条目（含 content/.isEnabled/order），用于编辑或查看。', obj({ projectId: str(), roleId: str() }, ['projectId', 'roleId']), any(), run('read-role')),
-    tool('mofei_write-role', '创建或更新角色定义。entries 为条目数组，每条 {name, content, order, isEnabled}；isEnabled 默认 true。roleId 留空时新建。', obj({ projectId: str(), roleId: str(), name: str(), entries: arr(obj({ name: str(), content: str(), order: num(), isEnabled: bool() })) }, ['projectId', 'name', 'entries']), any(), run('save-role')),
-    tool('mofei_delete-role', '删除角色定义。高风险：必须先取得作者明确确认。', obj({ projectId: str(), roleId: str() }, ['projectId', 'roleId']), any(), run('delete-role')),
+    // v0.20: 有效角色目录 = 四个内置角色 + 项目覆盖/自建角色。
+    tool('mofei_list-roles', '列出这本小说实际生效的子代理角色（含内置来源、项目覆盖状态和条目数）。', obj({ projectId: str() }, ['projectId']), any(), run('list-roles')),
+    tool('mofei_read-role', '读取一个实际生效的子代理角色提示词（含 content/isEnabled/order 和来源），用于编辑或查看。', obj({ projectId: str(), roleId: str() }, ['projectId', 'roleId']), any(), run('read-role')),
+    tool('mofei_write-role', '创建项目角色，或以同 id 完整覆盖内置角色。entries 为 {name, content, order, isEnabled} 数组；isEnabled 默认 true。', obj({ projectId: str(), roleId: str(), name: str(), entries: arr(obj({ name: str(), content: str(), order: num(), isEnabled: bool() })) }, ['projectId', 'name', 'entries']), any(), run('save-role')),
+    tool('mofei_delete-role', '删除项目自建角色；内置角色只清除项目覆盖并恢复默认。高风险：必须先取得作者明确确认。', obj({ projectId: str(), roleId: str() }, ['projectId', 'roleId']), any(), run('delete-role')),
   ]
   defs.push(...legacy, ...authoring)
   return defs

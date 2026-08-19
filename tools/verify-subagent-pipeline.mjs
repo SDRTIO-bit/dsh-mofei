@@ -3,6 +3,9 @@
 // 用法（在 OpenFic-DSH 目录）：
 //   $env:MOFEI_BASE='http://127.0.0.1:3088'; node tools\verify-subagent-pipeline.mjs
 import crypto from 'node:crypto'
+import { mkdtemp, rm } from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 
 const BASE = process.env.MOFEI_BASE || 'http://127.0.0.1:3088'
 const CWD = process.cwd()
@@ -51,6 +54,18 @@ function textOf(content) {
   return content.map((part) => part && part.type === 'text' ? part.text : '').filter(Boolean).join('\n')
 }
 
+function toolArguments(data) {
+  const value = data && data.arguments
+  if (value && typeof value === 'object') return value
+  if (typeof value !== 'string') return {}
+  try {
+    const parsed = JSON.parse(value)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 function eventLog(events) {
   const lines = []
   for (const entry of events || []) {
@@ -67,18 +82,11 @@ function eventLog(events) {
 }
 
 let projectId = null
+let projectRoot = ''
 try {
-  // 0. 清理历史同名临时项目，避免前次中断残留
-  const existing = await mofei('list-projects', {})
-  for (const item of existing.projects || []) {
-    if (item.title && item.title.startsWith('流水线实测-')) {
-      await mofei('delete-project', { projectId: item.id })
-      console.log('INFO: 清理历史临时项目 ' + item.title)
-    }
-  }
-
-  // 1. 数据准备：临时项目 + 1 章 + 1 角色
-  const { project } = await mofei('create-project', { title: TITLE })
+  // 1. 数据准备：实体文件在系统临时目录，不能触及工作区内的真实项目镜像。
+  projectRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-pipeline-'))
+  const { project } = await mofei('create-project', { title: TITLE, rootDir: projectRoot })
   projectId = project.id
   const { chapter } = await mofei('create-chapter', { projectId, title: '第一章' })
   const chapterId = chapter.id
@@ -87,7 +95,7 @@ try {
   await mofei('update-chapter', { projectId, chapterId, content: initialContent, expectedRevision: chapter.revision })
   ok(`临时项目已建：${TITLE} / chapter=${chapterId}`)
 
-  // 2. 主会话派两个同步 subagent
+  // 2. 主会话通过实际产品路径派两个同步角色子代理。
   const created = await rpc('session.create', { cwd: CWD, sessionId: SESSION_ID, agentPreset: 'mofei-writer' })
   const sessionId = created.sessionId
   ok(`主会话已建：${sessionId}`)
@@ -113,11 +121,11 @@ try {
 
   const promptText = [
     '请严格按以下步骤执行，不要自己直接调用 mofei_* 修改章节。',
-    '第一步：调用 subagent 工具启动 Writer 子代理。参数：description="Writer 续写"，run_in_background=false，prompt 如下：',
+    '第一步：调用 subagent_with_model 工具启动 Writer 子代理。参数必须包含 role="writer"、projectId="' + projectId + '"、description="Writer 续写"、run_in_background=false，prompt 如下：',
     '---WRITER PROMPT BEGIN---',
     writerPrompt,
     '---WRITER PROMPT END---',
-    '第二步：拿到 Writer 结果后，调用 subagent 工具启动 Reviewer 子代理。参数：description="Reviewer 审稿"，run_in_background=false，prompt 如下：',
+    '第二步：拿到 Writer 结果后，调用 subagent_with_model 工具启动 Reviewer 子代理。参数必须包含 role="reviewer"、projectId="' + projectId + '"、description="Reviewer 审稿"、run_in_background=false，prompt 如下：',
     '---REVIEWER PROMPT BEGIN---',
     reviewerPrompt,
     '---REVIEWER PROMPT END---',
@@ -154,13 +162,16 @@ try {
   const after = events.filter((entry) => entry.event.seq > beforeSeq)
   console.log('INFO: final events:\n' + eventLog(after))
 
-  const subagentCalls = after.filter((entry) => entry.event.type === 'tool/call' && entry.event.data && entry.event.data.name === 'subagent')
-  if (subagentCalls.length >= 2) ok(`主会话派生了 ${subagentCalls.length} 个 subagent（Writer+Reviewer）`)
-  else fail(`subagent 调用次数应为至少 2，实际 ${subagentCalls.length}`)
+  const subagentCalls = after.filter((entry) => entry.event.type === 'tool/call' && entry.event.data && entry.event.data.name === 'subagent_with_model')
+  if (subagentCalls.length >= 2) ok(`主会话派生了 ${subagentCalls.length} 个子代理（Writer+Reviewer）`)
+  else fail(`子代理调用次数应为至少 2，实际 ${subagentCalls.length}`)
   for (const call of subagentCalls) {
-    const args = call.event.data.arguments || {}
-    console.log(`INFO: subagent call: ${args.description || ''} background=${args.run_in_background}`)
+    const args = toolArguments(call.event.data)
+    console.log(`INFO: subagent call: role=${args.role || ''} ${args.description || ''} background=${args.run_in_background}`)
   }
+  const delegatedRoles = subagentCalls.map((call) => toolArguments(call.event.data).role)
+  if (delegatedRoles.includes('writer') && delegatedRoles.includes('reviewer')) ok('实际角色路径 writer + reviewer 均已调用')
+  else fail('子代理角色不完整: ' + JSON.stringify(delegatedRoles))
 
   const subagentResults = after.filter((entry) => entry.event.type === 'tool/result' && textOf(entry.event.data && entry.event.data.message && entry.event.data.message.content).includes(''))
   const resultText = subagentResults.map((entry) => textOf(entry.event.data.message && entry.event.data.message.content)).join('\n')
@@ -207,6 +218,9 @@ try {
     } catch (error) {
       console.error('WARN: 删除临时项目失败: ' + (error && error.message))
     }
+  }
+  if (projectRoot) {
+    try { await rm(projectRoot, { recursive: true, force: true }) } catch (error) { console.error('WARN: 删除临时目录失败: ' + (error && error.message)) }
   }
 }
 

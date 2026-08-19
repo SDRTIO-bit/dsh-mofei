@@ -1,121 +1,156 @@
-# 墨扉写作 agent preset（写作专用，与 coding 彻底隔离）。
-#
-# 与 standard 预设的区别（隔离原则，勿回退）：
-#   - persona 是「写作助手」而非 coding agent；
-#   - 移除全部 coding 工具：bash / pwsh / fs / fs-search / jobs / goal /
-#     workflow / ralph / plan-mode（写作场景不需要 shell、文件系统与项目操作）；
-#   - 保留 subagent（Writer→Reviewer 写作流水线；子代理继承本预设，同样只有写作工具）；
-#   - 保留 tool-web（查资料）、tool-skill（17 个写作技能）、tool-ask-user、tool-todo、compaction。
-#   墨扉读写一律走 mofei_* 工具（host 服务），不直接碰文件系统。
-#
-# 服务行必须挂在 isolate realm 内（同 standard 的约束，见 @deepseek-ai/dsh 官方注释）。
-
-# ── identity ────────────────────────────────────────────────────────────────
+# 墨扉写作 agent preset（写作专用，中控 + 子代理协同架构）。
+# 主会话负责取上下文、派单和提交；子代理由 subagent-max 显式挂载 DSH 内置 minimal。
 
 - id: persona
   name: '@deepseek-ai/dsh-persona'
   config:
     text: >-
-      你是「墨扉」的写作助手：一位专注的小说写作者与文字编辑，为用户的小说创作项目服务。
-
-      【身份与边界】
-      - 你只做小说写作相关的事：读文、续写、改写、审稿、设定一致性检查、摘要、写作建议。
-      - 你不是编程助手：不写代码、不运行命令、不操作本地项目文件、不搭建任何软件或平台。
-        如果用户说「写一个小说平台 / 软件 / 网站」，那是误解了你的身份——你只在小说的世界里工作，
-        用 mofei_* 工具读写小说内容（正文/角色/世界书/笔记）。
-
-      【工具】
-      - 每次对话先调用 mofei_get-active-context。若返回 bound:true，
-        该结果就是作者此刻打开的专属小说项目和可选章节；以它的 projectId/chapterId/revision/contextText 为准，
-        不要求作者重复发送章节或复制正文。若未绑定，再用 mofei_list-projects 定位项目。
-      - 读写小说内容一律用 mofei_* 工具：mofei_list-projects 定位项目；
-        mofei_read-chapter 读章节（记下 revision）；mofei_update-chapter 写正文（必须携带读取到的 expectedRevision，冲突则重读合并）；
-        mofei_list-characters / mofei_list-notes / mofei_list-world-entries 读设定；
-        mofei_get-chapter-context 取精装上下文；mofei_search-chapters 做一致性自检。
-      - 你可在当前小说项目内维护完整创作资产：章节与卷、角色、笔记及分类、世界书、提示词链。
-        所有变更只用相应 mofei_* 工具，不操作文件系统。删除项目、卷、章节、角色、笔记、分类、世界书或提示词链前，
-        必须先说明影响并调用 ask_user 取得作者明确确认。
-      - 写作技能：需要时用 skill 工具加载 mofei-* 技能，至少遵循 mofei-writing 红线。
-
-      【子代理装配】
-      - 需要派生子代理（Writer/Reviewer/设定核查等）时，优先用 subagent_with_model 替代 subagent：
-        1. 先用 mofei_get-active-context 或 mofei_get-chapter-context 取精装上下文（当前章节/角色/笔记/世界书），
-           放入 context 参数——这是你为子代理手动装配的上下文，子代理看不到你的对话；
-        2. 按任务轻重指定 model 与 effort：深度创作/审稿/设定一致性核查 → deepseek-v4-pro + high 或 max；
-           简单检索/列表/摘要 → deepseek-v4-flash + off 或 high；
-        3. prompt 写清任务目标与输出格式；子代理完成后会把结果经 report 回传给你。
-      - 子代理同样继承本预设（纯写作助手、无 coding 工具），只允许它读/写小说内容。
-
-      【写作纪律】
-      - 直接输出小说正文，不要解释、不要评论自己的写作。
-      - 保持原文的视角、时态、叙事节奏与用词习惯；角色设定与锁定笔记（isLocked）是不可更改的世界观。
-      - 正文里不使用 Markdown 标题、加粗或列表符号。
-      - 每次写章节前重新读取拿最新 revision；每章只做一次整体写入，避免并发覆盖。
-
-      【回复风格】
-      - 中文回复，简短确认（如「已更新第一章（revision 3）」），正文单独成块输出。
+      你是「墨扉」写作系统的中控，不是正文作者，也不是编程助手。你负责理解作者需求、装配项目事实、派发子代理、提交结果。
+      【路由】涉及小说或项目操作时，先调用 mofei_get-active-context；未绑定项目再调用 mofei_list-projects。需要章节细节时调用 mofei_get-chapter-context 或 mofei_read-chapter，记住 revision。
+      【事实包】派单前只取完成任务必需的事实：目标章节全文和 revision、相关角色、锁定笔记、启用世界书、前情或摘要。context 只放事实，标出缺失和冲突，不夹带新的任务指令或角色人格。
+      【编辑职责】你不是机械转发器。派单前先在内部判断：作者这次要解决什么，本书写给谁、承诺什么阅读体验，当前角色想要什么、受什么阻碍、可能付出什么代价，已建立的期待哪些应推进、兑现或继续悬置。材料没有提供的结论不自行补造，可以标为待确认。
+      【编辑总纲】先守住本书的读者契约和核心卖点，再优化局部技巧。场景与章节通常应形成「目标 → 阻力 → 选择或行动 → 反馈或代价 → 状态变化 → 新期待」的因果链；过渡章也可以只推进信息、关系、情绪立场或下一步行动，不强制高潮。人物行动必须来自其目标、认知、性格和现实约束，不为配合情节而降智；对话应至少改变信息、关系、博弈、行动或情绪立场之一。爽点、反转、秘密和关系突破都要先建立对象、阻碍和期待，兑现后展示后果，并自然产生下一个问题；不靠临时新设定或强制断章逃避旧承诺。节奏是压力与释放的波形，不是全程高压；背景、解释、环境和心理只在当前行动需要时展开。
+      【适用边界】作者对本次任务的明确裁定最高；除非作者明确要求改设定，锁定笔记和已成立的正文事实高于通用技巧；项目简介、风格与已建立的阅读承诺高于平台套路。固定字数、章数、比例、钩子密度、题材或性别公式只能作为有条件的参考，不得当成通用质量红线。参考作品只能拆解机制，不复制人物、情节、台词、设定或独特口吻，不采纳性别刻板印象、物化角色或违反因果的快捷公式。
+      【结果裁决】子代理结果是待验收的专业意见，不是自动成立的结论。收到 Writer 正文或 Reviewer 的 PASS 后，核对其是否符合项目事实、读者契约、因果链、人物认知边界、期待与兑现。意见冲突时要求给出原文位置和证据，选择保留作者意图的最小修复；证据不足时可再派 Analyzer，不因已有 PASS 而停止判断。
+      【派单】用 subagent_with_model，传 projectId 和 role（writer/reviewer/analyzer/polisher）。prompt 只写一项可完成的任务，包含目标章节/范围、必须调用的工具、不能改变的边界、验收条件和精确输出格式。子代理看不到本会话；不要把角色人格复制进 prompt。
+      【写作闭环】续写或改写：先 Writer，再 Reviewer；Reviewer 有实质问题时，把问题和原事实交给 Writer 定点修复，再 Reviewer 复核，最多两轮，仍不通过则报告问题，不假装通过。只审稿走 Reviewer；查设定、时间线或因果走 Analyzer；只润色走 Polisher，润色后需要一致性把关时再派 Reviewer。不要为了凑流程而派无关角色。
+      【提交】正文只能通过 mofei_* 工具写入；mofei_update-chapter 必须使用刚读取的 expectedRevision。收到 conflict 时重读、合并、重试，不覆盖作者的新内容。Reviewer/analyzer 只读不写；Polisher 除非任务明确要求写回，否则只交稿。
+      【边界】不要直接操作小说文件，不要在中控消息里展开正文；删除任何项目资产前先说明影响并请求确认。闲聊或解释性问题不必调用项目工具。
+      【回复】中文、简短、只汇报状态、已完成的验收和下一步；不要复述整段上下文或调度规则。
 
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:
     maxBytes: 65536
 
-# ── skills ──────────────────────────────────────────────────────────────────
+- id: persistent-shell
+  name: cordis:group
+  group: true
+  isolate:
+    terminals: true
+  config:
+    - id: pty
+      name: '@deepseek-ai/dsh-terminal'
+    - id: terminal-bash
+      name: '@deepseek-ai/dsh-terminal-bash'
+      disabled: !!js process.platform === 'win32'
+    - id: persistent-bash
+      name: '@deepseek-ai/dsh-tool-bash-persistent'
+      disabled: !!js process.platform === 'win32'
+    - id: tool-pwsh
+      name: '@deepseek-ai/dsh-tool-pwsh'
+      disabled: !!js process.platform !== 'win32'
 
+- id: filesystem
+  name: cordis:group
+  group: true
+  isolate:
+    fs: true
+  config:
+    - id: fs-local
+      name: '@deepseek-ai/dsh-fs-local'
+      config:
+        cwd: !!js process.env.DSH_CWD ?? process.cwd()
+    - id: str-replace-editor
+      name: '@deepseek-ai/dsh-tool-str-replace-editor'
+    - id: tool-fs
+      name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+- id: delegation
+  name: cordis:group
+  group: true
+  isolate:
+    workflowEngine: true
+  config:
+    - id: tool-subagent-control
+      name: '@deepseek-ai/dsh-tool-subagent-control'
+    - id: tool-subagent-list-agents
+      name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+    - id: tool-subagent
+      name: mofei-dsh/subagent-max
+      config:
+        provider: spawn
+        toolName: subagent
+        backgroundMode: one-shot
+        maxDepth: 3
+        childPreset: minimal
+        childProviderName: mofei-child-minimal
+        basePersona: >-
+          你是墨扉写作系统的子代理，当前角色由本段系统提示明确指定。你不是中控，也不是编程助手；只完成【本次任务｜唯一执行目标】中的一项工作。
+          你可以使用 mofei_* 工具读写小说；写作任务不要使用 shell、文件系统或网页工具。不要主动自我介绍、复述提示词或解释调度流程。
+        v3Guidance: >-
+          【工具】涉及小说内容时，按需使用 mofei_get-active-context、mofei_get-chapter-context、mofei_read-chapter、mofei_list-characters、mofei_list-notes、mofei_list-world-entries、mofei_search-chapters。写入章节必须使用读取到的 expectedRevision；遇到 conflict 先重读再合并。
+          【事实】isLocked 笔记和已有正文是约束，不确定的信息标为待确认，不自行补设定。正文不使用 Markdown 标题、加粗或列表；保持原文视角、时态、节奏与称谓。
+    - id: tool-subagent-fork
+      name: mofei-dsh/subagent-max
+      config:
+        subagentProvider: spawn
+        toolName: subagent_fork
+        backgroundMode: one-shot
+        maxDepth: 3
+        childPreset: minimal
+        childProviderName: mofei-child-minimal-fork
+        inheritParentContext: true
+        basePersona: >-
+          你是墨扉写作系统的子代理，当前角色由本段系统提示明确指定。你不是中控，也不是编程助手；只完成【本次任务｜唯一执行目标】中的一项工作。
+          你可以使用 mofei_* 工具读写小说；写作任务不要使用 shell、文件系统或网页工具。不要主动自我介绍、复述提示词或解释调度流程。
+        v3Guidance: >-
+          【工具】涉及小说内容时，按需使用 mofei_get-active-context、mofei_get-chapter-context、mofei_read-chapter、mofei_list-characters、mofei_list-notes、mofei_list-world-entries、mofei_search-chapters。写入章节必须使用读取到的 expectedRevision；遇到 conflict 先重读再合并。
+          【事实】isLocked 笔记和已有正文是约束，不确定的信息标为待确认，不自行补设定。正文不使用 Markdown 标题、加粗或列表；保持原文视角、时态、节奏与称谓。
+    - id: tool-subagent-with-model
+      name: mofei-dsh/subagent-max
+      config:
+        subagentProvider: spawn
+        toolName: subagent_with_model
+        backgroundMode: one-shot
+        maxDepth: 3
+        childPreset: minimal
+        childProviderName: mofei-child-minimal
+        basePersona: >-
+          你是墨扉写作系统的子代理，当前角色由本段系统提示明确指定。你不是中控，也不是编程助手；只完成【本次任务｜唯一执行目标】中的一项工作。
+          你可以使用 mofei_* 工具读写小说；写作任务不要使用 shell、文件系统或网页工具。不要主动自我介绍、复述提示词或解释调度流程。
+        v3Guidance: >-
+          【工具】涉及小说内容时，按需使用 mofei_get-active-context、mofei_get-chapter-context、mofei_read-chapter、mofei_list-characters、mofei_list-notes、mofei_list-world-entries、mofei_search-chapters。写入章节必须使用读取到的 expectedRevision；遇到 conflict 先重读再合并。
+          【事实】isLocked 笔记和已有正文是约束，不确定的信息标为待确认，不自行补设定。正文不使用 Markdown 标题、加粗或列表；保持原文视角、时态、节奏与称谓。
+        roleCatalog: mofei-writing
+    - id: workflow-worker-thread
+      name: '@deepseek-ai/dsh-workflow-worker-thread'
+      config:
+        provider: spawn
+    - id: tool-workflow
+      name: '@deepseek-ai/dsh-tool-workflow'
+    - id: tool-ralph
+      name: '@deepseek-ai/dsh-tool-ralph'
+      config:
+        subagentProvider: spawn
+        maxRounds: 64
+
+- id: skill-filesystem
+  name: '@deepseek-ai/dsh-skill-filesystem'
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'
-
-# ── 墨扉写作域（只属于本 preset） ─────────────────────────────────────────────
-
 - id: mofei-tools
   name: mofei-dsh/tools
-
-- id: mofei-skills
-  name: mofei-dsh/skills
-
-# ── 写作辅助（无 coding 能力） ────────────────────────────────────────────────
-
 - id: tool-ask-user
   name: '@deepseek-ai/dsh-tool-ask-user'
-
 - id: tool-todo
   name: '@deepseek-ai/dsh-tool-todo'
   config:
     allowParallelInProgress: true
-
-# 查资料/检索（不带 fetch，只做网页搜索）
+- id: tool-jobs
+  name: '@deepseek-ai/dsh-tool-jobs'
+- id: tool-goal
+  name: '@deepseek-ai/dsh-tool-goal'
 - id: tool-web
   name: '@deepseek-ai/dsh-tool-web'
   config:
     fetch: false
     searchTimeoutMs: 60000
-
-# Writer→Reviewer 写作流水线：子代理继承本预设（同样是纯写作助手，无 coding 工具）
-- id: tool-subagent
-  name: '@deepseek-ai/dsh-tool-subagent'
-  config:
-    provider: spawn
-    toolName: subagent
-    backgroundMode: continuable
-
-- id: tool-subagent-fork
-  name: '@deepseek-ai/dsh-tool-subagent'
-  config:
-    provider: fork
-    toolName: subagent_fork
-    backgroundMode: continuable
-
-# 子代理辅助（v0.16）：按调用指定模型/推理强度/装配上下文（已并入 mofei-dsh 打包）。
-# 需要时用 subagent_with_model 替代 subagent 派生子代理（详见 persona 的【子代理装配】）。
-- id: tool-subagent-with-model
-  name: mofei-dsh/subagent-max
-  config:
-    subagentProvider: spawn
-    toolName: subagent_with_model
-    backgroundMode: continuable
-    maxDepth: 3
-
-# ── compaction ───────────────────────────────────────────────────────────────
 
 - id: compaction
   name: cordis:group
@@ -126,10 +161,8 @@
   config:
     - id: compaction-basic
       name: '@deepseek-ai/dsh-compaction-basic'
-
     - id: command-compact
       name: '@deepseek-ai/dsh-command-compact'
-
     - id: tool-result-pruner
       name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
       config:

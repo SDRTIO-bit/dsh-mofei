@@ -24,3 +24,6 @@ node_modules/
 
 # Keep the existing .mofei/ writing history tracked. Source, presets, skills,
 # scripts, tests, and documentation are intentionally tracked from this point.
+
+# 本地拆书研究样本（网文文本，非源码不入库）
+/新建文件夹/

@@ -325,7 +325,7 @@ export function createClient(require) {
       return () => { observer.disconnect(); document.body.classList.remove('mf-sidebar-expanded') }
     }, [on])
     return h('div', { className: 'mf-bubble' + (on ? ' on' : '') },
-      h('div', { className: 'mf-bubble-panel', 'aria-hidden': on ? undefined : 'true' }, h(ErrorBoundary, null, h(Workspace, { mode: 'web', onCollapse: () => setBubbleOn(false) }))),
+      h('div', { className: 'mf-bubble-panel', 'aria-hidden': on ? undefined : 'true' }, h(ErrorBoundary, null, h(Workspace, { mode: 'web', onCollapse: () => setBubbleOn(false), onOpenSettings: () => setBubbleOn(true) }))),
       h('button', { className: 'mf-orb' + (on ? ' on' : ''), type: 'button', title: on ? '收起墨扉，返回原版 web' : '打开墨扉写作台（原版 web 变形）', onClick: () => setBubbleOn(!on) }, on ? '✕' : '墨'))
   }
 
@@ -480,6 +480,7 @@ export function createClient(require) {
      const [retrievalStatus, setRetrievalStatus] = React.useState(null)
      const [retrievalBusy, setRetrievalBusy] = React.useState(false)
     const [roles, setRoles] = React.useState([])
+    const [roleScopeId, setRoleScopeId] = React.useState('')
     const [roleActiveId, setRoleActiveId] = React.useState('')
     const [roleDetail, setRoleDetail] = React.useState(null)
     const [roleBusy, setRoleBusy] = React.useState(false)
@@ -1123,19 +1124,38 @@ export function createClient(require) {
       }).catch((failure) => { setChainBusy(false); setChainError('运行链失败：' + String((failure && failure.message) || failure)) })
     }
     // v0.20: 子代理提示词
-    function loadRoles(scopeId = projectId) {
+    function loadRoleDetail(scopeId, roleId) {
+      if (!scopeId || !roleId) { setRoleDetail(null); return Promise.resolve(null) }
+      setRoleDetail(null)
+      return call('read-role', { projectId: scopeId, roleId }).then((result) => {
+        if (result && result.error) throw new Error(result.error)
+        const next = result && result.role ? result.role : null
+        setRoleDetail(next)
+        return next
+      })
+    }
+    function loadRoles(scopeId = roleScopeId || projectId, preferredRoleId = roleActiveId) {
       if (!scopeId) return
       Promise.all([call('list-roles', { projectId: scopeId }), call('list-instructions')]).then(([rolesResult, instructionResult]) => {
-        setRoles(Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : [])
+        if (rolesResult && rolesResult.error) throw new Error(rolesResult.error)
+        if (instructionResult && instructionResult.error) throw new Error(instructionResult.error)
+        const nextRoles = Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : []
+        const nextRoleId = nextRoles.some((role) => role && role.id === preferredRoleId)
+          ? preferredRoleId
+          : (nextRoles[0] && nextRoles[0].id) || ''
+        setRoleScopeId(scopeId)
+        setRoles(nextRoles)
+        setRoleActiveId(nextRoleId)
         setPrivateInstructions(Array.isArray(instructionResult && (instructionResult.items || instructionResult.instructions)) ? (instructionResult.items || instructionResult.instructions) : [])
         setRoleError('')
+        return loadRoleDetail(scopeId, nextRoleId)
       }).catch((failure) => { setRoles([]); setPrivateInstructions([]); setRoleError('提示词加载失败：' + String((failure && failure.message) || failure)) })
     }
     function loadRetrievalStatus() { setRetrievalBusy(true); call('retrieval-model-status').then((result) => setRetrievalStatus(result || null)).catch((failure) => setRetrievalStatus({ embeddingReady: false, rerankReady: false, embeddingError: String((failure && failure.message) || failure) })).finally(() => setRetrievalBusy(false)) }
-     function openSettingsPanel() { setSettingsOpen(true); if (!retrievalStatus) loadRetrievalStatus() }
+     function openSettingsPanel() { if (props && props.onOpenSettings) props.onOpenSettings(); setSettingsOpen(true); if (!retrievalStatus) loadRetrievalStatus() }
      function openModelsPanel() {
       setModelsOpen(true); setModelError('')
-      Promise.all([projectId ? call('list-roles', { projectId }) : Promise.resolve({ roles: [] }), call('get-model-settings'), call('list-model-catalog')]).then(([rolesResult, modelResult, catalogResult]) => {
+      Promise.all([projectId ? call('list-roles', { projectId }) : Promise.resolve({ roles: [{ id: 'writer', name: '正文写作者' }, { id: 'reviewer', name: '审稿者' }, { id: 'analyzer', name: '设定分析者' }, { id: 'polisher', name: '语言润色者' }] }), call('get-model-settings'), call('list-model-catalog')]).then(([rolesResult, modelResult, catalogResult]) => {
         setRoles(Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : [])
         setModelSettings(modelResult && modelResult.settings ? modelResult.settings : { version: 1, general: {}, byRole: {}, byProject: {} })
         setModelCatalog(catalogResult && catalogResult.providers ? catalogResult : { providers: [] })
@@ -1143,44 +1163,54 @@ export function createClient(require) {
     }
     function saveModelSettings(settings) {
       setModelBusy(true); setModelError('')
-      call('save-model-settings', { settings }).then((result) => { setModelSettings(result && result.settings ? result.settings : settings); setModelBusy(false); setModelsOpen(false) }).catch((failure) => { setModelBusy(false); setModelError('模型配置保存失败：' + String((failure && failure.message) || failure)) })
+      const current = modelSettings && typeof modelSettings === 'object' ? modelSettings : { version: 1, general: {}, byRole: {}, byProject: {} }
+       const next = { ...current, version: 1, general: current.general || {}, byRole: current.byRole || {}, byProject: { ...(current.byProject || {}) } }
+       if (projectId) next.byProject[projectId] = { general: settings.general || {}, byRole: settings.byRole || {} }
+       else { next.general = settings.general || {}; next.byRole = settings.byRole || {} }
+       call('save-model-settings', { settings: next }).then((result) => { setModelSettings(result && result.settings ? result.settings : next); setModelBusy(false); setModelsOpen(false) }).catch((failure) => { setModelBusy(false); setModelError('模型配置保存失败：' + String((failure && failure.message) || failure)) })
     }
     function openRolesPanel(scopeId = '') {
       const selectedId = scopeId || projectId || (projects[0] && projects[0].id) || ''
       if (!selectedId) { setRolesOpen(true); setRoleError('请先创建一个项目，再配置子代理提示词。'); return }
       if (!projectId) pickProject(selectedId)
+      setRoleScopeId(selectedId)
       setRolesOpen(true); setRoleError(''); setRoleDetail(null); setRoleActiveId('')
-      loadRoles(selectedId)
+      loadRoles(selectedId, '')
     }
     function handleSelectRole(roleId) {
       setRoleActiveId(roleId || '')
-      setRoleDetail(null)
-      if (!projectId || !roleId) return
-      call('read-role', { projectId, roleId }).then((result) => {
-        setRoleDetail(result && result.role ? result.role : null)
-      }).catch((failure) => { setRoleError('读取提示词失败：' + String((failure && failure.message) || failure)) })
+      const scopeId = roleScopeId || projectId
+      loadRoleDetail(scopeId, roleId).catch((failure) => { setRoleError('读取提示词失败：' + String((failure && failure.message) || failure)) })
     }
     function handleSaveRole(input) {
-      if (!projectId || roleBusy) return
+      const scopeId = roleScopeId || projectId
+      if (!scopeId || roleBusy) return
       setRoleBusy(true); setRoleError('')
-      call('save-role', { projectId, roleId: input && input.roleId, name: input && input.name, entries: input && input.entries, defaultInstructions: input && input.defaultInstructions }).then((result) => {
+      call('save-role', { projectId: scopeId, roleId: input && input.roleId, name: input && input.name, entries: input && input.entries, defaultInstructions: input && input.defaultInstructions }).then((result) => {
+        if (result && result.error) throw new Error(result.error)
         setRoleBusy(false)
         if (result && result.role) setRoleActiveId(result.role.id)
-        loadRoles()
-        if (result && result.role) setRoleDetail(result.role)
+        loadRoles(scopeId, result && result.role ? result.role.id : '')
       }).catch((failure) => { setRoleBusy(false); setRoleError('保存提示词失败：' + String((failure && failure.message) || failure)) })
     }
     function handleDeleteRole(role) {
-      if (!projectId || !role || roleBusy) return
+      const scopeId = roleScopeId || projectId
+      if (!scopeId || !role || roleBusy) return
       if (!arm('delete-role', role.id)) return
-      call('delete-role', { projectId, roleId: role.id }).then(() => {
-        disarm(); if (roleActiveId === role.id) { setRoleActiveId(''); setRoleDetail(null) }; loadRoles()
+      call('delete-role', { projectId: scopeId, roleId: role.id }).then((result) => {
+        if (result && result.error) throw new Error(result.error)
+        disarm()
+        loadRoles(scopeId, result && result.role ? result.role.id : '')
       }).catch((failure) => { disarm(); setRoleError('删除提示词失败：' + String((failure && failure.message) || failure)) })
     }
     function handleAddEntry() {
       const list = (roleDetail && Array.isArray(roleDetail.entries)) ? roleDetail.entries.slice() : []
       list.push({ name: '', content: '', order: list.length, isEnabled: true })
       setRoleDetail(Object.assign({}, roleDetail, { entries: list }))
+    }
+    function handleUpdateRoleName(name) {
+      if (!roleDetail) return
+      setRoleDetail(Object.assign({}, roleDetail, { name: String(name == null ? '' : name) }))
     }
     function handleUpdateEntry(index, patch) {
       if (!roleDetail || !Array.isArray(roleDetail.entries)) return
@@ -2497,7 +2527,7 @@ export function createClient(require) {
               h('button', { className: 'mf-btn mf-primary', type: 'button', disabled: !chatSessionId || !chatInput.trim() || chatBusy, onClick: sendChat }, chatBusy ? '发送中' : '发送'))
           ) : null)
         )
-      ),        modelsOpen ? h(AgentModelsPanel, { roles, settings: modelSettings, catalog: modelCatalog, busy: modelBusy, error: modelError, onSave: saveModelSettings, onClose: () => setModelsOpen(false) }) : null,
+      ),        modelsOpen ? h(AgentModelsPanel, { roles, settings: projectId && modelSettings.byProject && modelSettings.byProject[projectId] ? modelSettings.byProject[projectId] : modelSettings, catalog: modelCatalog, busy: modelBusy, error: modelError, onSave: saveModelSettings, onClose: () => setModelsOpen(false) }) : null,
        settingsOpen ? h(SettingsPanel, { active: settingsSection, onSelect: (section) => { setSettingsSection(section); if (section === 'retrieval' && !retrievalStatus && !retrievalBusy) loadRetrievalStatus() }, retrievalStatus, retrievalBusy, onRefreshRetrieval: loadRetrievalStatus, onClose: () => setSettingsOpen(false), onOpenModels: () => { setSettingsOpen(false); openModelsPanel() }, onOpenRoles: () => { setSettingsOpen(false); openRolesPanel() }, onOpenInstructions: () => { setSettingsOpen(false); openWritingSkills() }, onOpenSummary: () => { setSettingsOpen(false); openSummaryPanel() }, onOpenChains: () => { setSettingsOpen(false); openPromptChains() }, onOpenStyles: () => { setSettingsOpen(false); setTab('styles') } }) : null,
 importOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.stopPropagation(); if (event.target === event.currentTarget) setImportOpen(false) } }, h('div', { className: 'mf-import-card' },
         h('h3', null, 'TXT 整书导入'),
@@ -2526,7 +2556,7 @@ importOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.
       summaryOpen ? h(SummaryPanel, { open: true, onClose: () => setSummaryOpen(false), projectTitle: project ? project.title : '', chapterRows: summaryRows, ranges: summaryRanges, loading: summaryLoading, error: summaryError, busy: summaryBusy, progress: summaryProgress, result: summaryResult, onRegenerateChapter: (row) => runSummary('chapters', { chapterIds: [row.chapterId], force: true }, 'chapter', row.chapterId), onRegenerateRange: (range) => runSummary('ranges', { rangeIds: [range.id], force: true }, 'range', range.id), onGenerateChapters: () => runSummary('chapters', {}, 'chapters', null), onGenerateRanges: () => runSummary('ranges', {}, 'ranges', null), onRefresh: refreshSummaryPanel }) : null,
       skillsOpen ? h(WritingSkillsPanel, { open: true, onClose: () => setSkillsOpen(false), onOpenChains: projectId ? () => { setSkillsOpen(false); openPromptChains() } : null, skills: writingSkills, settings: skillSettings, loading: skillsLoading, error: skillsError, onToggle: toggleSkill, onCreateSkill: createCustomSkill, onDeleteCustom: deleteCustomSkill, onRefresh: refreshSkillSettings }) : null,
       chainsOpen ? h(PromptChainsPanel, { open: true, onClose: () => setChainsOpen(false), chains, activeChainId: chainActiveId, onSelect: setChainActiveId, busy: chainBusy, error: chainError, result: chainResult, lastPrompt: chainLastPrompt, onSave: handleSaveChain, onDelete: handleDeleteChain, onRun: handleRunChain, onHistory: (chain) => { if (chain && chain.id) openGitHistory(chain.id) } }) : null,
-      rolesOpen ? h(RolesPanel, { open: true, onClose: () => setRolesOpen(false), roles, activeRoleId: roleActiveId, onSelect: handleSelectRole, detail: roleDetail, busy: roleBusy, error: roleError, onSave: handleSaveRole, onDelete: handleDeleteRole, onAddEntry: handleAddEntry, onUpdateEntry: handleUpdateEntry, onDeleteEntry: handleDeleteEntry, instructions: privateInstructions, onToggleInstruction: handleToggleInstruction }) : null,
+      rolesOpen ? h(RolesPanel, { open: true, onClose: () => setRolesOpen(false), roles, activeRoleId: roleActiveId, onSelect: handleSelectRole, detail: roleDetail, busy: roleBusy, error: roleError, onSave: handleSaveRole, onDelete: handleDeleteRole, onAddEntry: handleAddEntry, onUpdateName: handleUpdateRoleName, onUpdateEntry: handleUpdateEntry, onDeleteEntry: handleDeleteEntry, instructions: privateInstructions, onToggleInstruction: handleToggleInstruction }) : null,
       dashOpen ? h(WritingDashboard, { open: true, onClose: () => setDashOpen(false), days: stats && stats.calendar ? stats.calendar : {} }) : null,
       gitHistOpen ? h('div', { className: 'mf-import', onMouseDown: (event) => { event.stopPropagation(); if (event.target === event.currentTarget) setGitHistOpen(false) } }, h('div', { className: 'mf-import-card' },
         h('h3', null, 'Git 历史 / 对比' + (gitHistData && gitHistData.chainId ? ' · 链 ' + gitHistData.chainId : '')),

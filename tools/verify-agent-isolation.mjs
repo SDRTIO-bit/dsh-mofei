@@ -68,7 +68,7 @@ try {
 
   const writer = await countForPreset('mofei-writer')
   console.log(`INFO: mofei-writer -> ${JSON.stringify(writer)}`)
-  if (writer.mofei === 36 && writer.openfic === 36) ok('mofei-writer 会话 36+36 工具')
+  if (writer.mofei === 73 && writer.openfic === 73) ok('mofei-writer 会话 73+73 工具')
   else fail(`mofei-writer 工具数异常：${JSON.stringify(writer)}`)
 
   const skills = await rpc('skill.list', { sessionId: 'x' }).catch(() => null)

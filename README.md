@@ -14,6 +14,38 @@
 - 快捷操作：顶栏三点打开可搜索的写作操作面板；支持关闭按钮、再次点击、`Escape` 和点击外部收起，不暴露内部命令名。
 - 原生界面共存：墨扉工作台从左侧展开，官方 DSH 对话和 Composer 保留在右侧；官方会话侧栏展开时，工作台会自动收紧，不遮挡输入区。
 
+## 安装
+
+墨扉需要已安装、且已配置可用模型的 DSH。子代理使用 DSH 随附的 `minimal` preset；不依赖本机私有的 `minimal-v3` 或其他作者自定义 preset。
+
+以下以 Windows PowerShell 为例。下载仓库后，在仓库根目录执行：
+
+```powershell
+# 将插件加入独立的 novel profile。
+$pluginPath = (Resolve-Path .\plugin).Path
+dsh plugin --profile novel add $pluginPath
+
+# 首次安装写作 preset。已有同名 preset 时先备份或使用下方的更新命令。
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.dsh\.agent-presets" | Out-Null
+Copy-Item .\presets\mofei-writer "$env:USERPROFILE\.dsh\.agent-presets\mofei-writer" -Recurse
+```
+
+在 `$env:USERPROFILE\.dsh\profiles\novel\cordis.patch.yml` 中加入墨扉插件行。该文件已有其他配置时，只追加 `insert` 内的 `mofei` 行，不要覆盖整个文件：
+
+```yaml
+- insert:
+    - id: mofei
+      name: mofei-dsh
+```
+
+更新仓库后的 preset 时，确认没有本地自定义后再执行：
+
+```powershell
+Copy-Item .\presets\mofei-writer "$env:USERPROFILE\.dsh\.agent-presets\mofei-writer" -Recurse -Force
+```
+
+安装后重启 DSH。`mofei-writer` 是主会话 preset；Writer、Reviewer 等子代理由墨扉创建为 DSH 内置 `minimal` preset，再在各自会话内注入墨扉工具和角色规则，因此不会继承或污染主会话。
+
 ## 快速开始
 
 在 Windows PowerShell 中启动写作环境：

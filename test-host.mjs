@@ -1081,6 +1081,57 @@ test('prompt chains：delete-project 清理链数据', async () => {
   assert.equal(persisted.byProject[projectId], undefined)
 })
 
+test('内置子代理角色默认可见，项目覆盖可恢复且不会播种副本', async () => {
+  const rolesFile = path.posix.join(root, '.mofei-roles.json')
+  const { project } = await rpc('create-project', { title: '角色目录契约' })
+  const projectId = project.id
+
+  const initial = await rpc('list-roles', { projectId })
+  assert.deepEqual(initial.roles.map((role) => role.id), ['writer', 'reviewer', 'analyzer', 'polisher'])
+  assert.equal(initial.roles.every((role) => role.source === 'builtin' && role.isBuiltin && !role.isOverridden), true)
+  const defaultWriter = await rpc('read-role', { projectId, roleId: 'writer' })
+  assert.match(defaultWriter.role.entries[0].content, /你是 Writer/)
+  assert.equal(defaultWriter.role.effort, 'high')
+
+  const saved = await rpc('save-role', {
+    projectId,
+    roleId: 'writer',
+    name: 'Writer（正文写作）',
+    entries: [{ name: '项目覆盖', content: '只注入项目 Writer 规则', order: 0, isEnabled: true }],
+    defaultInstructions: [{ instructionId: 'mofei-writing', order: 10, isEnabled: true }],
+  })
+  assert.equal(saved.role.source, 'project')
+  assert.equal(saved.role.isBuiltin, true)
+  assert.equal(saved.role.isOverridden, true)
+  assert.equal(saved.role.canReset, true)
+  assert.equal(saved.role.entries[0].content, '只注入项目 Writer 规则')
+
+  const compiled = await ctx.mofei.compileRolePersona(projectId, 'writer')
+  assert.equal(compiled.persona, '只注入项目 Writer 规则')
+  assert.doesNotMatch(compiled.persona, /你是 Writer/)
+  const instructions = await ctx.mofei.compileInstructionPersona(projectId, 'writer', [])
+  assert.deepEqual(instructions.instructionIds, ['mofei-writing'])
+  assert.ok(instructions.persona.length > 100)
+
+  const persisted = JSON.parse(files.get(rolesFile))
+  assert.deepEqual(persisted.byProject[projectId].map((role) => role.id), ['writer'])
+  const entities = await rpc('list-entities', { projectId, kind: 'roles' })
+  assert.deepEqual(entities.items.map((role) => role.id), initial.roles.map((role) => role.id))
+
+  const reset = await rpc('delete-role', { projectId, roleId: 'writer' })
+  assert.equal(reset.deleted, true)
+  assert.equal(reset.resetToBuiltin, true)
+  assert.equal(reset.role.source, 'builtin')
+  const restored = await ctx.mofei.compileRolePersona(projectId, 'writer')
+  assert.match(restored.persona, /你是 Writer/)
+  assert.deepEqual(JSON.parse(files.get(rolesFile)).byProject[projectId], [])
+
+  const noOpReset = await rpc('delete-role', { projectId, roleId: 'writer' })
+  assert.equal(noOpReset.deleted, false)
+  assert.equal(noOpReset.role.source, 'builtin')
+  await rpc('delete-project', { projectId })
+})
+
 test('discover-workspace 无摘要变更时不重写 summaries JSON', async () => {
   const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-discover-'))
   const summaryTarget = path.join(workspaceRoot, '.mofei-summaries.json')

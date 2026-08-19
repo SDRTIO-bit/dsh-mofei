@@ -25,6 +25,7 @@ npm run check    # node --check 全部 lib/*.js
 
 - novel profile 装配与配置样例：`~/.dsh/profiles/novel/cordis.patch.yml`
 - 写作 preset：`~/.dsh/.agent-presets/mofei-writer/agent.cordis.yml`（仓库副本 `presets/mofei-writer/`）
+- 子代理基础：使用 DSH 随附的 `minimal` preset；`subagent-max` 在子代理作用域追加墨扉工具和角色 persona，安装者无需复制 `minimal-v3`。
 
 ## 配置
 

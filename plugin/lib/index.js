@@ -10,7 +10,7 @@ import { parseWorldInfoJson, buildChapterContext, normalizeWorldEntry, normalize
 import { normalizeAiSession, aiSessionView, appendAiMessage, buildAiMessages, chapterSelection, summaryRequest, sseEvent } from './ai.js'
 import { normalizeSummaryStore, chapterSummaryView, isChapterSummaryStale, applyChapterSummary, buildRangeGroups, applyRangeSummary, planSummaryBatch } from './summary.js'
 import { normalizeChainStore, compilePromptChain, promptChainView } from './prompt-chain.js'
-import { normalizeRoleStore, compileRolePersona, roleSummaryView, roleDetailView } from './roles.js'
+import { normalizeRoleStore, compileRolePersona, mergeEffectiveRoles, roleSummaryView, roleDetailView } from './roles.js'
 import { mofeiInstructions } from './instructions.js'
 import { buildIndex, queryIndex, indexStatus, DEFAULT_RAG_CONFIG } from './rag.js'
 import { embedTexts, localRetrievalStatus, rerankResultItems, DEFAULT_LOCAL_RETRIEVAL } from './local-retrieval.js'
@@ -70,7 +70,7 @@ export default {
     function text(value, fallback) { const result = typeof value === 'string' ? value.trim() : ''; return result || fallback }
      function modelRef(value) { const source = value && typeof value === 'object' ? value : {}; return { mode: source.mode === 'dedicated' ? 'dedicated' : 'general', provider: typeof source.provider === 'string' ? source.provider.trim() : '', model: typeof source.model === 'string' ? source.model.trim() : '' } }
      function normalizeModelStore(value) { const source = value && typeof value === 'object' ? value : {}; const out = { version: 1, general: modelRef(source.general), byRole: {}, byProject: {} }; const roles = source.byRole && typeof source.byRole === 'object' ? source.byRole : {}; Object.keys(roles).forEach((id) => { if (id !== '__proto__' && id !== 'constructor' && id !== 'prototype') out.byRole[id] = modelRef(roles[id]) }); const projects = source.byProject && typeof source.byProject === 'object' ? source.byProject : {}; Object.keys(projects).forEach((projectId) => { if (projectId !== '__proto__' && projectId !== 'constructor' && projectId !== 'prototype') { const item = projects[projectId] && typeof projects[projectId] === 'object' ? projects[projectId] : {}; out.byProject[projectId] = { general: modelRef(item.general), byRole: {} }; const projectRoles = item.byRole && typeof item.byRole === 'object' ? item.byRole : {}; Object.keys(projectRoles).forEach((id) => { out.byProject[projectId].byRole[id] = modelRef(projectRoles[id]) }) } }); return out }
-     function resolvedModel(projectId, roleId) { const project = projectId && modelStore.byProject[projectId]; const dedicated = project && project.byRole && project.byRole[roleId] && project.byRole[roleId].model ? project.byRole[roleId] : modelStore.byRole[roleId]; if (dedicated && dedicated.model) return { ...dedicated, source: 'role' }; const general = project && project.general && project.general.model ? project.general : modelStore.general; return { ...general, source: general && general.model ? 'general' : 'dsh-default' } }
+     function resolvedModel(projectId, roleId) { const project = projectId && modelStore.byProject[projectId]; const projectRole = project && project.byRole && project.byRole[roleId]; const globalRole = modelStore.byRole[roleId]; const hasProjectRole = !!projectRole; const dedicatedRole = projectRole && projectRole.mode === 'dedicated' && projectRole.model ? projectRole : !hasProjectRole && globalRole && globalRole.mode === 'dedicated' && globalRole.model ? globalRole : null; if (dedicatedRole) return { ...dedicatedRole, source: 'role' }; const projectGeneral = project && project.general; const general = projectGeneral && projectGeneral.mode !== 'dedicated' && projectGeneral.model ? projectGeneral : modelStore.general; return { ...general, source: general && general.model ? 'general' : 'dsh-default' } }
      function ragIndexFor(projectId) { return ragStore.byProject && ragStore.byProject[projectId] ? ragStore.byProject[projectId] : null }
      function projectSummaries(projectId) { const out = {}; Object.keys(summaryStore.chapters || {}).forEach((id) => { const item = summaryStore.chapters[id]; if (item && (!projectId || item.projectId === projectId || !item.projectId)) out[id] = item }); return out }
      async function modelCatalog() {
@@ -1050,10 +1050,11 @@ export default {
     function instructionById(id) { return mofeiInstructions.find((item) => item && item.name === id) || instructionStore.custom.find((item) => item && item.name === id) || null }
      function instructionItems() { return mofeiInstructions.concat(instructionStore.custom) }
      function instructionView(item) { return { id: item.name, name: item.name, description: item.description || '', whenToUse: item.whenToUse || '', content: item.content || '', source: mofeiInstructions.includes(item) ? 'builtin' : 'project' } }
-     function roleList(projectId) {
+     function roleOverrides(projectId) {
       const list = rolesStore.byProject[projectId]
       return Array.isArray(list) ? list : []
     }
+    function effectiveRoleList(projectId) { return mergeEffectiveRoles(roleOverrides(projectId)) }
     // v0.10.1: 链上下文包含当前写作风格（{{style}} 宏 + 系统提示注入）。
     async function buildPromptChainContext(project, args) {
       const chapter = chapterBy(project, args && args.chapterId)
@@ -1318,7 +1319,7 @@ export default {
         agentContexts.set(binding.sessionId, { projectId: binding.projectId, chapterId: binding.chapterId, updatedAt: Date.now() })
         return { bound: true, project: { id: project.id, title: project.title }, chapter: chapter ? { id: chapter.id, title: chapter.title, revision: chapter.revision } : null }
       },
-      'list-entities': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const kind = args && args.kind; if (!project) return { error: 'PROJECT_NOT_FOUND' }; if (kind === 'volumes') return { items: (project.volumes || []).map((item) => volumeView(item, project.chapters)) }; if (kind === 'chapters') return { items: project.chapters.map(chapterView) }; if (kind === 'characters') return { items: (project.characters || []).map(characterView) }; if (kind === 'notes') return { items: (project.notes || []).map(noteView) }; if (kind === 'world') return { items: (project.worldEntries || []).map(worldEntryView) }; if (kind === 'summaries') return { items: summaryStore.ranges || [] }; if (kind === 'chains') return { items: (chainStore.projects && chainStore.projects[project.id] || []) }; if (kind === 'roles') return { items: roleList(project.id).map(roleSummaryView) }; return { error: 'INVALID_KIND' } },
+      'list-entities': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const kind = args && args.kind; if (!project) return { error: 'PROJECT_NOT_FOUND' }; if (kind === 'volumes') return { items: (project.volumes || []).map((item) => volumeView(item, project.chapters)) }; if (kind === 'chapters') return { items: project.chapters.map(chapterView) }; if (kind === 'characters') return { items: (project.characters || []).map(characterView) }; if (kind === 'notes') return { items: (project.notes || []).map(noteView) }; if (kind === 'world') return { items: (project.worldEntries || []).map(worldEntryView) }; if (kind === 'summaries') return { items: summaryStore.ranges || [] }; if (kind === 'chains') return { items: (chainStore.projects && chainStore.projects[project.id] || []) }; if (kind === 'roles') return { items: effectiveRoleList(project.id).map(roleSummaryView) }; return { error: 'INVALID_KIND' } },
       'read-character': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const character = characterBy(project, args && args.characterId); if (!character) return { error: project ? 'CHARACTER_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; return { character: characterView(character) } },
       'read-note': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const note = noteBy(project, args && args.noteId); if (!note) return { error: project ? 'NOTE_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; if (note.isHidden) return { error: 'NOTE_HIDDEN' }; return { note: noteView(note) } },
       'read-world-entry': async (args) => { await load(); await queue; const project = projectBy(args && args.projectId); const entry = worldEntryBy(project, args && args.entryId); if (!entry) return { error: project ? 'WORLD_ENTRY_NOT_FOUND' : 'PROJECT_NOT_FOUND' }; return { entry: worldEntryView(entry) } },
@@ -1548,7 +1549,12 @@ export default {
         await dropChainsFor(project.id)
         await dropRolesFor(project.id)
         await saveProjects()
-        if (!String(cwd).startsWith('virtual-root')) { try { await rm(path.join(mofeiFileRoot, 'projects', safeFileSegment(project.id, 'project')), { recursive: true, force: true }) } catch (error) { console.error('墨扉 mirror delete failed', error) } }
+        // rootDir 项目直接把实体文件放在用户选定的小说目录；删除项目记录时绝不能递归删除
+        // 该目录，避免一个项目条目删除整本小说或用户选定的上级文件夹。默认镜像项目才清理其专属目录。
+        const hasExternalRoot = typeof project.rootDir === 'string' && project.rootDir.trim()
+        if (!String(cwd).startsWith('virtual-root') && !hasExternalRoot) {
+          try { await rm(path.join(mofeiFileRoot, 'projects', safeFileSegment(project.id, 'project')), { recursive: true, force: true }) } catch (error) { console.error('墨扉 mirror delete failed', error) }
+        }
         return { deleted: true, projectId: project.id }
       }),
       'update-chapter-meta': async (args) => mutate(async () => {
@@ -2382,14 +2388,14 @@ export default {
         await load(); await queue
         const project = projectBy(args && args.projectId)
         if (!project) return { error: 'PROJECT_NOT_FOUND' }
-        return { roles: roleList(project.id).map(roleSummaryView) }
+        return { roles: effectiveRoleList(project.id).map(roleSummaryView) }
       },
       'read-role': async (args) => {
         await load(); await queue
         const project = projectBy(args && args.projectId)
         if (!project) return { error: 'PROJECT_NOT_FOUND' }
         const roleId = typeof (args && args.roleId) === 'string' ? args.roleId : ''
-        const role = roleList(project.id).find((item) => item.id === roleId)
+        const role = effectiveRoleList(project.id).find((item) => item.id === roleId)
         if (!role) return { error: 'ROLE_NOT_FOUND' }
         return { role: roleDetailView(role) }
       },
@@ -2406,7 +2412,7 @@ export default {
           isEnabled: entry && entry.isEnabled !== false,
         }))
          const defaultInstructions = Array.isArray(args && args.defaultInstructions) ? args.defaultInstructions.map((item) => ({ instructionId: text(item && item.instructionId, ''), order: typeof (item && item.order) === 'number' && isFinite(item.order) ? Math.floor(item.order) : 0, isEnabled: item && item.isEnabled !== false })).filter((item) => item.instructionId) : []
-        const list = roleList(project.id).slice()
+        const list = roleOverrides(project.id).slice()
         const index = roleId ? list.findIndex((item) => item.id === roleId) : -1
         let role
         if (roleId && index < 0) {
@@ -2427,15 +2433,20 @@ export default {
         rolesStore = { version: 1, byProject }
         await saveRoles()
         gitCommitAll('墨扉 角色保存: ' + name, true).catch(() => { /* 非 git 工作区或 git 失败时忽略 */ })
-        return { role: roleDetailView(role) }
+        const effective = effectiveRoleList(project.id).find((item) => item.id === role.id)
+        return { role: roleDetailView(effective || role) }
       }),
       'delete-role': async (args) => mutate(async () => {
         const project = projectBy(args && args.projectId)
         if (!project) return { error: 'PROJECT_NOT_FOUND' }
         const roleId = typeof (args && args.roleId) === 'string' ? args.roleId : ''
         if (!roleId) return { error: 'ROLE_NOT_FOUND' }
-        const list = roleList(project.id)
-        if (!list.some((item) => item.id === roleId)) return { error: 'ROLE_NOT_FOUND' }
+        const list = roleOverrides(project.id)
+        if (!list.some((item) => item.id === roleId)) {
+          const builtin = effectiveRoleList(project.id).find((item) => item.id === roleId && item.isBuiltin)
+          if (builtin) return { deleted: false, roleId, resetToBuiltin: false, role: roleDetailView(builtin) }
+          return { error: 'ROLE_NOT_FOUND' }
+        }
         const byProject = {}
         Object.keys(rolesStore.byProject).forEach((id) => {
           Object.defineProperty(byProject, id, { value: rolesStore.byProject[id], enumerable: true, writable: true, configurable: true })
@@ -2444,7 +2455,8 @@ export default {
         rolesStore = { version: 1, byProject }
         await saveRoles()
         gitCommitAll('墨扉 角色删除: ' + roleId, true).catch(() => { /* 非 git 工作区忽略 */ })
-        return { deleted: true, roleId }
+        const restored = effectiveRoleList(project.id).find((item) => item.id === roleId)
+        return { deleted: true, roleId, resetToBuiltin: !!(restored && restored.isBuiltin), ...(restored ? { role: roleDetailView(restored) } : {}) }
       }),
       'compile-prompt-chain': async (args) => {
         await load(); await queue
@@ -2576,7 +2588,7 @@ export default {
          await load(); await queue
          const project = projectBy(projectId)
          if (!project) throw new Error('PROJECT_NOT_FOUND')
-         const role = roleList(project.id).find((item) => item.id === roleId)
+         const role = effectiveRoleList(project.id).find((item) => item.id === roleId)
          if (!role) throw new Error('ROLE_NOT_FOUND')
          const requested = Array.isArray(additionalIds) ? additionalIds : []
          const bindings = role.defaultInstructions.filter((item) => item.isEnabled).sort((a, b) => a.order - b.order).map((item) => item.instructionId).concat(requested)
@@ -2591,9 +2603,9 @@ export default {
        listModelCatalog: async () => modelCatalog(),
        resolveSubagentModel: async (projectId, roleId) => { await load(); await queue; return resolvedModel(projectId, roleId) },
        listModelSettings: async () => { await load(); await queue; return modelStore },
-       listRoles: async (projectId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return { roles: roleList(project.id).map(roleSummaryView) } },
-      readRole: async (projectId, roleId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const role = roleList(project.id).find((item) => item.id === roleId); if (!role) throw new Error('ROLE_NOT_FOUND'); return roleDetailView(role) },
-      compileRolePersona: async (projectId, roleId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const role = roleList(project.id).find((item) => item.id === roleId); if (!role) throw new Error('ROLE_NOT_FOUND'); return { persona: compileRolePersona(role) } },
+       listRoles: async (projectId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); return { roles: effectiveRoleList(project.id).map(roleSummaryView) } },
+      readRole: async (projectId, roleId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const role = effectiveRoleList(project.id).find((item) => item.id === roleId); if (!role) throw new Error('ROLE_NOT_FOUND'); return roleDetailView(role) },
+      compileRolePersona: async (projectId, roleId) => { await load(); await queue; const project = projectBy(projectId); if (!project) throw new Error('PROJECT_NOT_FOUND'); const role = effectiveRoleList(project.id).find((item) => item.id === roleId); if (!role) throw new Error('ROLE_NOT_FOUND'); return { persona: compileRolePersona(role), source: role.source, isOverridden: role.isOverridden } },
     }
     if (typeof ctx.provide === 'function') ctx.provide('mofei', mofeiService)
     // v0.10.2: 挂接 DSH jobs controller（使 unowned 后台任务可启动）；无 jobs 服务时忽略。

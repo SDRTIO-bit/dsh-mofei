@@ -60,13 +60,17 @@ export const ROLES_PANEL_CSS = [
   '.mf-roles-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}',
   '.mf-roles-item-name{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
   '.mf-roles-item-meta{font-size:10px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+  '.mf-roles-source{display:inline-flex;align-items:center;min-height:18px;padding:1px 6px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;color:var(--dsw-alias-label-secondary);font-size:10px;white-space:nowrap}',
+  '.mf-roles-source.custom{border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 45%,transparent);color:var(--dsw-alias-state-business-primary)}',
   '.mf-roles-del{flex-shrink:0;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-label-secondary);padding:2px 6px;font-size:11px;cursor:pointer;line-height:1}',
   '.mf-roles-del:hover{background:rgba(220,38,38,.14);color:#dc2626}',
-  '.mf-roles-editor{display:flex;flex-direction:column;min-width:0;min-height:0;padding:12px;overflow-y:auto}',
+  '.mf-roles-editor{display:flex;flex-direction:column;min-width:0;min-height:0;padding:12px;overflow-x:hidden;overflow-y:auto}',
   '.mf-roles-ed-name{display:flex;align-items:center;gap:8px;margin-bottom:8px}',
   '.mf-roles-ed-name label{font-size:11px;color:var(--dsw-alias-label-secondary);flex-shrink:0}',
   '.mf-roles-name{flex:1;min-width:0}',
-  '.mf-roles-entries{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}',
+  // Keep the entries at their intrinsic height so the editor owns the scroll.
+  // A shrinking flex child lets long textareas paint over the instruction block below.
+  '.mf-roles-entries{display:flex;flex-direction:column;gap:10px;flex:0 0 auto;min-height:auto;overflow:visible}',
   '.mf-roles-entry{border:1px solid var(--dsw-alias-border-l1);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}',
   '.mf-roles-entry-head{display:flex;align-items:center;gap:8px}',
   '.mf-roles-entry-toggle{flex-shrink:0;width:36px;height:18px;border-radius:9px;border:0;background:var(--dsw-alias-interactive-bg-hover);cursor:pointer;position:relative;transition:background .15s ease}',
@@ -132,7 +136,6 @@ export function RolesPanel(props) {
   const resolved = resolveReact()
   if (!resolved) throw new Error('墨扉 RolesPanel 无法解析 React：请在宿主注入全局 React 或确保 require("react") 可用')
   const h = resolved.h
-  const useSt = resolved.useState
 
   const open = !!(props && props.open)
   const onClose = (props && props.onClose) || null
@@ -147,10 +150,9 @@ export function RolesPanel(props) {
   const onAddEntry = (props && props.onAddEntry) || null
   const onUpdateEntry = (props && props.onUpdateEntry) || null
   const onDeleteEntry = (props && props.onDeleteEntry) || null
-   const instructions = (props && Array.isArray(props.instructions)) ? props.instructions : []
-   const onToggleInstruction = (props && props.onToggleInstruction) || null
-
-  const [draftName, setDraftName] = useSt('')
+  const onUpdateName = (props && props.onUpdateName) || null
+  const instructions = (props && Array.isArray(props.instructions)) ? props.instructions : []
+  const onToggleInstruction = (props && props.onToggleInstruction) || null
 
   if (!open) return null
 
@@ -168,7 +170,7 @@ export function RolesPanel(props) {
     if (!onSave) return
     onSave({
       roleId: active ? active.id : undefined,
-      name: draftName || detailName,
+      name: detailName,
       entries,
       defaultInstructions: bindings,
     })
@@ -183,19 +185,23 @@ export function RolesPanel(props) {
         const isActive = active && id != null && active.id === id
         const entryCount = (role && role.entryCount) || 0
         const enabledCount = (role && role.enabledCount) || 0
+        const sourceLabel = role && role.isBuiltin
+          ? (role.isOverridden ? '项目定制' : '内置默认')
+          : '项目自建'
+        const canRemove = !!(role && (role.canReset || !role.isBuiltin))
         return h('div', { className: 'mf-roles-item' + (isActive ? ' on' : ''), key, onClick: () => pick(role) },
           h('div', { className: 'mf-roles-item-main' },
             h('div', { className: 'mf-roles-item-name' }, name),
-            h('div', { className: 'mf-roles-item-meta' }, String(enabledCount) + '/' + String(entryCount) + ' 条 · ' + (date || '（无日期）'))),
-          h('button', {
+            h('div', { className: 'mf-roles-item-meta' }, sourceLabel + ' · ' + String(enabledCount) + '/' + String(entryCount) + ' 条' + (date ? ' · ' + date : ''))),
+          canRemove ? h('button', {
             className: 'mf-roles-del',
             type: 'button',
-            title: '删除该提示词',
+            title: role && role.canReset ? '清除项目定制并恢复内置默认' : '删除该提示词',
             onClick: (event) => {
               if (event && event.stopPropagation) event.stopPropagation()
               if (onDelete) onDelete(role)
             },
-          }, '删除'))
+          }, role && role.canReset ? '恢复' : '删除') : null)
       })
     : h('div', { className: 'mf-roles-list-empty' }, '暂无子代理提示词')
 
@@ -240,21 +246,25 @@ export function RolesPanel(props) {
     : h('div', { className: 'mf-roles-list-empty' }, '暂无条目，点击下方添加')
 
   const bindings = (detail && Array.isArray(detail.defaultInstructions)) ? detail.defaultInstructions : []
-   const instructionBlock = h('div', { className: 'mf-roles-instructions' },
-     h('div', { className: 'mf-roles-section-title' }, '默认注入的写作指令'),
-     instructions.length ? instructions.map((item) => {
-       const bindingIndex = bindings.findIndex((binding) => binding.instructionId === item.id)
-       const enabled = bindingIndex >= 0 && bindings[bindingIndex].isEnabled !== false
-       return h('label', { className: 'mf-roles-instruction' + (enabled ? ' on' : ''), key: item.id },
-         h('input', { type: 'checkbox', checked: enabled, onChange: () => {
-           if (!onToggleInstruction) return
-           if (bindingIndex >= 0) onToggleInstruction(bindingIndex, { isEnabled: !enabled })
-           else onToggleInstruction(bindings.length, { instructionId: item.id, order: (bindings.length + 1) * 10, isEnabled: true })
-         } }),
-         h('span', { className: 'mf-roles-instruction-main' }, h('strong', null, item.name || item.id), h('small', null, item.description || '私有写作指令'))
-       )
-     }) : h('div', { className: 'mf-roles-list-empty' }, '暂无私有写作指令'),
-     h('div', { className: 'mf-roles-hint' }, '勾选项会在创建该子代理时强制注入；中控只能为单次任务追加，不能移除这里的默认指令。'))
+  const instructionBlock = h('div', { className: 'mf-roles-instructions' },
+    h('div', { className: 'mf-roles-section-title' }, '默认注入的写作指令'),
+    instructions.length ? instructions.map((item) => {
+      const bindingIndex = bindings.findIndex((binding) => binding.instructionId === item.id)
+      const enabled = bindingIndex >= 0 && bindings[bindingIndex].isEnabled !== false
+      return h('label', { className: 'mf-roles-instruction' + (enabled ? ' on' : ''), key: item.id },
+        h('input', { type: 'checkbox', checked: enabled, onChange: () => {
+          if (!onToggleInstruction) return
+          if (bindingIndex >= 0) onToggleInstruction(bindingIndex, { isEnabled: !enabled })
+          else onToggleInstruction(bindings.length, { instructionId: item.id, order: (bindings.length + 1) * 10, isEnabled: true })
+        } }),
+        h('span', { className: 'mf-roles-instruction-main' }, h('strong', null, item.name || item.id), h('small', null, item.description || '私有写作指令'))
+      )
+    }) : h('div', { className: 'mf-roles-list-empty' }, '暂无私有写作指令'),
+    h('div', { className: 'mf-roles-hint' }, '勾选项会在创建该子代理时强制注入；中控只能为单次任务追加，不能移除这里的默认指令。'))
+
+  const sourceLabel = active && active.isBuiltin
+    ? (active.isOverridden ? '项目定制' : '内置默认')
+    : '项目自建'
 
   const editor = h('div', { className: 'mf-roles-editor' },
     h('div', { className: 'mf-roles-ed-name' },
@@ -262,10 +272,12 @@ export function RolesPanel(props) {
       h('input', {
         className: 'mf-roles-name',
         type: 'text',
-        value: draftName || detailName,
+        value: detailName,
+        disabled: !!(active && active.isBuiltin),
         placeholder: '未命名提示词',
-        onChange: (event) => setDraftName(event && event.target ? event.target.value : ''),
-      })),
+        onChange: (event) => { if (onUpdateName) onUpdateName(event && event.target ? event.target.value : '') },
+      }),
+      active ? h('span', { className: 'mf-roles-source' + (active.isOverridden || !active.isBuiltin ? ' custom' : '') }, sourceLabel + (active.effort ? ' · ' + active.effort : '')) : null),
     h('div', { className: 'mf-roles-entries' },
       entriesBody,
       h('button', {
@@ -274,9 +286,10 @@ export function RolesPanel(props) {
         onClick: () => { if (onAddEntry) onAddEntry() },
       }, '＋ 添加条目')),
     h('div', { className: 'mf-roles-hint' }, '每个提示词由多条 entries 组成，使用时按 order 排序拼接启用的条目注入子代理。开关 isEnabled 可临时禁用某条而不删除。'),
-     instructionBlock,
+    instructionBlock,
     h('div', { className: 'mf-roles-actions' },
-      h('button', { className: 'mf-roles-btn primary', type: 'button', disabled: busy, onClick: fireSave }, active ? '保存' : '新建'),
+      h('button', { className: 'mf-roles-btn primary', type: 'button', disabled: busy || !detail, onClick: fireSave }, active && active.isBuiltin && !active.isOverridden ? '保存为项目定制' : (active ? '保存' : '新建')),
+      active && active.canReset ? h('button', { className: 'mf-roles-btn', type: 'button', disabled: busy, onClick: () => { if (onDelete) onDelete(active) } }, '恢复内置默认') : null,
       h('button', { className: 'mf-roles-btn', type: 'button', onClick: () => { if (onClose) onClose() } }, '关闭')),
     error ? h('div', { className: 'mf-roles-error' }, error) : null,
   )

@@ -1,4 +1,4 @@
-// src/client/project-grid.js
+// plugin/src/client/project-grid.js
 var reactBinding = null;
 var reactResolved = false;
 function resolveReact() {
@@ -314,7 +314,7 @@ function ProjectGrid(props) {
   return h("div", { className: "mf-grid-root" }, toolbar, body);
 }
 
-// src/client/project-page.js
+// plugin/src/client/project-page.js
 var MAX_DESCRIPTION_CHARS = 500;
 function normalizeDescription(text) {
   const s = String(text == null ? "" : text).trim();
@@ -471,7 +471,7 @@ function ProjectPage(props) {
   );
 }
 
-// src/client/summary-panel.js
+// plugin/src/client/summary-panel.js
 var reactBinding2 = null;
 var reactResolved2 = false;
 function resolveReact2() {
@@ -836,7 +836,7 @@ function SummaryPanel(props) {
   );
 }
 
-// src/client/prompt-chains.js
+// plugin/src/client/prompt-chains.js
 var reactBinding3 = null;
 var reactResolved3 = false;
 function resolveReact3() {
@@ -1068,7 +1068,7 @@ function PromptChainsPanel(props) {
   );
 }
 
-// src/client/roles-panel.js
+// plugin/src/client/roles-panel.js
 var reactBinding4 = null;
 var reactResolved4 = false;
 function resolveReact4() {
@@ -1114,13 +1114,17 @@ var ROLES_PANEL_CSS = [
   ".mf-roles-item-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}",
   ".mf-roles-item-name{font-size:12px;font-weight:600;color:var(--dsw-alias-label-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
   ".mf-roles-item-meta{font-size:10px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
+  ".mf-roles-source{display:inline-flex;align-items:center;min-height:18px;padding:1px 6px;border:1px solid var(--dsw-alias-border-l1);border-radius:4px;color:var(--dsw-alias-label-secondary);font-size:10px;white-space:nowrap}",
+  ".mf-roles-source.custom{border-color:color-mix(in srgb,var(--dsw-alias-state-business-primary) 45%,transparent);color:var(--dsw-alias-state-business-primary)}",
   ".mf-roles-del{flex-shrink:0;border:0;border-radius:4px;background:transparent;color:var(--dsw-alias-label-secondary);padding:2px 6px;font-size:11px;cursor:pointer;line-height:1}",
   ".mf-roles-del:hover{background:rgba(220,38,38,.14);color:#dc2626}",
-  ".mf-roles-editor{display:flex;flex-direction:column;min-width:0;min-height:0;padding:12px;overflow-y:auto}",
+  ".mf-roles-editor{display:flex;flex-direction:column;min-width:0;min-height:0;padding:12px;overflow-x:hidden;overflow-y:auto}",
   ".mf-roles-ed-name{display:flex;align-items:center;gap:8px;margin-bottom:8px}",
   ".mf-roles-ed-name label{font-size:11px;color:var(--dsw-alias-label-secondary);flex-shrink:0}",
   ".mf-roles-name{flex:1;min-width:0}",
-  ".mf-roles-entries{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}",
+  // Keep the entries at their intrinsic height so the editor owns the scroll.
+  // A shrinking flex child lets long textareas paint over the instruction block below.
+  ".mf-roles-entries{display:flex;flex-direction:column;gap:10px;flex:0 0 auto;min-height:auto;overflow:visible}",
   ".mf-roles-entry{border:1px solid var(--dsw-alias-border-l1);border-radius:6px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}",
   ".mf-roles-entry-head{display:flex;align-items:center;gap:8px}",
   ".mf-roles-entry-toggle{flex-shrink:0;width:36px;height:18px;border-radius:9px;border:0;background:var(--dsw-alias-interactive-bg-hover);cursor:pointer;position:relative;transition:background .15s ease}",
@@ -1165,7 +1169,6 @@ function RolesPanel(props) {
   const resolved2 = resolveReact4();
   if (!resolved2) throw new Error('\u58A8\u6249 RolesPanel \u65E0\u6CD5\u89E3\u6790 React\uFF1A\u8BF7\u5728\u5BBF\u4E3B\u6CE8\u5165\u5168\u5C40 React \u6216\u786E\u4FDD require("react") \u53EF\u7528');
   const h = resolved2.h;
-  const useSt = resolved2.useState;
   const open = !!(props && props.open);
   const onClose = props && props.onClose || null;
   const roles = props && Array.isArray(props.roles) ? props.roles : [];
@@ -1179,9 +1182,9 @@ function RolesPanel(props) {
   const onAddEntry = props && props.onAddEntry || null;
   const onUpdateEntry = props && props.onUpdateEntry || null;
   const onDeleteEntry = props && props.onDeleteEntry || null;
+  const onUpdateName = props && props.onUpdateName || null;
   const instructions = props && Array.isArray(props.instructions) ? props.instructions : [];
   const onToggleInstruction = props && props.onToggleInstruction || null;
-  const [draftName, setDraftName] = useSt("");
   if (!open) return null;
   const active = roles.find((r) => r && r.id === activeRoleId) || (roles.length ? roles[0] : null);
   const entries = detail && Array.isArray(detail.entries) ? detail.entries : [];
@@ -1193,7 +1196,7 @@ function RolesPanel(props) {
     if (!onSave) return;
     onSave({
       roleId: active ? active.id : void 0,
-      name: draftName || detailName,
+      name: detailName,
       entries,
       defaultInstructions: bindings
     });
@@ -1206,6 +1209,8 @@ function RolesPanel(props) {
     const isActive = active && id != null && active.id === id;
     const entryCount = role && role.entryCount || 0;
     const enabledCount = role && role.enabledCount || 0;
+    const sourceLabel2 = role && role.isBuiltin ? role.isOverridden ? "\u9879\u76EE\u5B9A\u5236" : "\u5185\u7F6E\u9ED8\u8BA4" : "\u9879\u76EE\u81EA\u5EFA";
+    const canRemove = !!(role && (role.canReset || !role.isBuiltin));
     return h(
       "div",
       { className: "mf-roles-item" + (isActive ? " on" : ""), key, onClick: () => pick(role) },
@@ -1213,17 +1218,17 @@ function RolesPanel(props) {
         "div",
         { className: "mf-roles-item-main" },
         h("div", { className: "mf-roles-item-name" }, name),
-        h("div", { className: "mf-roles-item-meta" }, String(enabledCount) + "/" + String(entryCount) + " \u6761 \xB7 " + (date || "\uFF08\u65E0\u65E5\u671F\uFF09"))
+        h("div", { className: "mf-roles-item-meta" }, sourceLabel2 + " \xB7 " + String(enabledCount) + "/" + String(entryCount) + " \u6761" + (date ? " \xB7 " + date : ""))
       ),
-      h("button", {
+      canRemove ? h("button", {
         className: "mf-roles-del",
         type: "button",
-        title: "\u5220\u9664\u8BE5\u63D0\u793A\u8BCD",
+        title: role && role.canReset ? "\u6E05\u9664\u9879\u76EE\u5B9A\u5236\u5E76\u6062\u590D\u5185\u7F6E\u9ED8\u8BA4" : "\u5220\u9664\u8BE5\u63D0\u793A\u8BCD",
         onClick: (event) => {
           if (event && event.stopPropagation) event.stopPropagation();
           if (onDelete) onDelete(role);
         }
-      }, "\u5220\u9664")
+      }, role && role.canReset ? "\u6062\u590D" : "\u5220\u9664") : null
     );
   }) : h("div", { className: "mf-roles-list-empty" }, "\u6682\u65E0\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD");
   const entriesBody = entries.length ? entries.map((entry, index) => {
@@ -1300,6 +1305,7 @@ function RolesPanel(props) {
     }) : h("div", { className: "mf-roles-list-empty" }, "\u6682\u65E0\u79C1\u6709\u5199\u4F5C\u6307\u4EE4"),
     h("div", { className: "mf-roles-hint" }, "\u52FE\u9009\u9879\u4F1A\u5728\u521B\u5EFA\u8BE5\u5B50\u4EE3\u7406\u65F6\u5F3A\u5236\u6CE8\u5165\uFF1B\u4E2D\u63A7\u53EA\u80FD\u4E3A\u5355\u6B21\u4EFB\u52A1\u8FFD\u52A0\uFF0C\u4E0D\u80FD\u79FB\u9664\u8FD9\u91CC\u7684\u9ED8\u8BA4\u6307\u4EE4\u3002")
   );
+  const sourceLabel = active && active.isBuiltin ? active.isOverridden ? "\u9879\u76EE\u5B9A\u5236" : "\u5185\u7F6E\u9ED8\u8BA4" : "\u9879\u76EE\u81EA\u5EFA";
   const editor = h(
     "div",
     { className: "mf-roles-editor" },
@@ -1310,10 +1316,14 @@ function RolesPanel(props) {
       h("input", {
         className: "mf-roles-name",
         type: "text",
-        value: draftName || detailName,
+        value: detailName,
+        disabled: !!(active && active.isBuiltin),
         placeholder: "\u672A\u547D\u540D\u63D0\u793A\u8BCD",
-        onChange: (event) => setDraftName(event && event.target ? event.target.value : "")
-      })
+        onChange: (event) => {
+          if (onUpdateName) onUpdateName(event && event.target ? event.target.value : "");
+        }
+      }),
+      active ? h("span", { className: "mf-roles-source" + (active.isOverridden || !active.isBuiltin ? " custom" : "") }, sourceLabel + (active.effort ? " \xB7 " + active.effort : "")) : null
     ),
     h(
       "div",
@@ -1332,7 +1342,10 @@ function RolesPanel(props) {
     h(
       "div",
       { className: "mf-roles-actions" },
-      h("button", { className: "mf-roles-btn primary", type: "button", disabled: busy, onClick: fireSave }, active ? "\u4FDD\u5B58" : "\u65B0\u5EFA"),
+      h("button", { className: "mf-roles-btn primary", type: "button", disabled: busy || !detail, onClick: fireSave }, active && active.isBuiltin && !active.isOverridden ? "\u4FDD\u5B58\u4E3A\u9879\u76EE\u5B9A\u5236" : active ? "\u4FDD\u5B58" : "\u65B0\u5EFA"),
+      active && active.canReset ? h("button", { className: "mf-roles-btn", type: "button", disabled: busy, onClick: () => {
+        if (onDelete) onDelete(active);
+      } }, "\u6062\u590D\u5185\u7F6E\u9ED8\u8BA4") : null,
       h("button", { className: "mf-roles-btn", type: "button", onClick: () => {
         if (onClose) onClose();
       } }, "\u5173\u95ED")
@@ -1368,7 +1381,7 @@ function RolesPanel(props) {
   );
 }
 
-// src/client/writing-dashboard.js
+// plugin/src/client/writing-dashboard.js
 var reactBinding5 = null;
 var reactResolved5 = false;
 function resolveReact5() {
@@ -1633,7 +1646,7 @@ function WritingDashboard(props) {
   );
 }
 
-// src/client/skills-library.js
+// plugin/src/client/skills-library.js
 var reactBinding6 = null;
 var reactResolved6 = false;
 var WRITING_SKILL_LABELS = {
@@ -1852,7 +1865,7 @@ function WritingSkillsPanel(props) {
   );
 }
 
-// src/client/settings-panel.js
+// plugin/src/client/settings-panel.js
 var binding = null;
 var resolved = false;
 function react() {
@@ -1864,10 +1877,10 @@ function react() {
   return binding;
 }
 var SETTINGS_PANEL_CSS = [
-  ".mf-settings-overlay{position:fixed;inset:0;z-index:136;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.36)}",
+  ".mf-settings-overlay{position:fixed;inset:0;z-index:136;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.36);transform:none!important}",
   ".mf-settings{width:min(780px,calc(100vw - 40px));height:min(620px,calc(100vh - 64px));display:grid;grid-template-rows:52px minmax(0,1fr);overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.32)}",
   ".mf-settings-head{display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-settings-head strong{font-size:14px}.mf-settings-head small{color:var(--dsw-alias-label-secondary);font-size:11px;flex:1}",
-  ".mf-settings-body{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0}.mf-settings-nav{padding:10px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto}.mf-settings-nav button{display:flex;width:100%;align-items:center;gap:9px;padding:10px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;text-align:left;font:12px/1.3 sans-serif}.mf-settings-nav button:hover,.mf-settings-nav button.on{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-settings-nav button strong{display:block;color:inherit;font-size:12px}.mf-settings-nav button small{display:block;color:var(--dsw-alias-label-tertiary);font-size:10px;margin-top:3px}",
+  ".mf-settings-body{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0}.mf-settings-nav{padding:10px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto}.mf-settings-nav button{display:flex;width:100%;align-items:flex-start;gap:9px;box-sizing:border-box;min-height:52px;padding:10px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;text-align:left;font:12px/1.35 sans-serif}.mf-settings-nav button:hover,.mf-settings-nav button.on{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-settings-nav button>span{display:block;min-width:0;line-height:1.35}.mf-settings-nav button strong{display:block;color:inherit;font-size:12px;line-height:1.35;white-space:normal}.mf-settings-nav button small{display:block;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:1.35;margin-top:3px;white-space:normal}",
   ".mf-settings-content{padding:22px;overflow:auto}.mf-settings-content h3{margin:0 0 8px;font-size:16px}.mf-settings-content p{margin:0 0 18px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.7}.mf-settings-card{padding:14px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-base));margin-bottom:10px}.mf-settings-card strong{display:block;font-size:13px}.mf-settings-card small{display:block;margin-top:5px;color:var(--dsw-alias-label-secondary);line-height:1.5}.mf-settings-action{margin-top:14px;padding:8px 12px;border:0;border-radius:6px;background:var(--dsw-alias-state-business-primary);color:#fff;cursor:pointer;font:12px/1.2 sans-serif}",
   ".mf-settings-action:disabled{opacity:.55;cursor:wait}.mf-settings-status{display:grid;gap:8px;margin-top:12px}.mf-settings-status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:5px;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base));font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-settings-status-row strong{color:var(--dsw-alias-state-error-primary);font-weight:600;text-align:right;word-break:break-word}.mf-settings-status-row strong.ok{color:var(--dsw-alias-state-success-primary)}.mf-settings-error{display:block;color:var(--dsw-alias-state-error-primary);line-height:1.5;word-break:break-word}"
 ].join("");
@@ -1908,8 +1921,8 @@ function SettingsPanel(props) {
   } }, h("div", { className: "mf-settings", role: "dialog", "aria-label": "\u58A8\u6249\u8BBE\u7F6E" }, h("header", { className: "mf-settings-head" }, h("strong", null, "\u58A8\u6249\u8BBE\u7F6E"), h("small", null, "\u96C6\u4E2D\u7BA1\u7406\u5B50\u4EE3\u7406\u3001\u6307\u4EE4\u3001\u6458\u8981\u4E0E\u5199\u4F5C\u914D\u7F6E"), h("button", { className: "mf-action-icon", type: "button", title: "\u5173\u95ED", onClick: close }, "\xD7")), h("div", { className: "mf-settings-body" }, h("nav", { className: "mf-settings-nav" }, items.map((item) => h("button", { key: item[0], type: "button", className: active === item[0] ? "on" : "", onClick: () => select(item[0]) }, h("span", null, h("strong", null, item[1]), h("small", null, item[2]))))), h("main", { className: "mf-settings-content" }, content))));
 }
 
-// src/client/agent-models-panel.js
-var AGENT_MODELS_PANEL_CSS = ".mf-models-overlay{position:fixed;inset:0;z-index:137;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.36)}.mf-models-panel{width:min(860px,calc(100vw - 40px));max-height:calc(100vh - 64px);display:grid;grid-template-rows:58px minmax(0,1fr) auto;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.32)}.mf-models-head{display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-models-head>div{flex:1}.mf-models-head strong{display:block;font-size:14px}.mf-models-head small{display:block;margin-top:4px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-models-body{padding:18px;overflow:auto}.mf-model-card{padding:15px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;margin-bottom:12px}.mf-model-card h3{margin:0 0 6px;font-size:13px}.mf-model-card p{margin:0 0 14px;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.6}.mf-model-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mf-model-fields label,.mf-model-row input,.mf-model-row select{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-model-fields select,.mf-model-row select{display:block;width:100%;box-sizing:border-box;margin-top:5px;padding:8px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);outline:0}.mf-model-row{display:grid;grid-template-columns:minmax(130px,1fr) 70px 1fr 1fr;gap:9px;align-items:end;padding:10px 0;border-top:1px solid var(--dsw-alias-border-l1)}.mf-model-role strong,.mf-model-role small{display:block}.mf-model-role strong{font-size:12px}.mf-model-role small{margin-top:3px;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-model-check{display:flex;align-items:center;gap:5px;padding-bottom:8px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-model-row select:disabled{opacity:.45}.mf-model-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--dsw-alias-border-l1)}@media(max-width:620px){.mf-models-panel{width:calc(100vw - 20px)}.mf-model-fields{grid-template-columns:1fr}.mf-model-row{grid-template-columns:1fr 70px}.mf-model-row select{grid-column:span 2}}";
+// plugin/src/client/agent-models-panel.js
+var AGENT_MODELS_PANEL_CSS = ".mf-models-overlay{position:fixed;inset:0;z-index:137;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.36)}.mf-models-panel{width:min(860px,calc(100vw - 40px));max-height:calc(100vh - 64px);display:grid;grid-template-rows:58px minmax(0,1fr) auto;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.32)}.mf-models-head{display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-models-head>div{flex:1}.mf-models-head strong{display:block;font-size:14px}.mf-models-head small{display:block;margin-top:4px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-models-body{padding:18px;overflow:auto}.mf-model-card{padding:15px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;margin-bottom:12px}.mf-model-card h3{margin:0 0 6px;font-size:13px}.mf-model-card p{margin:0 0 14px;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.6}.mf-model-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.mf-model-fields label,.mf-model-row input,.mf-model-row select{min-width:0;font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-model-fields select,.mf-model-row select{display:block;max-width:100%;min-width:0;width:100%;box-sizing:border-box;margin-top:5px;padding:8px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);outline:0}.mf-model-row{display:grid;grid-template-columns:minmax(0,1.2fr) 70px minmax(0,1fr) minmax(0,1fr);gap:9px;align-items:end;min-width:0;padding:10px 0;border-top:1px solid var(--dsw-alias-border-l1)}.mf-model-role{min-width:0}.mf-model-role strong,.mf-model-role small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-model-role strong{font-size:12px}.mf-model-role small{margin-top:3px;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-model-check{display:flex;align-items:center;gap:5px;min-width:0;padding-bottom:8px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-model-row select:disabled{opacity:.45}.mf-model-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--dsw-alias-border-l1)}@media(max-width:620px){.mf-models-panel{width:calc(100vw - 20px)}.mf-model-fields{grid-template-columns:1fr}.mf-model-row{grid-template-columns:1fr 70px}.mf-model-row select{grid-column:span 2}}";
 var ReactRef = null;
 function getReact() {
   if (ReactRef) return ReactRef;
@@ -1957,20 +1970,29 @@ function AgentModelsPanel(props) {
   return h("div", { className: "mf-models-overlay", onMouseDown: (event) => {
     if (event.target === event.currentTarget) close();
   } }, h("div", { className: "mf-models-panel", role: "dialog", "aria-label": "\u5B50\u4EE3\u7406\u6A21\u578B\u8BBE\u7F6E" }, h("header", { className: "mf-models-head" }, h("div", null, h("strong", null, "\u5B50\u4EE3\u7406\u6A21\u578B"), h("small", null, "DSH \u5B9E\u65F6\u76EE\u5F55 \xB7 \u4E13\u7528\u6A21\u578B\u4F18\u5148\uFF0C\u672A\u914D\u7F6E\u65F6\u4F7F\u7528\u901A\u7528\u6A21\u578B")), h("button", { className: "mf-action-icon", type: "button", title: "\u5173\u95ED", onClick: close }, "\xD7")), h("main", { className: "mf-models-body" }, props && props.error ? h("div", { className: "mf-alert" }, props.error) : null, !providerEntries(catalog).length ? h("div", { className: "mf-alert" }, "\u5F53\u524D\u6CA1\u6709\u53EF\u7528\u7684 DSH \u6A21\u578B\u76EE\u5F55\uFF0C\u8BF7\u68C0\u67E5 Provider \u914D\u7F6E\u3002") : null, h("section", { className: "mf-model-card" }, h("h3", null, "\u901A\u7528\u6A21\u578B"), h("p", null, "\u6CA1\u6709\u4E13\u7528\u6A21\u578B\u7684\u5B50\u4EE3\u7406\uFF0C\u4EE5\u53CA\u666E\u901A\u5B50\u4EE3\u7406\uFF0C\u4F7F\u7528\u6B64\u6A21\u578B\u3002\u7559\u7A7A\u5219\u56DE\u9000\u5230 DSH \u9ED8\u8BA4\u6A21\u578B\u3002"), h("div", { className: "mf-model-fields" }, h("label", null, "Provider", h(ProviderSelect, { h, value: general.provider, catalog, onChange: (value) => {
-    patchGeneral("provider", value);
-    if (!modelEntries(catalog, value).some((item) => item.id === general.model)) patchGeneral("model", "");
+    setDraft((current) => {
+      const nextGeneral = { ...current.general || {}, mode: "general", provider: value };
+      if (!modelEntries(catalog, value).some((item) => item.id === nextGeneral.model)) nextGeneral.model = "";
+      return { ...current, general: nextGeneral };
+    });
   } })), h("label", null, "Model", h(ModelSelect, { h, value: general.model, provider: general.provider, catalog, onChange: (value) => patchGeneral("model", value) })))), h("section", { className: "mf-model-card" }, h("h3", null, "\u4E13\u4E1A\u5B50\u4EE3\u7406"), h("p", null, "\u4ECE DSH \u5B9E\u65F6\u76EE\u5F55\u9009\u62E9 Provider \u548C Model\uFF1B\u542F\u7528\u4E13\u7528\u6A21\u578B\u540E\uFF0C\u5B83\u4F1A\u8986\u76D6\u901A\u7528\u6A21\u578B\u3002"), roles.length ? roles.map((role) => {
     const id = role.id;
     const item = byRole[id] || {};
     const dedicated = item.mode === "dedicated" || !!item.model;
-    return h("div", { className: "mf-model-row", key: id }, h("div", { className: "mf-model-role" }, h("strong", null, role.name || id), h("small", null, id)), h("label", { className: "mf-model-check" }, h("input", { type: "checkbox", checked: dedicated, onChange: (event) => patchRole(id, "mode", event.target.checked ? "dedicated" : "general") }), "\u4E13\u7528"), h(ProviderSelect, { h, value: item.provider, catalog, disabled: !dedicated, onChange: (value) => {
+    return h("div", { className: "mf-model-row", key: id }, h("div", { className: "mf-model-role" }, h("strong", null, role.name || id), h("small", null, id)), h("label", { className: "mf-model-check" }, h("input", { type: "checkbox", checked: dedicated, onChange: (event) => {
+      if (event.target.checked) patchRole(id, "mode", "dedicated");
+      else setDraft((current) => {
+        const previous = (current.byRole || {})[id] || {};
+        return { ...current, byRole: { ...current.byRole || {}, [id]: { ...previous, mode: "general", provider: "", model: "" } } };
+      });
+    } }), "\u4E13\u7528"), h(ProviderSelect, { h, value: item.provider, catalog, disabled: !dedicated, onChange: (value) => {
       patchRole(id, "provider", value);
       if (!modelEntries(catalog, value).some((entry) => entry.id === item.model)) patchRole(id, "model", "");
     } }), h(ModelSelect, { h, value: item.model, provider: item.provider, catalog, disabled: !dedicated, onChange: (value) => patchRole(id, "model", value) }));
   }) : h("div", { className: "mf-empty" }, "\u5F53\u524D\u9879\u76EE\u8FD8\u6CA1\u6709\u5B50\u4EE3\u7406\u6A21\u677F\uFF0C\u8BF7\u5148\u521B\u5EFA\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD\u3002")), h("footer", { className: "mf-model-actions" }, h("button", { className: "mf-btn", type: "button", onClick: close }, "\u53D6\u6D88"), h("button", { className: "mf-btn mf-primary", type: "button", disabled: !!(props && props.busy), onClick: save }, props && props.busy ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u6A21\u578B\u914D\u7F6E")))));
 }
 
-// src/client/editor-limits.js
+// plugin/src/client/editor-limits.js
 var MAX_EDITOR_CONTENT_LINES = 2e3;
 var MAX_EDITOR_CONTENT_CHARACTERS = 1e5;
 var LINE_SEPARATORS = /* @__PURE__ */ new Set([
@@ -2016,7 +2038,7 @@ function formatContentLimitError(limit) {
   return `\u6B63\u6587\u8D85\u51FA\u4E0A\u9650\uFF1A\u5F53\u524D ${characterCount} \u5B57 / ${MAX_EDITOR_CONTENT_CHARACTERS} \u5B57\uFF0C${lineCount} \u884C / ${MAX_EDITOR_CONTENT_LINES} \u884C\u3002\u8BF7\u62C6\u5206\u7AE0\u8282\u540E\u518D\u4FDD\u5B58\u3002`;
 }
 
-// src/client/agent-bridge.js
+// plugin/src/client/agent-bridge.js
 var MENTION_MAX_EXCERPT = 4e3;
 function toText(value) {
   if (value == null) return "";
@@ -2085,7 +2107,7 @@ function buildReviewerMention(input) {
   return [REVIEWER_HEADER, "", buildChapterMention(source)].join("\n");
 }
 
-// src/client/worldbook-tools.js
+// plugin/src/client/worldbook-tools.js
 function idOf(item) {
   if (typeof item === "string") return item;
   if (item && typeof item === "object" && !Array.isArray(item) && typeof item.id === "string") return item.id;
@@ -2185,7 +2207,7 @@ function buildBulkDeletePlan(entries, selectedIds) {
   return { entryIds, count: entryIds.length };
 }
 
-// src/client/layout.js
+// plugin/src/client/layout.js
 var LAYOUT_DEFAULTS = { left: 210, middle: 250 };
 var LAYOUT_MIN = { left: 180, middle: 180 };
 var LAYOUT_MAX = { left: 420, middle: 640 };
@@ -2278,7 +2300,7 @@ function saveLayout(storage, key, layout) {
   }
 }
 
-// src/client/workspace-utils.js
+// plugin/src/client/workspace-utils.js
 function fmtTime(at) {
   try {
     return new Date(at).toLocaleString();
@@ -2293,7 +2315,7 @@ function countWords(text) {
   return String(text).replace(/\s+/g, "").length;
 }
 
-// src/client/chat-utils.js
+// plugin/src/client/chat-utils.js
 function chatTextOf(blocks) {
   const out = [];
   (Array.isArray(blocks) ? blocks : []).forEach((block) => {
@@ -2342,7 +2364,7 @@ function normalizeChatItems(snap) {
   return items;
 }
 
-// src/client/legacy.js
+// plugin/src/client/legacy.js
 function createClient(require2) {
   const module = { exports: {} };
   const exports = module.exports;
@@ -2733,7 +2755,7 @@ function createClient(require2) {
     return h(
       "div",
       { className: "mf-bubble" + (on ? " on" : "") },
-      h("div", { className: "mf-bubble-panel", "aria-hidden": on ? void 0 : "true" }, h(ErrorBoundary, null, h(Workspace, { mode: "web", onCollapse: () => setBubbleOn(false) }))),
+      h("div", { className: "mf-bubble-panel", "aria-hidden": on ? void 0 : "true" }, h(ErrorBoundary, null, h(Workspace, { mode: "web", onCollapse: () => setBubbleOn(false), onOpenSettings: () => setBubbleOn(true) }))),
       h("button", { className: "mf-orb" + (on ? " on" : ""), type: "button", title: on ? "\u6536\u8D77\u58A8\u6249\uFF0C\u8FD4\u56DE\u539F\u7248 web" : "\u6253\u5F00\u58A8\u6249\u5199\u4F5C\u53F0\uFF08\u539F\u7248 web \u53D8\u5F62\uFF09", onClick: () => setBubbleOn(!on) }, on ? "\u2715" : "\u58A8")
     );
   }
@@ -2890,6 +2912,7 @@ function createClient(require2) {
     const [retrievalStatus, setRetrievalStatus] = React.useState(null);
     const [retrievalBusy, setRetrievalBusy] = React.useState(false);
     const [roles, setRoles] = React.useState([]);
+    const [roleScopeId, setRoleScopeId] = React.useState("");
     const [roleActiveId, setRoleActiveId] = React.useState("");
     const [roleDetail, setRoleDetail] = React.useState(null);
     const [roleBusy, setRoleBusy] = React.useState(false);
@@ -4161,12 +4184,32 @@ function createClient(require2) {
         setChainError("\u8FD0\u884C\u94FE\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
       });
     }
-    function loadRoles(scopeId = projectId) {
+    function loadRoleDetail(scopeId, roleId) {
+      if (!scopeId || !roleId) {
+        setRoleDetail(null);
+        return Promise.resolve(null);
+      }
+      setRoleDetail(null);
+      return call("read-role", { projectId: scopeId, roleId }).then((result) => {
+        if (result && result.error) throw new Error(result.error);
+        const next = result && result.role ? result.role : null;
+        setRoleDetail(next);
+        return next;
+      });
+    }
+    function loadRoles(scopeId = roleScopeId || projectId, preferredRoleId = roleActiveId) {
       if (!scopeId) return;
       Promise.all([call("list-roles", { projectId: scopeId }), call("list-instructions")]).then(([rolesResult, instructionResult]) => {
-        setRoles(Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : []);
+        if (rolesResult && rolesResult.error) throw new Error(rolesResult.error);
+        if (instructionResult && instructionResult.error) throw new Error(instructionResult.error);
+        const nextRoles = Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : [];
+        const nextRoleId = nextRoles.some((role) => role && role.id === preferredRoleId) ? preferredRoleId : nextRoles[0] && nextRoles[0].id || "";
+        setRoleScopeId(scopeId);
+        setRoles(nextRoles);
+        setRoleActiveId(nextRoleId);
         setPrivateInstructions(Array.isArray(instructionResult && (instructionResult.items || instructionResult.instructions)) ? instructionResult.items || instructionResult.instructions : []);
         setRoleError("");
+        return loadRoleDetail(scopeId, nextRoleId);
       }).catch((failure) => {
         setRoles([]);
         setPrivateInstructions([]);
@@ -4178,13 +4221,14 @@ function createClient(require2) {
       call("retrieval-model-status").then((result) => setRetrievalStatus(result || null)).catch((failure) => setRetrievalStatus({ embeddingReady: false, rerankReady: false, embeddingError: String(failure && failure.message || failure) })).finally(() => setRetrievalBusy(false));
     }
     function openSettingsPanel() {
+      if (props && props.onOpenSettings) props.onOpenSettings();
       setSettingsOpen(true);
       if (!retrievalStatus) loadRetrievalStatus();
     }
     function openModelsPanel() {
       setModelsOpen(true);
       setModelError("");
-      Promise.all([projectId ? call("list-roles", { projectId }) : Promise.resolve({ roles: [] }), call("get-model-settings"), call("list-model-catalog")]).then(([rolesResult, modelResult, catalogResult]) => {
+      Promise.all([projectId ? call("list-roles", { projectId }) : Promise.resolve({ roles: [{ id: "writer", name: "\u6B63\u6587\u5199\u4F5C\u8005" }, { id: "reviewer", name: "\u5BA1\u7A3F\u8005" }, { id: "analyzer", name: "\u8BBE\u5B9A\u5206\u6790\u8005" }, { id: "polisher", name: "\u8BED\u8A00\u6DA6\u8272\u8005" }] }), call("get-model-settings"), call("list-model-catalog")]).then(([rolesResult, modelResult, catalogResult]) => {
         setRoles(Array.isArray(rolesResult && rolesResult.roles) ? rolesResult.roles : []);
         setModelSettings(modelResult && modelResult.settings ? modelResult.settings : { version: 1, general: {}, byRole: {}, byProject: {} });
         setModelCatalog(catalogResult && catalogResult.providers ? catalogResult : { providers: [] });
@@ -4193,8 +4237,15 @@ function createClient(require2) {
     function saveModelSettings(settings) {
       setModelBusy(true);
       setModelError("");
-      call("save-model-settings", { settings }).then((result) => {
-        setModelSettings(result && result.settings ? result.settings : settings);
+      const current = modelSettings && typeof modelSettings === "object" ? modelSettings : { version: 1, general: {}, byRole: {}, byProject: {} };
+      const next = { ...current, version: 1, general: current.general || {}, byRole: current.byRole || {}, byProject: { ...current.byProject || {} } };
+      if (projectId) next.byProject[projectId] = { general: settings.general || {}, byRole: settings.byRole || {} };
+      else {
+        next.general = settings.general || {};
+        next.byRole = settings.byRole || {};
+      }
+      call("save-model-settings", { settings: next }).then((result) => {
+        setModelSettings(result && result.settings ? result.settings : next);
         setModelBusy(false);
         setModelsOpen(false);
       }).catch((failure) => {
@@ -4210,47 +4261,43 @@ function createClient(require2) {
         return;
       }
       if (!projectId) pickProject(selectedId);
+      setRoleScopeId(selectedId);
       setRolesOpen(true);
       setRoleError("");
       setRoleDetail(null);
       setRoleActiveId("");
-      loadRoles(selectedId);
+      loadRoles(selectedId, "");
     }
     function handleSelectRole(roleId) {
       setRoleActiveId(roleId || "");
-      setRoleDetail(null);
-      if (!projectId || !roleId) return;
-      call("read-role", { projectId, roleId }).then((result) => {
-        setRoleDetail(result && result.role ? result.role : null);
-      }).catch((failure) => {
+      const scopeId = roleScopeId || projectId;
+      loadRoleDetail(scopeId, roleId).catch((failure) => {
         setRoleError("\u8BFB\u53D6\u63D0\u793A\u8BCD\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
       });
     }
     function handleSaveRole(input) {
-      if (!projectId || roleBusy) return;
+      const scopeId = roleScopeId || projectId;
+      if (!scopeId || roleBusy) return;
       setRoleBusy(true);
       setRoleError("");
-      call("save-role", { projectId, roleId: input && input.roleId, name: input && input.name, entries: input && input.entries, defaultInstructions: input && input.defaultInstructions }).then((result) => {
+      call("save-role", { projectId: scopeId, roleId: input && input.roleId, name: input && input.name, entries: input && input.entries, defaultInstructions: input && input.defaultInstructions }).then((result) => {
+        if (result && result.error) throw new Error(result.error);
         setRoleBusy(false);
         if (result && result.role) setRoleActiveId(result.role.id);
-        loadRoles();
-        if (result && result.role) setRoleDetail(result.role);
+        loadRoles(scopeId, result && result.role ? result.role.id : "");
       }).catch((failure) => {
         setRoleBusy(false);
         setRoleError("\u4FDD\u5B58\u63D0\u793A\u8BCD\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
       });
     }
     function handleDeleteRole(role) {
-      if (!projectId || !role || roleBusy) return;
+      const scopeId = roleScopeId || projectId;
+      if (!scopeId || !role || roleBusy) return;
       if (!arm("delete-role", role.id)) return;
-      call("delete-role", { projectId, roleId: role.id }).then(() => {
+      call("delete-role", { projectId: scopeId, roleId: role.id }).then((result) => {
+        if (result && result.error) throw new Error(result.error);
         disarm();
-        if (roleActiveId === role.id) {
-          setRoleActiveId("");
-          setRoleDetail(null);
-        }
-        ;
-        loadRoles();
+        loadRoles(scopeId, result && result.role ? result.role.id : "");
       }).catch((failure) => {
         disarm();
         setRoleError("\u5220\u9664\u63D0\u793A\u8BCD\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
@@ -4260,6 +4307,10 @@ function createClient(require2) {
       const list = roleDetail && Array.isArray(roleDetail.entries) ? roleDetail.entries.slice() : [];
       list.push({ name: "", content: "", order: list.length, isEnabled: true });
       setRoleDetail(Object.assign({}, roleDetail, { entries: list }));
+    }
+    function handleUpdateRoleName(name) {
+      if (!roleDetail) return;
+      setRoleDetail(Object.assign({}, roleDetail, { name: String(name == null ? "" : name) }));
     }
     function handleUpdateEntry(index, patch) {
       if (!roleDetail || !Array.isArray(roleDetail.entries)) return;
@@ -6557,7 +6608,7 @@ function createClient(require2) {
           ) : null
         )
       ),
-      modelsOpen ? h(AgentModelsPanel, { roles, settings: modelSettings, catalog: modelCatalog, busy: modelBusy, error: modelError, onSave: saveModelSettings, onClose: () => setModelsOpen(false) }) : null,
+      modelsOpen ? h(AgentModelsPanel, { roles, settings: projectId && modelSettings.byProject && modelSettings.byProject[projectId] ? modelSettings.byProject[projectId] : modelSettings, catalog: modelCatalog, busy: modelBusy, error: modelError, onSave: saveModelSettings, onClose: () => setModelsOpen(false) }) : null,
       settingsOpen ? h(SettingsPanel, { active: settingsSection, onSelect: (section) => {
         setSettingsSection(section);
         if (section === "retrieval" && !retrievalStatus && !retrievalBusy) loadRetrievalStatus();
@@ -6641,7 +6692,7 @@ function createClient(require2) {
       chainsOpen ? h(PromptChainsPanel, { open: true, onClose: () => setChainsOpen(false), chains, activeChainId: chainActiveId, onSelect: setChainActiveId, busy: chainBusy, error: chainError, result: chainResult, lastPrompt: chainLastPrompt, onSave: handleSaveChain, onDelete: handleDeleteChain, onRun: handleRunChain, onHistory: (chain) => {
         if (chain && chain.id) openGitHistory(chain.id);
       } }) : null,
-      rolesOpen ? h(RolesPanel, { open: true, onClose: () => setRolesOpen(false), roles, activeRoleId: roleActiveId, onSelect: handleSelectRole, detail: roleDetail, busy: roleBusy, error: roleError, onSave: handleSaveRole, onDelete: handleDeleteRole, onAddEntry: handleAddEntry, onUpdateEntry: handleUpdateEntry, onDeleteEntry: handleDeleteEntry, instructions: privateInstructions, onToggleInstruction: handleToggleInstruction }) : null,
+      rolesOpen ? h(RolesPanel, { open: true, onClose: () => setRolesOpen(false), roles, activeRoleId: roleActiveId, onSelect: handleSelectRole, detail: roleDetail, busy: roleBusy, error: roleError, onSave: handleSaveRole, onDelete: handleDeleteRole, onAddEntry: handleAddEntry, onUpdateName: handleUpdateRoleName, onUpdateEntry: handleUpdateEntry, onDeleteEntry: handleDeleteEntry, instructions: privateInstructions, onToggleInstruction: handleToggleInstruction }) : null,
       dashOpen ? h(WritingDashboard, { open: true, onClose: () => setDashOpen(false), days: stats && stats.calendar ? stats.calendar : {} }) : null,
       gitHistOpen ? h("div", { className: "mf-import", onMouseDown: (event) => {
         event.stopPropagation();
@@ -6791,6 +6842,6 @@ function createClient(require2) {
   return module.exports;
 }
 
-// src/client/index.js
+// plugin/src/client/index.js
 window.__ModuleLoader__.load({ id: "mofei-dsh", factory: createClient });
 //# sourceMappingURL=client.js.map
