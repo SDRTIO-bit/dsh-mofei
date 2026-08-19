@@ -2,7 +2,7 @@
 
 墨扉是运行在 DeepSeek Harness（DSH）中的小说写作工作台插件。它把项目、卷章、角色、世界书、笔记、摘要和提示词链放在同一套写作数据模型里，并将 `mofei-writer` 写作会话与 DSH 原生工作区连接起来。
 
-当前固定插件版本：`mofei-dsh v0.24.0`。
+当前固定插件版本：`mofei-dsh v0.25.0`。
 
 ## 能做什么
 
@@ -10,7 +10,9 @@
 - 写作设定：角色、笔记、世界书、摘要、写作技能和项目级提示词链。
 - 文件优先：项目根目录中的 `project.yml`、`chapters/`、`styles/` 等 Markdown 资产可直接被 Git 管理。
 - DSH 工作区联动：新项目默认使用当前 DSH 会话的 `cwd`，也可以在初始向导中选择专用小说文件夹。
-- Agent 协作：`mofei-writer` 会话使用同一工作区，可通过 `mofei_*` 工具读写章节和设定。
+- Agent 协作：`mofei-writer` 会话使用同一工作区，可通过 `mofei_*` 工具读写章节和设定；
+  子代理角色 = 四个内置角色（Writer/Reviewer/Analyzer/Polisher）+ 项目覆盖/自建，
+  由 `subagent_with_model` 按角色装配 persona 与模型。
 - 快捷操作：顶栏三点打开可搜索的写作操作面板；支持关闭按钮、再次点击、`Escape` 和点击外部收起，不暴露内部命令名。
 - 原生界面共存：墨扉工作台从左侧展开，官方 DSH 对话和 Composer 保留在右侧；官方会话侧栏展开时，工作台会自动收紧，不遮挡输入区。
 
@@ -103,7 +105,7 @@ tests/verify-p0-lifecycle.mjs   Host 生命周期回归（mock ctx）
 docs/ARCHITECTURE.md            架构说明（Host/Client 两半体与装配）
 docs/ACCEPTANCE-2026-08.md      整体验收报告
 AGENTS.md                       Agent 协作约定（mofei_* 工具与写作流水线）
-v0.24-changelog.md              最新变更说明
+v0.25-changelog.md              最新变更说明
 ```
 
 ## 开发与验收
@@ -128,10 +130,11 @@ node verify-v0.18-onboard.cjs
 
 ## 文档导航
 
-- [v0.24 变更说明](v0.24-changelog.md)
+- [v0.25 变更说明](v0.25-changelog.md)
 - [架构说明](docs/ARCHITECTURE.md)
 - [整体验收报告](docs/ACCEPTANCE-2026-08.md)
 - [Agent 协作约定](AGENTS.md)
+- [dsh-novel-tavern fork 调研](docs/NOVEL-TAVERN-FORK-NOTES.md)（小说存储/酒馆格式对照与借鉴）
 - 历史交接与规划文档已归档至 `docs/archive/`
 
 ## 许可与来源
