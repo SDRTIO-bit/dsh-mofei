@@ -2,7 +2,8 @@
 
 > 调研对象：`F:\game\SillyTavern-1.13.2\dsh-novel-tavern-main\dsh-novel-tavern-main`
 > （DeepSeek Harness fork，目录名 `dsh-novel-tavern-main`，含 `packages/novel` 小说扩展族）。
-> 本文记录该 fork 的结构、能力与 墨扉（mofei-dsh）的对应关系，供后续集成决策参考。
+> 本文记录该 fork 的结构、能力与 墨扉（mofei-dsh）的对应关系。
+> **可执行的逐条借鉴清单见 [`NOVEL-TAVERN-REFERENCE.md`](NOVEL-TAVERN-REFERENCE.md)（含源码位置→墨扉方案→优先级）。**
 > ⚠️ 该目录为压缩包解出的源码快照，**无 `.git`**；以 zip `dsh-novel-tavern-main.zip` 为原始分发物。
 
 ## 1. 这是什么

@@ -134,7 +134,8 @@ node verify-v0.18-onboard.cjs
 - [架构说明](docs/ARCHITECTURE.md)
 - [整体验收报告](docs/ACCEPTANCE-2026-08.md)
 - [Agent 协作约定](AGENTS.md)
-- [dsh-novel-tavern fork 调研](docs/NOVEL-TAVERN-FORK-NOTES.md)（小说存储/酒馆格式对照与借鉴）
+- [dsh-novel-tavern fork 调研](docs/NOVEL-TAVERN-FORK-NOTES.md)（小说存储/酒馆格式对照）
+- [dsh-novel-tavern 参考手册](docs/NOVEL-TAVERN-REFERENCE.md)（逐条借鉴清单与优先级）
 - 历史交接与规划文档已归档至 `docs/archive/`
 
 ## 许可与来源

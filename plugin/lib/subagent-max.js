@@ -95,28 +95,37 @@ async function settleStart(start, signal) {
 
 // 项目角色的持久化 id 通常是 role-*，但中控和作者也会按角色名称调用。
 // 先按 id 读取，再用 listRoles 支持名称别名；找不到时交给静态 preset 角色兜底。
+// v0.24.1: 修正匹配顺序——同名角色下「项目覆盖（source=project）」必须优先于内置角色。
+// 原实现直接 readRole(roleKey) 按 id 精确命中了内置 writer（id='writer'）就返回，
+// 导致用户配置的项目角色（id='role-8234', name='writer', source=project）永远抢不到。
+// 现在改为：listRoles 全量（内置+项目）里按 id/name 匹配，项目覆盖优先，再 fallback readRole。
 async function resolveProjectRole(mofei, projectId, roleKey) {
   if (mofei === undefined || !projectId || !roleKey) return null
+  // 1) 全量角色列表（内置 + 项目覆盖），按 id 或 name 匹配，项目覆盖优先。
+  if (typeof mofei.listRoles === 'function') {
+    try {
+      const result = await mofei.listRoles(projectId)
+      const roles = Array.isArray(result) ? result : result && Array.isArray(result.roles) ? result.roles : []
+      const key = String(roleKey).trim().toLocaleLowerCase()
+      const matches = roles.filter((role) => {
+        if (!role || typeof role !== 'object') return false
+        const id = typeof role.id === 'string' ? role.id.trim().toLocaleLowerCase() : ''
+        const name = typeof role.name === 'string' ? role.name.trim().toLocaleLowerCase() : ''
+        return id === key || name === key
+      })
+      if (matches.length > 0) {
+        return matches.find((role) => role.source === 'project' || role.isBuiltin === false) || matches[0]
+      }
+    } catch (error) { /* 列表不可用时走 readRole 兜底 */ }
+  }
+  // 2) 兜底：按持久化 id 精确读取（roleKey 可能是 role-* id）。
   if (typeof mofei.readRole === 'function') {
     try {
       const role = await mofei.readRole(projectId, roleKey)
       if (role && typeof role === 'object') return role
-    } catch (error) { /* roleKey 可能是名称而不是持久化 id */ }
+    } catch (error) { /* roleKey 是名称而非持久化 id 时忽略 */ }
   }
-  if (typeof mofei.listRoles !== 'function') return null
-  try {
-    const result = await mofei.listRoles(projectId)
-    const roles = Array.isArray(result) ? result : result && Array.isArray(result.roles) ? result.roles : []
-    const key = String(roleKey).trim().toLocaleLowerCase()
-    return roles.find((role) => {
-      if (!role || typeof role !== 'object') return false
-      const id = typeof role.id === 'string' ? role.id.trim().toLocaleLowerCase() : ''
-      const name = typeof role.name === 'string' ? role.name.trim().toLocaleLowerCase() : ''
-      return id === key || name === key
-    }) || null
-  } catch (error) {
-    return null
-  }
+  return null
 }
 
 function roleIdOf(role, fallback) {
