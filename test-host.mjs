@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import plugin from './plugin/lib/index.js'
@@ -886,27 +886,92 @@ test('实体快照：move-world-entry order 快照与 rollback 恢复 order', as
   await rpc('delete-project', { projectId })
 })
 
-test('实体历史持久化：rollback 后第二实例读取同一文件 history 仍在', async () => {
-  const { project } = await rpc('create-project', { title: '快照持久化' })
-  const projectId = project.id
-  const { character } = await rpc('create-character', { projectId, name: '曾用名' })
-  await rpc('update-character', { projectId, characterId: character.id, name: '现名' })
-  await rpc('rollback-entity', { projectId, kind: 'character', entityId: character.id, toRevision: 1 })
-  const hist = await rpc('entity-history', { projectId, kind: 'character', entityId: character.id })
-  assert.equal(hist.history.length, 2)
-  const routes2 = {}
-  plugin.apply({ fs: mockFs, sandboxPolicy: { workspaceRoot: root, resolve: () => ({}) }, webServer: { register: (d) => { routes2[d.path] = d } }, get: () => undefined, effect: () => {} })
-  const route2 = routes2['/api/mofei']
-  assert.ok(route2, 'persistence second instance route')
-  let body = ''
-  let done = false
-  const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: JSON.stringify({ method: 'entity-history', args: { projectId, kind: 'character', entityId: character.id } }), done: false }) } } }
-  const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
-  await route2.handler(req, res)
-  const value = JSON.parse(body).value
-  assert.equal(value.history.length, 2)
-  assert.equal(value.history[1].snapshot.name, '曾用名')
-  await rpc('delete-project', { projectId })
+test('v0.27 实体历史：JSON 抽离 + <id>.history.jsonl 落盘 + 第二实例回填 + revision 单调', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-entity-history-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const makeRoute = () => {
+    const routes = {}
+    plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+    const targetRoute = routes['/api/mofei']
+    return async (method, args = {}) => {
+      let body = ''
+      let done = false
+      const payload = JSON.stringify({ method, args })
+      const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+      const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+      await targetRoute.handler(req, res)
+      const parsed = JSON.parse(body)
+      if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+      return parsed.value
+    }
+  }
+  const firstRpc = makeRoute()
+  let projectId = ''
+  try {
+    const { project } = await firstRpc('create-project', { title: '实体历史' })
+    projectId = project.id
+    const { character } = await firstRpc('create-character', { projectId, name: '曾用名', description: '角色描述' })
+    await firstRpc('update-character', { projectId, characterId: character.id, name: '现名' })
+    // rollback 产生第二条快照：先把「现名」入史（revision 2），再恢复「曾用名」。
+    await firstRpc('rollback-entity', { projectId, kind: 'character', entityId: character.id, toRevision: 1 })
+    const { note } = await firstRpc('create-note', { projectId, title: '笔记一' })
+    // create-note 不吃 content；两次 update 产生两条快照（变更前状态）。
+    await firstRpc('update-note', { projectId, noteId: note.id, content: '内容一' })
+    await firstRpc('update-note', { projectId, noteId: note.id, title: '笔记二', content: '内容二' })
+    const { entry } = await firstRpc('create-world-entry', { projectId, name: '条目一', content: '世界一' })
+    await firstRpc('update-world-entry', { projectId, entryId: entry.id, name: '条目二', content: '世界二' })
+
+    // v0.27: JSON 索引不再含实体历史
+    const projectsJson = JSON.parse(await readFile(path.join(workspaceRoot, '.mofei-projects.json'), 'utf8'))
+    const stored = projectsJson.projects.find((item) => item.id === projectId)
+    assert.ok(stored, '项目必须落盘到 .mofei-projects.json')
+    for (const item of stored.characters) assert.equal(item.history, undefined, 'character.history 已抽离 JSON')
+    for (const item of stored.notes) assert.equal(item.history, undefined, 'note.history 已抽离 JSON')
+    for (const item of stored.worldEntries) assert.equal(item.history, undefined, 'worldEntry.history 已抽离 JSON')
+
+    // 文件树 <id>.history.jsonl 落盘且快照正确
+    const base = path.join(workspaceRoot, '.mofei', 'projects', projectId)
+    const characterLines = (await readFile(path.join(base, 'characters', character.id + '.history.jsonl'), 'utf8')).split('\n').filter(Boolean)
+    assert.equal(characterLines.length, 2, 'character 历史 2 条（update 快照 + rollback 快照）')
+    assert.equal(JSON.parse(characterLines[0]).snapshot.name, '曾用名', '首条快照 = 更新前状态')
+    assert.equal(JSON.parse(characterLines[1]).snapshot.name, '现名', 'rollback 前状态入史')
+    assert.ok(JSON.parse(characterLines[0]).at > 0 && JSON.parse(characterLines[1]).at > 0, '历史条目带 at 时间戳')
+    const noteLines = (await readFile(path.join(base, 'notes', note.id + '.history.jsonl'), 'utf8')).split('\n').filter(Boolean)
+    assert.equal(noteLines.length, 2, 'note 历史 2 条（两次 update 各快照一次变更前状态）')
+    // 历史条目快照的是「变更前」状态（pushEntityHistory 在应用修改前调用）。
+    assert.equal(JSON.parse(noteLines[0]).snapshot.title, '笔记一')
+    assert.equal(JSON.parse(noteLines[0]).snapshot.content, '')
+    assert.equal(JSON.parse(noteLines[1]).snapshot.title, '笔记一')
+    assert.equal(JSON.parse(noteLines[1]).snapshot.content, '内容一')
+    const worldLines = (await readFile(path.join(base, 'world', entry.id + '.history.jsonl'), 'utf8')).split('\n').filter(Boolean)
+    assert.equal(worldLines.length, 1)
+    assert.equal(JSON.parse(worldLines[0]).snapshot.name, '条目一')
+    assert.equal(JSON.parse(worldLines[0]).snapshot.content, '世界一')
+
+    // 第二实例：从文件树回填实体历史
+    const secondRpc = makeRoute()
+    const characterHistory = await secondRpc('entity-history', { projectId, kind: 'character', entityId: character.id })
+    assert.equal(characterHistory.history.length, 2, '第二实例从 .history.jsonl 回填 character 历史')
+    assert.equal(characterHistory.history[1].snapshot.name, '曾用名')
+    const noteHistory = await secondRpc('entity-history', { projectId, kind: 'note', entityId: note.id })
+    assert.equal(noteHistory.history.length, 2, '第二实例回填 note 历史')
+    assert.equal(noteHistory.history[1].snapshot.content, '', '首条快照 = 创建态（空正文）')
+    const worldHistory = await secondRpc('entity-history', { projectId, kind: 'world-entry', entityId: entry.id })
+    assert.equal(worldHistory.history.length, 1, '第二实例回填 world-entry 历史')
+
+    // historySeq 单调：回填后继续更新 → 新 revision 必须大于文件树最后 revision
+    await secondRpc('update-character', { projectId, characterId: character.id, description: '追加描述' })
+    const after = await secondRpc('entity-history', { projectId, kind: 'character', entityId: character.id })
+    assert.equal(after.history[0].revision, 3, '回填后 historySeq 单调递增（3 > 2）')
+  } finally {
+    if (projectId) { try { await firstRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
 })
 
 test('ENTITY_HISTORY_MAX：55 次 update-character 后历史长度≤50', async () => {
@@ -1525,6 +1590,137 @@ test('Windows ReplaceFileW 1175 短暂冲突会重试持久化写入', async () 
   const result = JSON.parse(body).value
   assert.ok(result.project)
   assert.equal(projectWrites, 2)
+})
+
+test('v0.27 回收站：删除章节/角色/笔记/世界书 → 镜像与历史移入 .mofei/trash 而非删除；reload 不复活', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-trash-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  const missing = async (file, label) => {
+    try {
+      await stat(file)
+      assert.fail(label + ' 镜像文件仍存在: ' + file)
+    } catch (error) {
+      if (error && error.name === 'AssertionError') throw error
+      assert.equal(error && error.code, 'ENOENT', label + ' 原位置应为 ENOENT（已移入回收站）')
+    }
+  }
+  const trashContains = async (projectId, relative) => {
+    // 回收站布局 = trash/<projectId>/<stamp>/<原相对路径>，因此用后缀匹配即可
+    // （stamp 目录名含实体 id，完整相对路径从 trashBase 算起会带 stamp 前缀）。
+    const trashBase = path.join(workspaceRoot, '.mofei', 'trash', projectId)
+    const suffix = path.sep + relative.split('/').join(path.sep)
+    let found = false
+    const walk = async (dir) => {
+      let entries = []
+      try { entries = await readdir(dir, { withFileTypes: true }) } catch (error) { return }
+      for (const entry of entries) {
+        const child = path.join(dir, entry.name)
+        if (entry.isDirectory()) await walk(child)
+        else if (child.endsWith(suffix)) found = true
+      }
+    }
+    await walk(trashBase)
+    return found
+  }
+  let projectId = ''
+  try {
+    const created = await workspaceRpc('create-project', { title: '回收站' })
+    projectId = created.project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '待删章节' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: 'v1', expectedRevision: chapter.revision })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: 'v2', expectedRevision: chapter.revision + 1 })
+    const { character } = await workspaceRpc('create-character', { projectId, name: '待删角色', description: '角色描述' })
+    await workspaceRpc('update-character', { projectId, characterId: character.id, name: '改名角色' })
+    const { note } = await workspaceRpc('create-note', { projectId, title: '待删笔记', content: '笔记内容' })
+    await workspaceRpc('update-note', { projectId, noteId: note.id, content: '笔记内容 2' })
+    const { entry } = await workspaceRpc('create-world-entry', { projectId, name: '待删条目', content: '世界内容' })
+    await workspaceRpc('update-world-entry', { projectId, entryId: entry.id, content: '世界内容 2' })
+
+    const base = path.join(workspaceRoot, '.mofei', 'projects', projectId)
+    const chapterFile = path.join(base, 'chapters', chapter.id + '.md')
+    const chapterHistoryFile = path.join(base, 'chapters', chapter.id + '.history.jsonl')
+    const characterFile = path.join(base, 'characters', character.id + '.md')
+    const characterHistoryFile = path.join(base, 'characters', character.id + '.history.jsonl')
+    const noteFile = path.join(base, 'notes', note.id + '.md')
+    const noteHistoryFile = path.join(base, 'notes', note.id + '.history.jsonl')
+    const worldFile = path.join(base, 'world', entry.id + '.md')
+    const worldHistoryFile = path.join(base, 'world', entry.id + '.history.jsonl')
+    // 删除前镜像与历史都在
+    await stat(chapterFile); await stat(chapterHistoryFile)
+    await stat(characterFile); await stat(characterHistoryFile)
+    await stat(noteFile); await stat(noteHistoryFile)
+    await stat(worldFile); await stat(worldHistoryFile)
+
+    await workspaceRpc('delete-chapter', { projectId, chapterId: chapter.id })
+    await workspaceRpc('delete-character', { projectId, characterId: character.id })
+    await workspaceRpc('delete-note', { projectId, noteId: note.id })
+    await workspaceRpc('delete-world-entry', { projectId, entryId: entry.id })
+
+    // 原位置全部消失（.md + .history.jsonl）
+    await missing(chapterFile, '章节 .md')
+    await missing(chapterHistoryFile, '章节 .history.jsonl')
+    await missing(characterFile, '角色 .md')
+    await missing(characterHistoryFile, '角色 .history.jsonl')
+    await missing(noteFile, '笔记 .md')
+    await missing(noteHistoryFile, '笔记 .history.jsonl')
+    await missing(worldFile, '世界书 .md')
+    await missing(worldHistoryFile, '世界书 .history.jsonl')
+
+    // 回收站里能找回每个实体的 .md 与 .history.jsonl（同批次目录）
+    assert.ok(await trashContains(projectId, 'chapters/' + chapter.id + '.md'), '章节 .md 在回收站')
+    assert.ok(await trashContains(projectId, 'chapters/' + chapter.id + '.history.jsonl'), '章节历史在回收站')
+    assert.ok(await trashContains(projectId, 'characters/' + character.id + '.md'), '角色 .md 在回收站')
+    assert.ok(await trashContains(projectId, 'characters/' + character.id + '.history.jsonl'), '角色历史在回收站')
+    assert.ok(await trashContains(projectId, 'notes/' + note.id + '.md'), '笔记 .md 在回收站')
+    assert.ok(await trashContains(projectId, 'notes/' + note.id + '.history.jsonl'), '笔记历史在回收站')
+    assert.ok(await trashContains(projectId, 'world/' + entry.id + '.md'), '世界书 .md 在回收站')
+    assert.ok(await trashContains(projectId, 'world/' + entry.id + '.history.jsonl'), '世界书历史在回收站')
+
+    // trash-list RPC 可见且按批次分组
+    const trash = await workspaceRpc('trash-list')
+    const myItems = trash.items.filter((item) => item.projectId === projectId)
+    assert.equal(myItems.length, 4, '4 个删除批次（章节/角色/笔记/世界书）')
+    const allFiles = myItems.flatMap((item) => item.files)
+    assert.ok(allFiles.includes('chapters/' + chapter.id + '.history.jsonl'), 'trash-list 含章节历史')
+    assert.ok(allFiles.includes('characters/' + character.id + '.history.jsonl'), 'trash-list 含角色历史')
+    assert.ok(allFiles.includes('notes/' + note.id + '.history.jsonl'), 'trash-list 含笔记历史')
+    assert.ok(allFiles.includes('world/' + entry.id + '.history.jsonl'), 'trash-list 含世界书历史')
+    assert.ok(myItems.every((item) => item.at > 0), '批次带 at 时间戳')
+
+    // reload-from-files 不复活
+    await workspaceRpc('reload-from-files')
+    const list = await workspaceRpc('list-projects')
+    const reloaded = list.projects.find((item) => item.id === projectId)
+    assert.ok(reloaded)
+    assert.equal(reloaded.chapters.some((item) => item.id === chapter.id), false, 'reload 后章节不复活')
+    assert.equal(reloaded.characters.some((item) => item.id === character.id), false, 'reload 后角色不复活')
+    assert.equal(reloaded.notes.some((item) => item.id === note.id), false, 'reload 后笔记不复活')
+    assert.equal(reloaded.worldEntries.some((item) => item.id === entry.id), false, 'reload 后世界书不复活')
+    // 回收站内容不受 reload 影响（仍在 trash 中）
+    assert.ok(await trashContains(projectId, 'chapters/' + chapter.id + '.history.jsonl'), 'reload 后回收站文件仍在')
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
 })
 
 let failed = 0
