@@ -47,12 +47,17 @@ export function chunkText(text, size = DEFAULT_RAG_CONFIG.chunkSize, overlap = D
   return out.filter(Boolean)
 }
 
-function sourceSignature(project, summaries) {
+function sourceSignature(project, summaries, contentOf) {
   const parts = []
-  for (const chapter of project && project.chapters || []) parts.push('c:' + chapter.id + ':' + (chapter.revision || 0) + ':' + String(chapter.content || '').length)
-  for (const item of project && project.characters || []) parts.push('r:' + item.id + ':' + String(item.name || '') + ':' + String(item.description || '').length)
-  for (const item of project && project.notes || []) parts.push('n:' + item.id + ':' + String(item.title || '') + ':' + String(item.content || '').length)
-  for (const item of project && project.worldEntries || []) parts.push('w:' + item.id + ':' + String(item.name || '') + ':' + String(item.content || '').length)
+  // v0.28: contentOf 优先（文件树加载器缓存）；无加载器时回退内存字段，行为与旧版一致。
+  const content = (kind, item) => {
+    if (contentOf) { const value = contentOf(kind, item); if (typeof value === 'string') return value }
+    return item && typeof item.content === 'string' ? item.content : ''
+  }
+  for (const chapter of project && project.chapters || []) parts.push('c:' + chapter.id + ':' + (chapter.revision || 0) + ':' + String(content('chapter', chapter)).length)
+  for (const item of project && project.characters || []) parts.push('r:' + item.id + ':' + String(item.name || '') + ':' + String(content('character', item)).length)
+  for (const item of project && project.notes || []) parts.push('n:' + item.id + ':' + String(item.title || '') + ':' + String(content('note', item)).length)
+  for (const item of project && project.worldEntries || []) parts.push('w:' + item.id + ':' + String(item.name || '') + ':' + String(content('world', item)).length)
   for (const id of Object.keys(summaries || {}).sort()) parts.push('s:' + id + ':' + String(summaries[id] && summaries[id].updatedAt || 0))
   return parts.join('|')
 }
@@ -60,14 +65,34 @@ function addChunks(out, entityType, entityId, title, content, meta, config) {
   const pieces = chunkText(content, config.chunkSize, config.chunkOverlap)
   pieces.forEach((text, index) => out.push({ id: entityType + ':' + entityId + ':' + index, entityType, entityId, title, chunkIndex: index, text, tokens: tokenize(text), ...meta }))
 }
-export function buildIndex(project, summaries, inputConfig = {}) {
+// v0.28: buildIndex 支持异步 readContent(kind, entityId) => Promise<string|null>——
+// file-first 后正文唯一来源是 .md 文件树，加载器直读文件；读不到或未提供时回退内存字段。
+// 变为 async 是兼容性升级：调用方须 await（旧同步用法不传 options 时行为不变）。
+export async function buildIndex(project, summaries, inputConfig = {}, options = {}) {
   const config = { ...DEFAULT_RAG_CONFIG, ...inputConfig }; const chunks = []
-  for (const chapter of project && project.chapters || []) addChunks(chunks, 'chapter', chapter.id, chapter.title, chapter.title + '\n' + chapter.content, { volumeId: chapter.volumeId || null }, config)
-  for (const item of project && project.characters || []) addChunks(chunks, 'character', item.id, item.name, item.name + '\n' + item.description, {}, config)
-  for (const item of project && project.notes || []) if (!item.isHidden) addChunks(chunks, 'note', item.id, item.title, item.title + '\n' + item.content, {}, config)
-  for (const item of project && project.worldEntries || []) if (item.isEnabled !== false) addChunks(chunks, 'world', item.id, item.name, item.name + '\n' + item.content, {}, config)
+  const readContent = options && typeof options.readContent === 'function' ? options.readContent : null
+  const contentCache = new Map()
+  const resolveContent = async (kind, entity, fallback) => {
+    const key = kind + ':' + entity.id
+    if (contentCache.has(key)) return contentCache.get(key)
+    let value = fallback
+    if (readContent) {
+      try {
+        const loaded = await readContent(kind, entity.id)
+        if (typeof loaded === 'string' && loaded) value = loaded
+      } catch (error) { /* 文件树读取失败时回退内存字段 */ }
+    }
+    contentCache.set(key, value)
+    return value
+  }
+  // 签名与 chunks 共用同一份加载结果，保证 indexStatus 的 fresh/stale 判定一致。
+  const contentOf = (kind, entity) => contentCache.get(kind + ':' + entity.id) || ''
+  for (const chapter of project && project.chapters || []) addChunks(chunks, 'chapter', chapter.id, chapter.title, chapter.title + '\n' + await resolveContent('chapter', chapter, chapter.content), { volumeId: chapter.volumeId || null }, config)
+  for (const item of project && project.characters || []) addChunks(chunks, 'character', item.id, item.name, item.name + '\n' + await resolveContent('character', item, item.description), {}, config)
+  for (const item of project && project.notes || []) if (!item.isHidden) addChunks(chunks, 'note', item.id, item.title, item.title + '\n' + await resolveContent('note', item, item.content), {}, config)
+  for (const item of project && project.worldEntries || []) if (item.isEnabled !== false) addChunks(chunks, 'world', item.id, item.name, item.name + '\n' + await resolveContent('world', item, item.content), {}, config)
   for (const id of Object.keys(summaries || {})) { const item = summaries[id]; if (item && item.summary) addChunks(chunks, 'summary', id, '摘要·' + id, item.summary, {}, config) }
-  return { version: RAG_INDEX_VERSION, projectId: project && project.id, signature: sourceSignature(project, summaries), config, builtAt: Date.now(), chunks }
+  return { version: RAG_INDEX_VERSION, projectId: project && project.id, signature: sourceSignature(project, summaries, contentOf), config, builtAt: Date.now(), chunks }
 }
 function bm25(queryTokens, chunk, df, total, avgLength) {
   const counts = new Map(); for (const token of chunk.tokens) counts.set(token, (counts.get(token) || 0) + 1)

@@ -1723,6 +1723,62 @@ test('v0.27 回收站：删除章节/角色/笔记/世界书 → 镜像与历史
   }
 })
 
+test('v0.28 RAG 索引重建：fileTreeBodyLoader 接入后 rag-build-index / search-rag 链路正常', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-rag-filetree-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  let projectId = ''
+  try {
+    const created = await workspaceRpc('create-project', { title: 'RAG 文件树' })
+    projectId = created.project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '剑冢' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '青锋剑出鞘，剑气纵横三万里。', expectedRevision: chapter.revision })
+    // 文件树镜像必须含最新正文（loader 的输入源）
+    const base = path.join(workspaceRoot, '.mofei', 'projects', projectId)
+    const chapterFile = await readFile(path.join(base, 'chapters', chapter.id + '.md'), 'utf8')
+    assert.ok(chapterFile.includes('青锋剑出鞘'), '镜像 .md 含最新正文')
+
+    // 重建索引（v0.28：readContent = fileTreeBodyLoader 直读文件树）
+    const built = await workspaceRpc('rag-build-index', { projectId })
+    assert.ok(built.builtAt > 0, '索引已构建')
+    assert.ok(built.indexedChunks >= 1)
+    assert.equal(built.status, 'fresh', '构建后索引与源数据一致')
+
+    // 检索命中正文（loader 与内存一致路径）
+    const found = await workspaceRpc('search-rag', { projectId, query: '青锋剑', force: true })
+    assert.ok(found.results.length >= 1, '命中正文 chunk')
+    const hit = found.results.find((item) => item.text.includes('青锋剑出鞘'))
+    assert.ok(hit, 'chunk 正文来自文件树 .md')
+    assert.equal(hit.entityType, 'chapter')
+    assert.equal(hit.entityId, chapter.id)
+    // rag-status 反映索引状态
+    const status = await workspaceRpc('rag-status', { projectId })
+    assert.equal(status.status, 'fresh')
+    assert.ok(status.indexedChunks >= 1)
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
 let failed = 0
 for (const [name, fn] of tests) {
   try { await fn(); console.log('PASS ' + name) } catch (error) { failed += 1; console.error('FAIL ' + name); console.error(error && error.stack || error) }
