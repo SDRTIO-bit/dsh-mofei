@@ -1,67 +1,70 @@
 {
-  "name": "dsh-mofei",
-  "version": "0.24.0",
-  "description": "墨扉（Mofei）写作内容平台（DSH 插件版）：MOFEI-SPEC 文件优先规范 + MOFEI-AGENT 写作 preset/技能 + MOFEI-STUDIO 全屏写作工作台（含内嵌 Agent 对话）；区间隔离，标准 DSH 零污染",
-  "type": "module",
-  "main": "lib/index.js",
-  "exports": {
-    ".": {
-      "default": "./lib/index.js"
-    },
-    "./client": {
-      "default": "./lib/client.js"
-    },
-    "./tools": {
-      "default": "./lib/tools.js"
-    },
-    "./subagent-max": {
-      "default": "./lib/subagent-max.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "files": [
-    "lib/index.js",
-    "lib/local-retrieval.js",
-    "lib/rag.js",
-    "lib/client.js",
-    "lib/client.js.map",
-    "lib/txt.js",
-    "lib/world.js",
-    "lib/ai.js",
-    "lib/tools.js",
-    "lib/subagent-max.js",
-    "lib/summary.js",
-    "lib/prompt-chain.js",
-    "lib/roles.js",
-    "lib/instructions.js",
-    "web/index.html",
-    "web/vendor/react.js",
-    "web/vendor/react-dom.js"
-  ],
-  "dsh": {
-    "client": {
-      "inject": [
-        "@deepseek-ai/dsh-client-runtime",
-        "@deepseek-ai/dsh-client-connection",
-        "@deepseek-ai/dsh-client-ui-slots"
-      ],
-      "platform": "web"
-    }
-  },
-  "scripts": {
-    "build": "node esbuild.config.js && node ../tools/verify-client-bundle.mjs",
-    "check": "node --check lib/index.js && node --check lib/client.js && node --check lib/txt.js && node --check lib/world.js && node --check lib/ai.js && node --check lib/tools.js && node --check lib/roles.js && node --check lib/instructions.js && node --check lib/subagent-max.js && node --check lib/rag.js && node --check lib/local-retrieval.js"
-  },
-  "license": "Apache-2.0",
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "react": "^18.2.0"
-  },
-  "devDependencies": {
-    "esbuild": "^0.28.2",
-    "typescript": "^7.0.2"
-  },
-  "dependencies": {
-    "@huggingface/transformers": "^4.2.0"
-  }
+    "name":  "dsh-mofei",
+    "version":  "0.24.0",
+    "description":  "墨扉（Mofei）写作内容平台（DSH 插件版）：MOFEI-SPEC 文件优先规范 + MOFEI-AGENT 写作 preset/技能 + MOFEI-STUDIO 全屏写作工作台（含内嵌 Agent 对话）；区间隔离，标准 DSH 零污染",
+    "type":  "module",
+    "main":  "lib/index.js",
+    "exports":  {
+                    ".":  {
+                              "default":  "./lib/index.js"
+                          },
+                    "./client":  {
+                                     "default":  "./lib/client.js"
+                                 },
+                    "./tools":  {
+                                    "default":  "./lib/tools.js"
+                                },
+                    "./subagent-max":  {
+                                           "default":  "./lib/subagent-max.js"
+                                       },
+                    "./package.json":  "./package.json"
+                },
+    "files":  [
+                  "lib/index.js",
+                  "lib/local-retrieval.js",
+                  "lib/rag.js",
+                  "lib/client.js",
+                  "lib/client.js.map",
+                  "lib/txt.js",
+                  "lib/world.js",
+                  "lib/ai.js",
+                  "lib/tools.js",
+                  "lib/subagent-max.js",
+                  "lib/summary.js",
+                  "lib/prompt-chain.js",
+                  "lib/roles.js",
+                  "lib/instructions.js",
+                  "web/index.html",
+                  "web/vendor/react.js",
+                  "web/vendor/react-dom.js"
+              ],
+    "dsh":  {
+                "client":  {
+                               "inject":  [
+                                              "@deepseek-ai/dsh-client-runtime",
+                                              "@deepseek-ai/dsh-client-connection",
+                                              "@deepseek-ai/dsh-client-ui-slots"
+                                          ],
+                               "platform":  "web"
+                           },
+                "bundle":  {
+                               "patch":  "./cordis.patch.yml"
+                           }
+            },
+    "scripts":  {
+                    "build":  "node esbuild.config.js \u0026\u0026 node ../tools/verify-client-bundle.mjs",
+                    "check":  "node --check lib/index.js \u0026\u0026 node --check lib/client.js \u0026\u0026 node --check lib/txt.js \u0026\u0026 node --check lib/world.js \u0026\u0026 node --check lib/ai.js \u0026\u0026 node --check lib/tools.js \u0026\u0026 node --check lib/roles.js \u0026\u0026 node --check lib/instructions.js \u0026\u0026 node --check lib/subagent-max.js \u0026\u0026 node --check lib/rag.js \u0026\u0026 node --check lib/local-retrieval.js"
+                },
+    "license":  "Apache-2.0",
+    "peerDependencies":  {
+                             "@deepseek-ai/cordis":  "^4.0.1",
+                             "react":  "^18.2.0"
+                         },
+    "devDependencies":  {
+                            "esbuild":  "^0.28.2",
+                            "typescript":  "^7.0.2"
+                        },
+    "dependencies":  {
+                         "@huggingface/transformers":  "^4.2.0"
+                     }
 }

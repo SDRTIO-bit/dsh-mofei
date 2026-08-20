@@ -1,0 +1,21 @@
+# dsh-mofei bundle patch: mounts the 墨扉（Mofei）writing workbench into a dsh
+# profile composition. The plugin registers `mofei_*` tools into the shared
+# `tools` registry and mounts the MOFEI-STUDIO full-screen writing workbench.
+#
+# Install: `dsh plugin --profile <name> add <path-to-plugin>`
+- insert:
+    - id: mofei
+      name: dsh-mofei
+      # Optional behavior params (omit to use built-in defaults, same as v0.23).
+      # Full schema validation (schemastery Config) lands in a later version;
+      # values are manually normalized today.
+      # config:
+      #   historyCap: 20              # chapter history snapshot cap
+      #   entityHistoryMax: 50        # character/note/world-entry snapshot cap
+      #   gitCommitIntervalMs: 10000  # git auto-commit throttle (ms)
+      #   rag:
+      #     chunkSize: 800
+      #     chunkOverlap: 100
+      #     candidateLimit: 40
+      #     resultLimit: 5
+      #     confidenceThreshold: 0.005

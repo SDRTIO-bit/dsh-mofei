@@ -1,8 +1,8 @@
-# 墨扉（Mofei）DSH
+﻿# 墨扉（Mofei）DSH
 
 墨扉是运行在 DeepSeek Harness（DSH）中的小说写作工作台插件。它把项目、卷章、角色、世界书、笔记、摘要和提示词链放在同一套写作数据模型里，并将 `mofei-writer` 写作会话与 DSH 原生工作区连接起来。
 
-当前固定插件版本：`dsh-mofei v0.25.0`。
+当前固定插件版本：`dsh-mofei v0.26.0`。
 
 ## 能做什么
 
@@ -16,14 +16,22 @@
 - 快捷操作：顶栏三点打开可搜索的写作操作面板；支持关闭按钮、再次点击、`Escape` 和点击外部收起，不暴露内部命令名。
 - 原生界面共存：墨扉工作台从左侧展开，官方 DSH 对话和 Composer 保留在右侧；官方会话侧栏展开时，工作台会自动收紧，不遮挡输入区。
 
+## 使用场景
+
+- **长篇小说日更/连载**：分卷管理章节，修订号冲突保护保证 Agent 与手动编辑不互相覆盖，全文检索快速定位设定词，区间摘要维持长文记忆。
+- **人设与世界观管理**：角色、笔记、世界书（world entries）全部文件优先存为 Markdown，可直接进 Git 做版本管理，写作时通过 `mofei_*` 工具或工作台即时查阅。
+- **Agent 协作写作流水线**：`mofei-writer` 会话内可用 `subagent` 拉起 Writer/Reviewer/Analyzer/Polisher 四个内置角色，实现「写草稿 → 审稿 → 修订」闭环；子代理通过 `mofei_read-chapter` / `mofei_update-chapter`（带 `expectedRevision`）读写章节。
+- **RAG 辅助检索**：内置 RAG 索引支持跨章节语义检索，长书设定检索不用翻正文。
+- **多项目隔离**：每个项目独立目录（`project.yml` + `chapters/` + `characters/` 等），项目之间数据互不干扰，可同时管理多本书。
+
 ## 安装
 
-墨扉需要已安装、且已配置可用模型的 DSH。子代理使用 DSH 随附的 `minimal` preset；不依赖本机私有的 `minimal-v3` 或其他作者自定义 preset。
+墨扉需要已安装、且已配置可用模型的 DSH（≥0.1.0-rc.6）。子代理使用 DSH 随附的 `minimal` preset；不依赖本机私有的 `minimal-v3` 或其他作者自定义 preset。
 
 以下以 Windows PowerShell 为例。下载仓库后，在仓库根目录执行：
 
 ```powershell
-# 将插件加入独立的 novel profile。
+# 将插件加入独立的 novel profile（推荐独立 profile，避免污染 coding 环境）。
 $pluginPath = (Resolve-Path .\plugin).Path
 dsh plugin --profile novel add $pluginPath
 
@@ -32,13 +40,9 @@ New-Item -ItemType Directory -Force "$env:USERPROFILE\.dsh\.agent-presets" | Out
 Copy-Item .\presets\mofei-writer "$env:USERPROFILE\.dsh\.agent-presets\mofei-writer" -Recurse
 ```
 
-在 `$env:USERPROFILE\.dsh\profiles\novel\cordis.patch.yml` 中加入墨扉插件行。该文件已有其他配置时，只追加 `insert` 内的 `mofei` 行，不要覆盖整个文件：
-
-```yaml
-- insert:
-    - id: mofei
-      name: dsh-mofei
-```
+> 插件自带 `dsh.bundle` 声明（`plugin/package.json` + `plugin/cordis.patch.yml`），
+> `dsh plugin add` 后 **DSH 会自动将 `dsh-mofei` 挂载到 profile 层栈**，无需手写
+> `cordis.patch.yml` 的 insert 行；`mofei` 一行已由插件 bundle 自动提供。
 
 更新仓库后的 preset 时，确认没有本地自定义后再执行：
 
@@ -48,12 +52,38 @@ Copy-Item .\presets\mofei-writer "$env:USERPROFILE\.dsh\.agent-presets\mofei-wri
 
 安装后重启 DSH。`mofei-writer` 是主会话 preset；Writer、Reviewer 等子代理由墨扉创建为 DSH 内置 `minimal` preset，再在各自会话内注入墨扉工具和角色规则，因此不会继承或污染主会话。
 
+## 配置要求
+
+| 依赖 | 说明 |
+| --- | --- |
+| Node.js | ≥ 20（DSH 0.1.0-rc.6 运行于 Node 24 验证） |
+| DSH | ≥ 0.1.0-rc.6，已配置可用模型（`llm-deepseek` 或 `llm-pi-ai` 任一路由） |
+| DEEPSEEK_API_KEY | 使用 DeepSeek 官方路由（含 web 搜索）时需要；其他路由按 DSH 配置提供凭据 |
+| pnpm | `dsh plugin` 依赖 pnpm 管理 profile 依赖 |
+| 端口 3088 | 墨扉写作入口约定端口（`dsh --profile novel --port 3088`） |
+
+可选行为参数（写在 profile 或 bundle 的 `config:` 中，不配则用内置默认）：
+
+```yaml
+# 默认值示例
+config:
+  historyCap: 20              # 章节历史快照上限
+  entityHistoryMax: 50        # 角色/笔记/世界书条目快照上限
+  gitCommitIntervalMs: 10000  # git 自动提交节流（毫秒）
+  rag:
+    chunkSize: 800
+    chunkOverlap: 100
+    candidateLimit: 40
+    resultLimit: 5
+    confidenceThreshold: 0.005
+```
+
 ## 快速开始
 
 在 Windows PowerShell 中启动写作环境：
 
 ```powershell
-cd F:\game\SillyTavern-1.13.2\OpenFic-DSH
+cd F:\game\SillyTavern-1.13.2\dsh-mofei
 dsh --profile novel --port 3088
 ```
 
@@ -94,7 +124,8 @@ DSH/browser 测试环境，不是墨扉入口，也不应加载 `dsh-mofei` 写�
 
 ```text
 plugin/
-  package.json                  插件元数据、DSH client 声明和构建脚本
+  package.json                  插件元数据、DSH bundle/client 声明和构建脚本
+  cordis.patch.yml              插件 bundle patch（dsh.bundle 自动挂载入口）
   lib/index.js                  Host 半体：webServer RPC、SSE、文件同步和持久化
   lib/client.js                 生成的 Client bundle（由 src/client/ 构建）
   lib/tools.js                  73 个 mofei_* 工具注册（消费 ctx.get('mofei') 服务）
@@ -108,7 +139,7 @@ tests/verify-p0-lifecycle.mjs   Host 生命周期回归（mock ctx）
 docs/ARCHITECTURE.md            架构说明（Host/Client 两半体与装配）
 docs/ACCEPTANCE-2026-08.md      整体验收报告
 AGENTS.md                       Agent 协作约定（mofei_* 工具与写作流水线）
-v0.25-changelog.md              最新变更说明
+v0.26-changelog.md              最新变更说明
 ```
 
 ## 开发与验收
@@ -133,7 +164,7 @@ node verify-v0.18-onboard.cjs
 
 ## 文档导航
 
-- [v0.25 变更说明](v0.25-changelog.md)
+- [v0.26 变更说明](v0.26-changelog.md)
 - [架构说明](docs/ARCHITECTURE.md)
 - [整体验收报告](docs/ACCEPTANCE-2026-08.md)
 - [Agent 协作约定](AGENTS.md)
