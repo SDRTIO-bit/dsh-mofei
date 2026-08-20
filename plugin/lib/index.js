@@ -652,9 +652,12 @@ export default {
     // v0.10.1: 通用 frontmatter + Markdown 正文解析（文件树唯一事实源）。
     function parseFrontmatter(textValue) {
       const source = String(textValue || '')
-      const match = source.match(/^---\n([\s\S]*?)\n---\n?/)
+      // v0.28: 兼容 CRLF 文件（git 检出 / Windows 编辑器）。正文统一归一化为 LF，
+      // 与 mirrorFileTree 写出的格式一致——否则文件树正文与内存 content 永久不一致
+      // （RAG 签名判定 stale、镜像反复重写）。
+      const match = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/)
       const meta = {}
-      if (match) for (const line of match[1].split('\n')) {
+      if (match) for (const line of match[1].split(/\r?\n/)) {
         const idx = line.indexOf(':')
         if (idx <= 0) continue
         const key = line.slice(0, idx).trim()
@@ -662,7 +665,7 @@ export default {
         const raw = line.slice(idx + 1).trim()
         try { meta[key] = JSON.parse(raw) } catch (error) { meta[key] = raw.replace(/^"|"$/g, '') }
       }
-      const body = match ? source.slice(match[0].length) : source
+      const body = (match ? source.slice(match[0].length) : source).replace(/\r\n/g, '\n')
       return { meta, body }
     }
     function isVirtualRoot() { return String(cwd).startsWith('virtual-root') }

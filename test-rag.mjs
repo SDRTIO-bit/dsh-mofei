@@ -77,6 +77,26 @@ test('queryIndex 对加载器构建的索引正常检索', async () => {
   assert.equal(found.results[0].entityType, 'chapter')
 })
 
+test('签名回退路径按 kind 取字段（角色=description，其余=content），防 stale 误判', async () => {
+  // 无加载器：角色长度必须来自 description（v0.28 曾因统一取 item.content 而恒 0 → 永久 stale）
+  const index = await buildIndex(project(), summaries())
+  assert.ok(index.signature.includes('r:character-1:主角:' + '内存角色描述'.length), '角色签名长度来自 description')
+  assert.ok(index.signature.includes('n:note-1:设定:' + '内存笔记正文'.length), '笔记签名长度来自 content')
+  assert.ok(index.signature.includes('w:world-1:门派:' + '内存世界书正文'.length), '世界书签名长度来自 content')
+  assert.ok(index.signature.includes('c:chapter-1:3:' + '内存章节正文 旧版'.length), '章节签名长度来自 content')
+  // 有加载器：签名用加载器值（角色 loader 与内存 description 不同 → 签名随之变化）
+  const loader = async (kind, entityId) => (kind === 'character' && entityId === 'character-1' ? '文件树角色描述更长的版本' : null)
+  const index2 = await buildIndex(project(), summaries(), {}, { readContent: loader })
+  assert.ok(index2.signature.includes('r:character-1:主角:' + '文件树角色描述更长的版本'.length), '加载器角色正文长度进入签名')
+  assert.notEqual(index2.signature, index.signature, '角色正文变化 → 签名变化')
+  // indexStatus 与 index.signature 一致 → fresh
+  const status = indexStatus(index, project(), summaries())
+  assert.equal(status.status, 'fresh', '无加载器构建后判定 fresh')
+  // 加载器内容与内存不同 → 判定 stale（提示重建；重建后以文件树为准，正常路径二者一致）
+  const status2 = indexStatus(index2, project(), summaries())
+  assert.equal(status2.status, 'stale', '加载器与内存分歧时判 stale 提示重建')
+})
+
 test('chunkText / tokenize 回归', () => {
   const chunks = chunkText('第一段。\n\n第二段，第二段比较长，超过了分块上限需要切开。', 10, 3)
   assert.ok(chunks.length >= 2)

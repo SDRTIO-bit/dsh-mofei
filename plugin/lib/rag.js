@@ -49,10 +49,14 @@ export function chunkText(text, size = DEFAULT_RAG_CONFIG.chunkSize, overlap = D
 
 function sourceSignature(project, summaries, contentOf) {
   const parts = []
-  // v0.28: contentOf 优先（文件树加载器缓存）；无加载器时回退内存字段，行为与旧版一致。
+  // v0.28: contentOf 优先（文件树加载器缓存）；无加载器时回退内存字段。
+  // 注意角色正文字段是 description 而非 content——回退路径必须按 kind 取字段，
+  // 否则角色长度恒为 0，与加载器签名不一致导致 indexStatus 永久 stale。
   const content = (kind, item) => {
     if (contentOf) { const value = contentOf(kind, item); if (typeof value === 'string') return value }
-    return item && typeof item.content === 'string' ? item.content : ''
+    if (!item || typeof item !== 'object') return ''
+    const value = kind === 'character' ? item.description : item.content
+    return typeof value === 'string' ? value : ''
   }
   for (const chapter of project && project.chapters || []) parts.push('c:' + chapter.id + ':' + (chapter.revision || 0) + ':' + String(content('chapter', chapter)).length)
   for (const item of project && project.characters || []) parts.push('r:' + item.id + ':' + String(item.name || '') + ':' + String(content('character', item)).length)

@@ -1779,6 +1779,63 @@ test('v0.28 RAG 索引重建：fileTreeBodyLoader 接入后 rag-build-index / se
   }
 })
 
+test('v0.28 CRLF 兼容：parseFrontmatter 解析 CRLF 文件，正文归一化后 RAG 签名一致', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-crlf-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  let projectId = ''
+  try {
+    const created = await workspaceRpc('create-project', { title: 'CRLF 项目' })
+    projectId = created.project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '风起' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '正文第一行。\n正文第二行。', expectedRevision: chapter.revision })
+    const base = path.join(workspaceRoot, '.mofei', 'projects', projectId)
+    const chapterFile = path.join(base, 'chapters', chapter.id + '.md')
+    // 模拟 git 检出 / Windows 编辑器：整个文件（frontmatter + 正文）转为 CRLF
+    const lfText = await readFile(chapterFile, 'utf8')
+    const crlfText = lfText.replace(/\n/g, '\r\n')
+    assert.ok(crlfText.includes('\r\n'), '测试前提：文件已转为 CRLF')
+    await writeFile(chapterFile, crlfText, 'utf8')
+
+    // load（任意 RPC 触发）必须正确解析 CRLF frontmatter 并归一化正文
+    const memory = await workspaceRpc('read-chapter', { projectId, chapterId: chapter.id })
+    assert.equal(memory.chapter.title, '风起', 'CRLF frontmatter 的 title 正确解析')
+    assert.ok(memory.chapter.content.includes('正文第一行。'), 'CRLF 文件正文可读')
+    assert.ok(!memory.chapter.content.includes('\r'), '正文已归一化为 LF（无 \\r）')
+    assert.ok(!memory.chapter.content.includes('revision:'), '正文不含 frontmatter 垃圾')
+
+    // RAG 构建：文件树正文与内存一致 → 签名 fresh
+    const built = await workspaceRpc('rag-build-index', { projectId })
+    assert.equal(built.status, 'fresh', 'CRLF 归一化后索引签名与源数据一致')
+    const found = await workspaceRpc('search-rag', { projectId, query: '第一行', force: true })
+    assert.ok(found.results.length >= 1, 'CRLF 项目检索命中')
+    // 镜像重写后文件应为 LF（内容差异时 mirror 重写一次，之后稳定不再反复）
+    const afterWrite = await readFile(chapterFile, 'utf8')
+    assert.ok(!afterWrite.includes('\r\n'), '镜像重写后文件树收敛为 LF')
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
 let failed = 0
 for (const [name, fn] of tests) {
   try { await fn(); console.log('PASS ' + name) } catch (error) { failed += 1; console.error('FAIL ' + name); console.error(error && error.stack || error) }
