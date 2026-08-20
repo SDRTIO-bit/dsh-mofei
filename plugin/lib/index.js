@@ -1746,12 +1746,124 @@ export default {
               }
             }
             await walk('.')
+            if (!files.length) continue
             items.push({ projectId, at, batch: batchDir.name, files: files.sort() })
           }
         }
         items.sort((a, b) => (b.at || 0) - (a.at || 0))
         return { items }
       },
+      // v0.29: 恢复回收站批次——把 trash/<projectId>/<batch>/ 下的 .md（与同名 .history.jsonl）
+      // 移回项目文件树，再由 importFileTree 回填 store（含历史）。实体 id 与现存实体冲突时
+      // 分配新 id 并重写 frontmatter，绝不覆盖现存实体。
+      'trash-restore': async (args) => mutate(async () => {
+        await load()
+        const projectId = args && args.projectId
+        const batch = args && args.batch
+        if (typeof projectId !== 'string' || !projectId || typeof batch !== 'string' || !batch || /[/\\]/.test(batch)) return { error: 'INVALID_ARGS' }
+        if (isVirtualRoot()) return { restored: [] }
+        const projectKey = safeFileSegment(projectId, 'project')
+        const batchDir = path.join(trashRoot, projectKey, batch)
+        let entries = []
+        try { entries = await readdir(batchDir, { withFileTypes: true }) } catch (error) { return { error: 'BATCH_NOT_FOUND' } }
+        const project = projectBy(projectId)
+        const base = project ? projectFileBase(project) : path.join(mofeiFileRoot, 'projects', projectKey)
+        const kindByTop = { chapters: 'chapter', characters: 'character', notes: 'note', world: 'world', chains: 'chain', summaries: 'summary' }
+        const existingOf = (kind, id) => {
+          if (!project) return false
+          if (kind === 'chapter') return !!chapterBy(project, id)
+          if (kind === 'character') return !!characterBy(project, id)
+          if (kind === 'note') return !!noteBy(project, id)
+          if (kind === 'world') return !!worldEntryBy(project, id)
+          return false
+        }
+        const moveBack = async (relative, targetRelative) => {
+          const source = path.join(batchDir, relative)
+          const target = path.join(base, targetRelative)
+          try {
+            await mkdir(path.dirname(target), { recursive: true })
+            await rename(source, target)
+          } catch (error) {
+            try { await copyFile(source, target); await rm(source, { force: true }) } catch (error2) { return false }
+          }
+          return true
+        }
+        const allFiles = []
+        const walk = async (relative) => {
+          let list = []
+          try { list = await readdir(path.join(batchDir, relative), { withFileTypes: true }) } catch (error) { return }
+          for (const entry of list) {
+            const child = path.join(relative, entry.name)
+            if (entry.isDirectory()) await walk(child)
+            else allFiles.push(child.split(path.sep).join('/'))
+          }
+        }
+        await walk('.')
+        const restored = []
+        for (const relative of allFiles.sort()) {
+          if (relative.endsWith('.history.jsonl')) continue
+          const parts = relative.split('/')
+          const kind = kindByTop[parts[0]]
+          if (!kind) continue
+          const source = path.join(batchDir, relative)
+          let parsed = { meta: {}, body: '' }
+          try { parsed = parseFrontmatter(await readFile(source, 'utf8')) } catch (error) { continue }
+          const id = typeof parsed.meta.id === 'string' && parsed.meta.id ? parsed.meta.id : path.basename(relative, '.md')
+          let targetRelative = relative
+          let effectiveId = id
+          let newId = null
+          if (kind !== 'summary' && existingOf(kind, id)) {
+            // 冲突：分配新 id，重写 frontmatter，文件名与 .history.jsonl 一并换新。
+            const prefix = kind === 'world' ? 'world' : kind
+            newId = allocate(prefix)
+            effectiveId = newId
+            const fileBase = safeFileSegment(newId, 'entity')
+            const directory = parts.slice(0, -1).join('/')
+            targetRelative = directory ? directory + '/' + fileBase + '.md' : fileBase + '.md'
+            const meta = { ...parsed.meta, id: newId }
+            const rewritten = '---\n' + Object.entries(meta).map(([key, value]) => `${key}: ${JSON.stringify(value)}`).join('\n') + '\n---\n' + parsed.body
+            try { await writeFile(source, rewritten, 'utf8') } catch (error) { continue }
+          }
+          if (!(await moveBack(relative, targetRelative))) continue
+          if (relative.endsWith('.md')) {
+            const historyRelative = relative.replace(/\.md$/i, '.history.jsonl')
+            const historyTarget = targetRelative.replace(/\.md$/i, '.history.jsonl')
+            await moveBack(historyRelative, historyTarget)
+          }
+          restored.push({ kind, id: effectiveId, name: parsed.meta.title || parsed.meta.name || path.basename(relative, '.md'), newId })
+        }
+        if (restored.length) {
+          await importFileTree()
+          await saveProjects()
+          await saveSummaries()
+          await saveChains()
+        }
+        // 移走全部文件后清掉批次空壳目录
+        try { await rm(batchDir, { recursive: true, force: true }) } catch (error) { /* noop */ }
+        return { restored }
+      }),
+      // v0.29: 清空回收站——按批次（projectId+batch）/ 按项目（projectId）/ 全部（缺省）。
+      'trash-purge': async (args) => mutate(async () => {
+        await load()
+        if (isVirtualRoot()) return { purged: 0 }
+        const projectId = args && args.projectId
+        const batch = args && args.batch
+        if (batch && (typeof batch !== 'string' || /[/\\]/.test(batch))) return { error: 'INVALID_ARGS' }
+        const target = batch ? path.join(trashRoot, safeFileSegment(projectId, 'project'), batch) : (projectId ? path.join(trashRoot, safeFileSegment(projectId, 'project')) : trashRoot)
+        let count = 0
+        const walk = async (dir) => {
+          let list = []
+          try { list = await readdir(dir, { withFileTypes: true }) } catch (error) { return }
+          for (const entry of list) {
+            const child = path.join(dir, entry.name)
+            if (entry.isDirectory()) await walk(child)
+            else count += 1
+          }
+        }
+        await walk(target)
+        try { await rm(target, { recursive: true, force: true }) } catch (error) { /* 已不存在 */ }
+        return { purged: count }
+      }),
       // v0.10.1: 每个实体文件与内存 store 的同步状态（revision 比较）。
       'file-tree-status': async (args) => {
         await load(); await queue

@@ -505,6 +505,11 @@ export function createClient(require) {
     const [retrieveResults, setRetrieveResults] = React.useState([])
     const [retrieveBusy, setRetrieveBusy] = React.useState(false)
     const [retrieveError, setRetrieveError] = React.useState('')
+    // v0.29: 回收站视图（列出 / 恢复 / 清空）
+    const [trashItems, setTrashItems] = React.useState([])
+    const [trashBusy, setTrashBusy] = React.useState(false)
+    const [trashError, setTrashError] = React.useState('')
+    const [trashNotice, setTrashNotice] = React.useState('')
     // v0.10.1: 风格视图（新建/编辑/预览/删除）
     const [selStyleId, setSelStyleId] = React.useState('')
     const [styleName, setStyleName] = React.useState('')
@@ -2064,6 +2069,39 @@ export function createClient(require) {
       }).catch((failure) => { setRetrieveBusy(false); setRetrieveError('检索失败：' + String((failure && failure.message) || failure)) })
     }
 
+    // v0.29: 回收站
+    function loadTrash() {
+      if (trashBusy) return
+      setTrashBusy(true); setTrashError(''); setTrashNotice('')
+      call('trash-list', {}).then((result) => {
+        setTrashBusy(false)
+        setTrashItems(result && Array.isArray(result.items) ? result.items : [])
+      }).catch((failure) => { setTrashBusy(false); setTrashError('加载回收站失败：' + String((failure && failure.message) || failure)) })
+    }
+    function restoreTrashBatch(projectId, batch) {
+      if (trashBusy) return
+      setTrashBusy(true); setTrashError(''); setTrashNotice('')
+      call('trash-restore', { projectId, batch }).then((result) => {
+        setTrashBusy(false)
+        if (result && result.error) { setTrashError('恢复失败：' + result.error); return }
+        const count = result && Array.isArray(result.restored) ? result.restored.length : 0
+        const renamed = result && Array.isArray(result.restored) ? result.restored.some((item) => item.newId) : false
+        setTrashNotice('已恢复 ' + String(count) + ' 个实体' + (renamed ? '（与现存实体冲突的已换新 id）' : ''))
+        loadTrash()
+        reload()
+      }).catch((failure) => { setTrashBusy(false); setTrashError('恢复失败：' + String((failure && failure.message) || failure)) })
+    }
+    function purgeTrash(projectId, batch) {
+      if (trashBusy) return
+      setTrashBusy(true); setTrashError(''); setTrashNotice('')
+      call('trash-purge', projectId ? { projectId, batch } : {}).then((result) => {
+        setTrashBusy(false)
+        if (result && result.error) { setTrashError('清空失败：' + result.error); return }
+        setTrashNotice('已清空' + (result && result.purged ? '（' + String(result.purged) + ' 个文件）' : ''))
+        loadTrash()
+      }).catch((failure) => { setTrashBusy(false); setTrashError('清空失败：' + String((failure && failure.message) || failure)) })
+    }
+
     function entityKindLabel(kind) { return kind === 'chapter' ? '章节' : kind === 'character' ? '角色' : kind === 'note' ? '笔记' : kind === 'world' ? '世界' : kind === 'summary' ? '摘要' : kind }
     // v0.10.3: git patch 行着色渲染（+/‑/@@/header）
     function renderGitPatch(patch) {
@@ -2194,6 +2232,7 @@ export function createClient(require) {
       { id: 'mofei-style', label: '写作风格', hint: '新建、编辑、预览或删除文风', run: () => { setTab('styles'); closePalette() } },
       { id: 'mofei-settings', label: '墨扉设置', hint: '管理检索模型、子代理、摘要和写作配置', run: () => { setSettingsOpen(true); closePalette() } },
       { id: 'mofei-retrieve', label: '跨项目检索', hint: '搜索角色、笔记、世界书和章节', run: () => { setTab('retrieve'); closePalette() } },
+      { id: 'mofei-trash', label: '回收站', hint: '恢复或清空已删除的实体', run: () => { setTab('trash'); loadTrash(); closePalette() } },
       { id: 'mofei-git-history', label: '项目版本历史', hint: '查看项目 Git 历史和链版本差异', run: () => { closePalette(); openGitHistory(null) } },
       { id: 'mofei-jobs', label: '后台任务', hint: '查看或取消摘要等长任务', run: () => { setJobListOpen(true); closePalette() } },
       { id: 'open-chains', label: '提示词链', hint: '打开项目级 Prompt Chains', run: () => { setChainsOpen(true); closePalette() } },
@@ -2263,6 +2302,7 @@ export function createClient(require) {
           h('button', { className: 'mf-act' + (tab === 'characters' ? ' on' : ''), type: 'button', title: '角色', onClick: () => setTab('characters') }, '☺', h('span', null, '角色')),
           h('button', { className: 'mf-act' + (tab === 'world' ? ' on' : ''), type: 'button', title: '世界书', onClick: () => setTab('world') }, '◈', h('span', null, '世界')),
           h('button', { className: 'mf-act' + (tab === 'notes' ? ' on' : ''), type: 'button', title: '笔记', onClick: () => setTab('notes') }, '☰', h('span', null, '笔记')),
+          h('button', { className: 'mf-act' + (tab === 'trash' ? ' on' : ''), type: 'button', title: '回收站（已删除实体，可恢复）', onClick: () => { setTab('trash'); loadTrash() } }, '♻', h('span', null, '回收站')),
            h('button', { className: 'mf-act' + (settingsOpen ? ' on' : ''), type: 'button', title: '墨扉设置', onClick: openSettingsPanel }, '⚙', h('span', null, '设置')),
           h('button', { className: 'mf-act' + (chatOpen ? ' on' : ''), type: 'button', title: 'Agent 对话（缩小版 DSH）', onClick: () => setChatOpen(!chatOpen) }, '💬', h('span', null, '对话')),
           h('button', { className: 'mf-act mf-act-bottom' + (dashOpen ? ' on' : ''), type: 'button', title: '写作仪表盘', onClick: () => setDashOpen(!dashOpen) }, '▦', h('span', null, '记录'))
@@ -2335,6 +2375,18 @@ export function createClient(require) {
             h('div', { className: 'mf-sh' }, h('span', null, '写作风格' + (projectId ? ' · 项目级优先' : '')), h('span', { className: 'mf-eh-actions' }, h('button', { className: 'mf-btn', type: 'button', onClick: createStyle }, '+ 新建'))),
             styleError ? h('div', { className: 'mf-alert' }, styleError) : null,
             styles.length ? styles.map((item) => h('div', { key: item.id, className: 'mf-item' + (item.id === selStyleId ? ' on' : '') }, h('div', { className: 'mf-row' }, h('button', { className: 'mf-title', type: 'button', onClick: () => loadStyleIntoEditor(item.id) }, item.name + (project && project.currentStyle === item.id ? ' ✓' : ''), h('small', null, (item.description || '') + (item.scope === 'project' ? ' · 项目级' : ''))), h('span', { className: 'mf-minis' }, h(MiniButton, { label: '✎', title: '编辑', onClick: () => loadStyleIntoEditor(item.id) }), h(MiniButton, { label: '×', danger: true, armed: armed && armed.kind === 'delete-style' && armed.id === item.id + ':' + (item.scope || 'global'), title: '删除风格', onClick: () => deleteStyleItem(item.id, item.scope) }))))) : h('div', { className: 'mf-empty' }, '暂无风格文件，点「+ 新建」创建。')
+          ) : tab === 'trash' ? h('div', { className: 'mf-list' },
+            h('div', { className: 'mf-sh' }, h('span', null, '回收站（删除的实体先到这里）'), h('span', { className: 'mf-eh-actions' }, h('button', { className: 'mf-btn', type: 'button', disabled: trashBusy, onClick: loadTrash }, '刷新'), h('button', { className: 'mf-btn mf-danger', type: 'button', disabled: trashBusy || !trashItems.length, onClick: () => { if (arm('trash-purge', 'all')) purgeTrash(null) } }, armed && armed.kind === 'trash-purge' && armed.id === 'all' ? '确认清空全部' : '清空全部'))),
+            trashError ? h('div', { className: 'mf-alert' }, trashError) : null,
+            trashNotice ? h('div', { className: 'mf-alert' }, trashNotice) : null,
+            trashBusy ? h('div', { className: 'mf-empty' }, '处理中…')
+              : trashItems.length ? trashItems.map((item) => h('div', { key: item.projectId + ':' + item.batch, className: 'mf-vol' },
+                  h('div', { className: 'mf-vol-head' },
+                    h('span', { className: 'mf-title' }, ((projects.find((p) => p.id === item.projectId) || {}).title || item.projectId), h('small', null, new Date(item.at || 0).toLocaleString() + ' · ' + String(item.files.length) + ' 个文件')),
+                    h('span', { className: 'mf-minis' }, h(MiniButton, { label: '↩', title: '恢复该批次（与现存实体冲突时自动换新 id）', onClick: () => restoreTrashBatch(item.projectId, item.batch) }), h(MiniButton, { label: '×', danger: true, armed: armed && armed.kind === 'trash-purge' && armed.id === item.projectId + ':' + item.batch, title: armed && armed.kind === 'trash-purge' && armed.id === item.projectId + ':' + item.batch ? '再次点击确认删除该批次' : '删除该批次', onClick: () => { if (arm('trash-purge', item.projectId + ':' + item.batch)) purgeTrash(item.projectId, item.batch) } }))),
+                  item.files.map((file) => h('div', { key: file, className: 'mf-item' }, h('div', { className: 'mf-row' }, h('span', { className: 'mf-title', style: { cursor: 'default' } }, file))))
+                ))
+              : h('div', { className: 'mf-empty' }, '回收站是空的——删除的实体先移到这里，可恢复或彻底清空。')
           ) : h('div', { className: 'mf-list' },
             h('div', { className: 'mf-sh' }, h('span', null, '笔记'), h('button', { className: 'mf-btn', type: 'button', onClick: () => setCatForm(!catForm) }, '+ 分类')),
             catForm ? h('div', { className: 'mf-form' }, h('input', { className: 'mf-input', value: newCat, placeholder: '分类名称', onChange: (event) => setNewCat(event.target.value), onKeyDown: (event) => { if (event.key === 'Enter') createCategory(null) } }), h('button', { className: 'mf-btn mf-primary', type: 'button', onClick: () => createCategory(null) }, '创建')) : null,
@@ -2368,7 +2420,7 @@ export function createClient(require) {
             h('div', { className: 'mf-empty' }, '笔记树：两级分类 · 锁定=Agent 不可改')
           ),
           mode === 'web' ? h('div', { className: 'mf-mininav' },
-            [['projects', '▤', '项目'], ['retrieve', '⌕', '检索'], ['characters', '☺', '角色'], ['world', '◈', '世界'], ['notes', '☰', '笔记']].map((item) => h('button', { key: item[0], type: 'button', className: tab === item[0] ? 'on' : '', onClick: () => setTab(item[0]) }, h('span', { className: 'ic' }, item[1]), item[2])),
+            [['projects', '▤', '项目'], ['retrieve', '⌕', '检索'], ['characters', '☺', '角色'], ['world', '◈', '世界'], ['notes', '☰', '笔记'], ['trash', '♻', '回收站']].map((item) => h('button', { key: item[0], type: 'button', className: tab === item[0] ? 'on' : '', onClick: () => { setTab(item[0]); if (item[0] === 'trash') loadTrash() } }, h('span', { className: 'ic' }, item[1]), item[2])),
             h('button', { type: 'button', className: skillsOpen ? 'on' : '', title: '写作指令与工作流', onClick: openWritingSkills }, h('span', { className: 'ic' }, '✦'), '技能')
           ) : null
         ),

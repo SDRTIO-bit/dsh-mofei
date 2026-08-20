@@ -1836,6 +1836,144 @@ test('v0.28 CRLF 兼容：parseFrontmatter 解析 CRLF 文件，正文归一化�
   }
 })
 
+test('v0.29 回收站：trash-restore 恢复删除的实体（含历史回填），trash-purge 清空', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-trash-restore-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  const findBatch = async (projectId, fileSuffix) => {
+    const trash = await workspaceRpc('trash-list')
+    const item = trash.items.find((entry) => entry.projectId === projectId && entry.files.some((f) => f.endsWith(fileSuffix)))
+    return item || null
+  }
+  let projectId = ''
+  try {
+    const created = await workspaceRpc('create-project', { title: '回收站恢复' })
+    projectId = created.project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '待恢复章' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '恢复正文 v1', expectedRevision: chapter.revision })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '恢复正文 v2', expectedRevision: chapter.revision + 1 })
+    const { character } = await workspaceRpc('create-character', { projectId, name: '待恢复角色', description: '角色描述' })
+    await workspaceRpc('delete-chapter', { projectId, chapterId: chapter.id })
+    await workspaceRpc('delete-character', { projectId, characterId: character.id })
+
+    // 删除后 trash-list 有 2 个批次
+    let trash = await workspaceRpc('trash-list')
+    assert.equal(trash.items.filter((item) => item.projectId === projectId).length, 2, '删除后 2 个批次入回收站')
+
+    // 恢复章节批次：正文 + 历史一起回来
+    const chapterBatch = await findBatch(projectId, 'chapters/' + chapter.id + '.md')
+    assert.ok(chapterBatch, '章节批次在回收站')
+    const restoredChapter = await workspaceRpc('trash-restore', { projectId, batch: chapterBatch.batch })
+    assert.equal(restoredChapter.error, undefined, '恢复无错误')
+    assert.equal(restoredChapter.restored.length, 1)
+    assert.equal(restoredChapter.restored[0].kind, 'chapter')
+    assert.equal(restoredChapter.restored[0].id, chapter.id, '无冲突时保留原 id')
+    const back = await workspaceRpc('read-chapter', { projectId, chapterId: chapter.id })
+    assert.equal(back.chapter.content, '恢复正文 v2', '恢复后正文为删除前最新版')
+    const history = await workspaceRpc('chapter-history', { projectId, chapterId: chapter.id })
+    assert.ok(history.history.length >= 1, '恢复后历史从 .history.jsonl 回填')
+
+    // 恢复角色批次
+    const characterBatch = await findBatch(projectId, 'characters/' + character.id + '.md')
+    assert.ok(characterBatch, '角色批次在回收站')
+    await workspaceRpc('trash-restore', { projectId, batch: characterBatch.batch })
+    const listed = await workspaceRpc('list-projects')
+    const reloaded = listed.projects.find((item) => item.id === projectId)
+    assert.ok(reloaded.characters.some((item) => item.id === character.id && item.description === '角色描述'), '角色恢复')
+
+    // 恢复后批次从回收站消失
+    trash = await workspaceRpc('trash-list')
+    assert.equal(trash.items.filter((item) => item.projectId === projectId).length, 0, '恢复后回收站清空该批次')
+
+    // trash-purge：再删一次后清空
+    await workspaceRpc('delete-character', { projectId, characterId: character.id })
+    trash = await workspaceRpc('trash-list')
+    assert.equal(trash.items.filter((item) => item.projectId === projectId).length, 1, '再次删除入回收站')
+    const purged = await workspaceRpc('trash-purge', { projectId })
+    assert.ok(purged.purged >= 1, 'purge 返回删除文件数')
+    trash = await workspaceRpc('trash-list')
+    assert.equal(trash.items.filter((item) => item.projectId === projectId).length, 0, 'purge 后批次消失')
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
+test('v0.29 回收站：trash-restore 实体 id 冲突时分配新 id，不覆盖现存实体', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-trash-conflict-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  let projectId = ''
+  try {
+    const created = await workspaceRpc('create-project', { title: '回收站冲突' })
+    projectId = created.project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '现存章节' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '现存正文', expectedRevision: chapter.revision })
+    // 手工构造一个「已删除但 id 与现存章节相同」的回收站批次（模拟旧版本/外部写入的批次）
+    const trashBatchDir = path.join(workspaceRoot, '.mofei', 'trash', projectId, '1234567890-' + chapter.id)
+    await mkdir(path.join(trashBatchDir, 'chapters'), { recursive: true })
+    await writeFile(path.join(trashBatchDir, 'chapters', 'orphan.md'), '---\nid: "' + chapter.id + '"\ntitle: "被删旧版"\norder: 0\nrevision: 1\n---\n旧版正文内容。\n', 'utf8')
+
+    const restored = await workspaceRpc('trash-restore', { projectId, batch: '1234567890-' + chapter.id })
+    assert.equal(restored.error, undefined)
+    assert.equal(restored.restored.length, 1)
+    assert.ok(restored.restored[0].newId, '冲突时分配新 id')
+    assert.notEqual(restored.restored[0].id, chapter.id, '新 id 不同于现存实体')
+
+    // 现存章节未被覆盖，新实体独立存在
+    const listed = await workspaceRpc('list-projects')
+    const reloaded = listed.projects.find((item) => item.id === projectId)
+    const existing = reloaded.chapters.find((item) => item.id === chapter.id)
+    assert.equal(existing.content, '现存正文', '现存章节未被覆盖')
+    const revived = reloaded.chapters.find((item) => item.id === restored.restored[0].id)
+    assert.ok(revived, '恢复的实体以新 id 回到项目')
+    assert.ok(revived.content.includes('旧版正文内容'), '恢复的实体内容正确')
+    assert.equal(revived.title, '被删旧版', 'frontmatter 重写后标题保留')
+    // 回收站批次已清
+    const trash = await workspaceRpc('trash-list')
+    assert.equal(trash.items.filter((item) => item.projectId === projectId && item.batch === '1234567890-' + chapter.id).length, 0, '恢复后批次消失')
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
 let failed = 0
 for (const [name, fn] of tests) {
   try { await fn(); console.log('PASS ' + name) } catch (error) { failed += 1; console.error('FAIL ' + name); console.error(error && error.stack || error) }

@@ -1,4 +1,4 @@
-// src/client/project-grid.js
+// plugin/src/client/project-grid.js
 var reactBinding = null;
 var reactResolved = false;
 function resolveReact() {
@@ -314,7 +314,7 @@ function ProjectGrid(props) {
   return h("div", { className: "mf-grid-root" }, toolbar, body);
 }
 
-// src/client/project-page.js
+// plugin/src/client/project-page.js
 var MAX_DESCRIPTION_CHARS = 500;
 function normalizeDescription(text) {
   const s = String(text == null ? "" : text).trim();
@@ -471,7 +471,7 @@ function ProjectPage(props) {
   );
 }
 
-// src/client/summary-panel.js
+// plugin/src/client/summary-panel.js
 var reactBinding2 = null;
 var reactResolved2 = false;
 function resolveReact2() {
@@ -836,7 +836,7 @@ function SummaryPanel(props) {
   );
 }
 
-// src/client/prompt-chains.js
+// plugin/src/client/prompt-chains.js
 var reactBinding3 = null;
 var reactResolved3 = false;
 function resolveReact3() {
@@ -1068,7 +1068,7 @@ function PromptChainsPanel(props) {
   );
 }
 
-// src/client/roles-panel.js
+// plugin/src/client/roles-panel.js
 var reactBinding4 = null;
 var reactResolved4 = false;
 function resolveReact4() {
@@ -1381,7 +1381,7 @@ function RolesPanel(props) {
   );
 }
 
-// src/client/writing-dashboard.js
+// plugin/src/client/writing-dashboard.js
 var reactBinding5 = null;
 var reactResolved5 = false;
 function resolveReact5() {
@@ -1646,7 +1646,7 @@ function WritingDashboard(props) {
   );
 }
 
-// src/client/skills-library.js
+// plugin/src/client/skills-library.js
 var reactBinding6 = null;
 var reactResolved6 = false;
 var WRITING_SKILL_LABELS = {
@@ -1865,7 +1865,7 @@ function WritingSkillsPanel(props) {
   );
 }
 
-// src/client/settings-panel.js
+// plugin/src/client/settings-panel.js
 var binding = null;
 var resolved = false;
 function react() {
@@ -1921,7 +1921,7 @@ function SettingsPanel(props) {
   } }, h("div", { className: "mf-settings", role: "dialog", "aria-label": "\u58A8\u6249\u8BBE\u7F6E" }, h("header", { className: "mf-settings-head" }, h("strong", null, "\u58A8\u6249\u8BBE\u7F6E"), h("small", null, "\u96C6\u4E2D\u7BA1\u7406\u5B50\u4EE3\u7406\u3001\u6307\u4EE4\u3001\u6458\u8981\u4E0E\u5199\u4F5C\u914D\u7F6E"), h("button", { className: "mf-action-icon", type: "button", title: "\u5173\u95ED", onClick: close }, "\xD7")), h("div", { className: "mf-settings-body" }, h("nav", { className: "mf-settings-nav" }, items.map((item) => h("button", { key: item[0], type: "button", className: active === item[0] ? "on" : "", onClick: () => select(item[0]) }, h("span", null, h("strong", null, item[1]), h("small", null, item[2]))))), h("main", { className: "mf-settings-content" }, content))));
 }
 
-// src/client/agent-models-panel.js
+// plugin/src/client/agent-models-panel.js
 var AGENT_MODELS_PANEL_CSS = ".mf-models-overlay{position:fixed;inset:0;z-index:137;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.36)}.mf-models-panel{width:min(860px,calc(100vw - 40px));max-height:calc(100vh - 64px);display:grid;grid-template-rows:58px minmax(0,1fr) auto;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.32)}.mf-models-head{display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-models-head>div{flex:1}.mf-models-head strong{display:block;font-size:14px}.mf-models-head small{display:block;margin-top:4px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-models-body{padding:18px;overflow:auto}.mf-model-card{padding:15px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;margin-bottom:12px}.mf-model-card h3{margin:0 0 6px;font-size:13px}.mf-model-card p{margin:0 0 14px;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.6}.mf-model-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.mf-model-fields label,.mf-model-row input,.mf-model-row select{min-width:0;font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-model-fields select,.mf-model-row select{display:block;max-width:100%;min-width:0;width:100%;box-sizing:border-box;margin-top:5px;padding:8px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);outline:0}.mf-model-row{display:grid;grid-template-columns:minmax(0,1.2fr) 70px minmax(0,1fr) minmax(0,1fr);gap:9px;align-items:end;min-width:0;padding:10px 0;border-top:1px solid var(--dsw-alias-border-l1)}.mf-model-role{min-width:0}.mf-model-role strong,.mf-model-role small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-model-role strong{font-size:12px}.mf-model-role small{margin-top:3px;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-model-check{display:flex;align-items:center;gap:5px;min-width:0;padding-bottom:8px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-model-row select:disabled{opacity:.45}.mf-model-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--dsw-alias-border-l1)}@media(max-width:620px){.mf-models-panel{width:calc(100vw - 20px)}.mf-model-fields{grid-template-columns:1fr}.mf-model-row{grid-template-columns:1fr 70px}.mf-model-row select{grid-column:span 2}}";
 var ReactRef = null;
 function getReact() {
@@ -1992,7 +1992,510 @@ function AgentModelsPanel(props) {
   }) : h("div", { className: "mf-empty" }, "\u5F53\u524D\u9879\u76EE\u8FD8\u6CA1\u6709\u5B50\u4EE3\u7406\u6A21\u677F\uFF0C\u8BF7\u5148\u521B\u5EFA\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD\u3002")), h("footer", { className: "mf-model-actions" }, h("button", { className: "mf-btn", type: "button", onClick: close }, "\u53D6\u6D88"), h("button", { className: "mf-btn mf-primary", type: "button", disabled: !!(props && props.busy), onClick: save }, props && props.busy ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u6A21\u578B\u914D\u7F6E")))));
 }
 
-// src/client/editor-limits.js
+// plugin/src/client/studio-polish.js
+var STUDIO_POLISH_CSS = `
+.mf-bubble-panel,
+.mf-panel,
+.mf-panel.mf-view,
+.mf-settings,
+.mf-models-panel,
+.mf-import-card,
+.mf-palette,
+.mf-onboard-card {
+  --mf-bg: #171a19;
+  --mf-layer: #1d2220;
+  --mf-layer-2: #252c28;
+  --mf-editor: #1b1e1c;
+  --mf-text: #e5e9e3;
+  --mf-text-2: #a8b2aa;
+  --mf-text-3: #7f8c83;
+  --mf-line: rgba(231, 237, 230, .095);
+  --mf-line-strong: rgba(231, 237, 230, .16);
+  --mf-accent: #6f9b89;
+  --mf-accent-strong: #87b5a0;
+  --mf-accent-soft: rgba(111, 155, 137, .17);
+  --mf-danger: #c47d73;
+  --mf-warn: #d4ad74;
+  --dsw-alias-bg-base: var(--mf-bg);
+  --dsw-alias-bg-layer-1: var(--mf-layer);
+  --dsw-alias-bg-layer-2: var(--mf-layer-2);
+  --dsw-alias-bg-elevated: #222925;
+  --dsw-alias-bg-overlay: #2b342e;
+  --dsw-alias-label-primary: var(--mf-text);
+  --dsw-alias-label-secondary: var(--mf-text-2);
+  --dsw-alias-label-tertiary: var(--mf-text-3);
+  --dsw-alias-border-l1: var(--mf-line);
+  --dsw-alias-border-l2: var(--mf-line-strong);
+  --dsw-alias-interactive-bg-hover: rgba(218, 232, 222, .075);
+  --dsw-alias-state-business-primary: var(--mf-accent);
+  --dsw-alias-state-business-tertiary: var(--mf-accent-soft);
+  --dsw-alias-state-success-primary: #83b39b;
+  --dsw-alias-state-warn-primary: var(--mf-warn);
+  --dsw-alias-state-warning-primary: var(--mf-warn);
+  --dsw-alias-state-error-primary: var(--mf-danger);
+  --dsw-specific-bubble: #2b3932;
+  --dsw-specific-bubble-highlight: var(--mf-accent-soft);
+  --dsw-specific-input-major: #232b26;
+  --dsw-shadow-lv2: 0 14px 38px rgba(3, 8, 6, .34);
+}
+
+/* The injected workbench gets a clear edge, while the DSH shell remains untouched. */
+.mf-bubble-panel {
+  background: var(--mf-bg) !important;
+  border-right-color: var(--mf-line-strong) !important;
+  box-shadow: 18px 0 48px rgba(3, 8, 6, .28) !important;
+}
+
+.mf-panel.mf-view {
+  color: var(--mf-text);
+  background: var(--mf-bg) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.mf-panel.mf-view .mf-head {
+  height: 58px;
+  padding: 0 18px;
+  background: #202724 !important;
+  border-bottom-color: var(--mf-line-strong) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .025);
+}
+
+.mf-panel.mf-view .mf-head-main {
+  gap: 9px;
+}
+
+.mf-panel.mf-view .mf-head-mark {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  place-items: center;
+  border: 1px solid rgba(135, 181, 160, .62);
+  color: #dcebe1;
+  font: 600 14px/1 ui-serif, Georgia, serif;
+  letter-spacing: 0;
+}
+
+.mf-panel.mf-view .mf-head-copy {
+  display: grid;
+  min-width: max-content;
+  gap: 1px;
+}
+
+.mf-panel.mf-view .mf-head-copy strong {
+  color: #f0f3ed;
+  font: 650 14px/1.15 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: .04em;
+}
+
+.mf-panel.mf-view .mf-head-copy small {
+  color: var(--mf-text-3);
+  font-size: 10px;
+  line-height: 1.15;
+}
+
+.mf-panel.mf-view .mf-head-context {
+  max-width: min(300px, 28vw);
+  color: #aebbb2;
+}
+
+.mf-panel.mf-view .mf-head-context::before {
+  margin-right: 7px;
+  color: var(--mf-accent-strong);
+  content: "\xB7";
+}
+
+.mf-panel.mf-view .mf-head-actions {
+  gap: 3px;
+}
+
+.mf-panel.mf-view .mf-head-actions .mf-btn {
+  min-height: 31px;
+  border-color: var(--mf-line-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mf-text-2);
+  font-size: 12px;
+}
+
+.mf-panel.mf-view .mf-head-actions .mf-btn:hover {
+  border-color: rgba(135, 181, 160, .38);
+  background: rgba(135, 181, 160, .09);
+  color: var(--mf-text);
+}
+
+.mf-panel.mf-view .mf-head-actions .mf-primary {
+  border-color: transparent;
+  background: var(--mf-accent);
+  color: #f3f7f2;
+  box-shadow: 0 5px 15px rgba(60, 112, 93, .2);
+}
+
+.mf-panel.mf-view .mf-head-actions .mf-primary:hover {
+  background: var(--mf-accent-strong);
+}
+
+.mf-panel.mf-view .mf-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  color: #aebbb2;
+}
+
+.mf-panel.mf-view .mf-action-icon:hover {
+  background: rgba(135, 181, 160, .1);
+  color: #eef4ee;
+}
+
+.mf-panel.mf-view .mf-body {
+  background: var(--mf-bg) !important;
+}
+
+.mf-panel.mf-view .mf-col {
+  background: var(--mf-layer) !important;
+  border-right-color: var(--mf-line-strong) !important;
+}
+
+.mf-panel.mf-view .mf-sh,
+.mf-panel.mf-view .mf-eh {
+  height: 50px;
+  padding: 0 16px;
+  background: #202623;
+  border-bottom-color: var(--mf-line-strong) !important;
+  color: #e3e9e2;
+  font-size: 12px;
+  letter-spacing: .015em;
+}
+
+.mf-panel.mf-view .mf-sh .mf-btn,
+.mf-panel.mf-view .mf-eh .mf-btn {
+  min-height: 28px;
+  border-color: var(--mf-line-strong);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--mf-text-2);
+}
+
+.mf-panel.mf-view .mf-sh .mf-btn:hover,
+.mf-panel.mf-view .mf-eh .mf-btn:hover {
+  background: rgba(135, 181, 160, .09);
+  color: var(--mf-text);
+}
+
+.mf-panel.mf-view .mf-list {
+  padding: 10px 10px 16px;
+  background: var(--mf-layer);
+}
+
+.mf-panel.mf-view .mf-item {
+  min-height: 34px;
+  margin: 1px 0;
+  padding: 8px 10px;
+  border-left: 2px solid transparent;
+  border-radius: 3px;
+  color: #b7c2ba;
+}
+
+.mf-panel.mf-view .mf-item:hover {
+  background: rgba(218, 232, 222, .065);
+  color: #eef3ed;
+}
+
+.mf-panel.mf-view .mf-item.on {
+  border-left-color: var(--mf-accent-strong);
+  background: var(--mf-accent-soft);
+  color: #f0f5ef;
+  font-weight: 650;
+}
+
+.mf-panel.mf-view .mf-item small,
+.mf-panel.mf-view .mf-vol small,
+.mf-panel.mf-view .mf-proj-meta {
+  color: var(--mf-text-3);
+}
+
+.mf-panel.mf-view .mf-vol {
+  padding: 12px 10px 4px;
+  color: #9eaea4;
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+
+.mf-panel.mf-view .mf-vol-children {
+  border-left-color: rgba(135, 181, 160, .18);
+}
+
+.mf-panel.mf-view .mf-proj {
+  border-left: 2px solid transparent !important;
+  border-radius: 3px !important;
+}
+
+.mf-panel.mf-view .mf-proj.active {
+  border-left-color: var(--mf-accent-strong) !important;
+  border-color: transparent;
+  background: var(--mf-accent-soft) !important;
+}
+
+.mf-panel.mf-view .mf-proj-name {
+  color: #e3ebe4;
+  font-size: 13px;
+  letter-spacing: .01em;
+}
+
+.mf-panel.mf-view .mf-minis .mf-mini {
+  min-width: 25px;
+  height: 23px;
+  border-color: transparent;
+  border-radius: 3px;
+  color: #92a198;
+}
+
+.mf-panel.mf-view .mf-minis .mf-mini:hover {
+  border-color: var(--mf-line-strong);
+  background: rgba(135, 181, 160, .1);
+  color: #edf4ee;
+}
+
+.mf-panel.mf-view .mf-mininav {
+  padding: 8px 10px 9px;
+  background: #202623;
+  border-top-color: var(--mf-line-strong);
+}
+
+.mf-panel.mf-view .mf-mininav button {
+  min-height: 36px;
+  border-radius: 3px;
+  color: #8e9d94;
+  font-size: 9.5px;
+}
+
+.mf-panel.mf-view .mf-mininav button:hover {
+  background: rgba(135, 181, 160, .08);
+  color: #e6eee7;
+}
+
+.mf-panel.mf-view .mf-mininav button.on {
+  color: var(--mf-accent-strong);
+  background: rgba(111, 155, 137, .1);
+}
+
+.mf-panel.mf-view .mf-editor {
+  background: var(--mf-editor) !important;
+}
+
+.mf-panel.mf-view .mf-editor-pane {
+  background: var(--mf-editor);
+}
+
+.mf-panel.mf-view .mf-title-input {
+  padding: 20px 28px 13px;
+  border-bottom-color: var(--mf-line-strong);
+  background: var(--mf-editor);
+  color: #edf1eb;
+  font: 600 20px/1.35 ui-serif, Georgia, "Songti SC", serif;
+  letter-spacing: .02em;
+  caret-color: var(--mf-accent-strong);
+}
+
+.mf-panel.mf-view .mf-text {
+  padding: 28px clamp(28px, 7vw, 94px) 48px;
+  background: var(--mf-editor);
+  color: #dfe5df;
+  font: 16px/1.95 ui-serif, Georgia, "Songti SC", serif;
+  letter-spacing: .012em;
+  caret-color: var(--mf-accent-strong);
+}
+
+.mf-panel.mf-view .mf-text::selection,
+.mf-panel.mf-view .mf-title-input::selection {
+  background: rgba(111, 155, 137, .34);
+}
+
+.mf-panel.mf-view .mf-editor .mf-empty {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  padding: 36px 28px;
+  color: #89978d;
+  line-height: 1.8;
+  text-align: center;
+}
+
+.mf-panel.mf-view .mf-editor .mf-empty::before {
+  width: 34px;
+  height: 1px;
+  margin: 0 auto 12px;
+  background: var(--mf-accent);
+  content: "";
+}
+
+.mf-panel.mf-view .mf-foot {
+  background: #171b19;
+  border-top-color: var(--mf-line-strong);
+  color: #89978e;
+}
+
+.mf-panel.mf-view .mf-status.unsaved { color: var(--mf-warn); }
+.mf-panel.mf-view .mf-status.saving { color: var(--mf-accent-strong); }
+.mf-panel.mf-view .mf-status.error { color: var(--mf-danger); }
+.mf-panel.mf-view .mf-context-status { color: #91a69a; }
+
+.mf-panel.mf-view .mf-alert {
+  border-bottom-color: rgba(196, 125, 115, .26);
+  background: rgba(196, 125, 115, .09);
+  color: #e2a39a;
+}
+
+/* The collapsed entry is a quiet return point, not a second primary CTA. */
+.mf-orb {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(135, 181, 160, .38);
+  border-radius: 8px;
+  background: #273730 !important;
+  color: #d8e9dd;
+  font-size: 14px;
+  box-shadow: 0 8px 22px rgba(3, 8, 6, .35);
+}
+
+.mf-orb:hover {
+  background: #385448 !important;
+  transform: translateY(-1px);
+}
+
+.mf-settings-overlay,
+.mf-models-overlay,
+.mf-import,
+.mf-onboard {
+  background: rgba(7, 11, 9, .62) !important;
+  backdrop-filter: blur(3px);
+}
+
+.mf-settings,
+.mf-models-panel,
+.mf-import-card,
+.mf-palette,
+.mf-onboard-card {
+  border-color: var(--mf-line-strong) !important;
+  border-radius: 9px !important;
+  background: #171b19 !important;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .42) !important;
+}
+
+.mf-settings-head,
+.mf-models-head {
+  min-height: 56px;
+  background: #202623;
+  border-bottom-color: var(--mf-line-strong) !important;
+}
+
+.mf-settings-head strong,
+.mf-models-head strong,
+.mf-import-card h3,
+.mf-onboard-card h2 {
+  color: #edf3ed;
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  letter-spacing: .025em;
+}
+
+.mf-settings-head small,
+.mf-models-head small,
+.mf-import-card small,
+.mf-onboard-note {
+  color: var(--mf-text-3) !important;
+}
+
+.mf-settings-nav {
+  background: #1b201e;
+  border-right-color: var(--mf-line-strong) !important;
+}
+
+.mf-settings-nav button {
+  border-left: 2px solid transparent;
+  border-radius: 4px;
+}
+
+.mf-settings-nav button:hover,
+.mf-settings-nav button.on {
+  border-left-color: var(--mf-accent-strong);
+  background: var(--mf-accent-soft);
+  color: #eff5ef;
+}
+
+.mf-settings-content,
+.mf-models-body {
+  background: #171b19;
+}
+
+.mf-settings-content h3 { color: #edf3ed; font-family: ui-serif, Georgia, "Songti SC", serif; }
+.mf-settings-content p { color: var(--mf-text-2); }
+
+.mf-settings-card,
+.mf-model-card,
+.mf-model-row,
+.mf-settings-status-row {
+  border-color: var(--mf-line) !important;
+  background: #1d2320 !important;
+}
+
+.mf-settings-action,
+.mf-models-panel .mf-primary,
+.mf-import-card .mf-primary,
+.mf-onboard-card .mf-primary {
+  border-color: transparent !important;
+  border-radius: 4px !important;
+  background: var(--mf-accent) !important;
+  color: #f3f8f3 !important;
+}
+
+.mf-settings-action:hover,
+.mf-models-panel .mf-primary:hover,
+.mf-import-card .mf-primary:hover,
+.mf-onboard-card .mf-primary:hover {
+  background: var(--mf-accent-strong) !important;
+}
+
+.mf-settings-status-row strong.ok { color: var(--mf-accent-strong); }
+.mf-settings-status-row strong { color: #e0a099; }
+
+.mf-panel.mf-view .mf-input,
+.mf-panel.mf-view .mf-search input,
+.mf-panel.mf-view .mf-world-search,
+.mf-panel.mf-view .mf-sel,
+.mf-panel.mf-view select {
+  border-color: var(--mf-line-strong);
+  border-radius: 4px;
+  background: #171c19;
+  color: var(--mf-text);
+}
+
+.mf-panel.mf-view .mf-input:focus,
+.mf-panel.mf-view .mf-search input:focus,
+.mf-panel.mf-view .mf-world-search:focus,
+.mf-panel.mf-view select:focus {
+  border-color: rgba(135, 181, 160, .62);
+  outline: 0;
+  box-shadow: 0 0 0 2px rgba(111, 155, 137, .12);
+}
+
+@container (max-width: 680px) {
+  .mf-panel.mf-view .mf-head { padding-inline: 12px; }
+  .mf-panel.mf-view .mf-head-mark { width: 24px; height: 24px; flex-basis: 24px; font-size: 12px; }
+  .mf-panel.mf-view .mf-head-copy small { display: none; }
+  .mf-panel.mf-view .mf-head-context { max-width: 150px; }
+  .mf-panel.mf-view .mf-title-input { padding-inline: 20px; font-size: 18px; }
+  .mf-panel.mf-view .mf-text { padding-inline: 22px; font-size: 15px; }
+}
+
+@container (max-width: 510px) {
+  .mf-panel.mf-view .mf-head-context { display: none; }
+  .mf-panel.mf-view .mf-head-actions .mf-stylebar { display: none; }
+  .mf-panel.mf-view .mf-title-input { padding-inline: 16px; font-size: 17px; }
+  .mf-panel.mf-view .mf-text { padding-inline: 16px; font-size: 14px; }
+}
+`;
+
+// plugin/src/client/editor-limits.js
 var MAX_EDITOR_CONTENT_LINES = 2e3;
 var MAX_EDITOR_CONTENT_CHARACTERS = 1e5;
 var LINE_SEPARATORS = /* @__PURE__ */ new Set([
@@ -2038,7 +2541,7 @@ function formatContentLimitError(limit) {
   return `\u6B63\u6587\u8D85\u51FA\u4E0A\u9650\uFF1A\u5F53\u524D ${characterCount} \u5B57 / ${MAX_EDITOR_CONTENT_CHARACTERS} \u5B57\uFF0C${lineCount} \u884C / ${MAX_EDITOR_CONTENT_LINES} \u884C\u3002\u8BF7\u62C6\u5206\u7AE0\u8282\u540E\u518D\u4FDD\u5B58\u3002`;
 }
 
-// src/client/agent-bridge.js
+// plugin/src/client/agent-bridge.js
 var MENTION_MAX_EXCERPT = 4e3;
 function toText(value) {
   if (value == null) return "";
@@ -2107,7 +2610,7 @@ function buildReviewerMention(input) {
   return [REVIEWER_HEADER, "", buildChapterMention(source)].join("\n");
 }
 
-// src/client/worldbook-tools.js
+// plugin/src/client/worldbook-tools.js
 function idOf(item) {
   if (typeof item === "string") return item;
   if (item && typeof item === "object" && !Array.isArray(item) && typeof item.id === "string") return item.id;
@@ -2207,7 +2710,7 @@ function buildBulkDeletePlan(entries, selectedIds) {
   return { entryIds, count: entryIds.length };
 }
 
-// src/client/layout.js
+// plugin/src/client/layout.js
 var LAYOUT_DEFAULTS = { left: 210, middle: 250 };
 var LAYOUT_MIN = { left: 180, middle: 180 };
 var LAYOUT_MAX = { left: 420, middle: 640 };
@@ -2300,7 +2803,7 @@ function saveLayout(storage, key, layout) {
   }
 }
 
-// src/client/workspace-utils.js
+// plugin/src/client/workspace-utils.js
 function fmtTime(at) {
   try {
     return new Date(at).toLocaleString();
@@ -2315,7 +2818,7 @@ function countWords(text) {
   return String(text).replace(/\s+/g, "").length;
 }
 
-// src/client/chat-utils.js
+// plugin/src/client/chat-utils.js
 function chatTextOf(blocks) {
   const out = [];
   (Array.isArray(blocks) ? blocks : []).forEach((block) => {
@@ -2364,7 +2867,7 @@ function normalizeChatItems(snap) {
   return items;
 }
 
-// src/client/legacy.js
+// plugin/src/client/legacy.js
 function createClient(require2) {
   const module = { exports: {} };
   const exports = module.exports;
@@ -2550,7 +3053,8 @@ function createClient(require2) {
     // v0.18: 初始向导
     '.mf-onboard{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}.mf-onboard-card{width:min(560px,calc(100vw - 40px));display:grid;gap:14px;padding:28px 30px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 26px 80px rgba(0,0,0,.5)}.mf-onboard-card h2{margin:0;font-size:18px}.mf-onboard-card p{margin:0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.7}.mf-onboard-folder{display:flex;gap:8px;align-items:center}.mf-onboard-folder input{flex:1;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1.4 sans-serif;outline:0}.mf-onboard-folder input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard input[type="text"]{box-sizing:border-box;width:100%;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:13px/1.4 sans-serif;outline:0}.mf-onboard input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}.mf-onboard-error{color:#f87171;font-size:12px}.mf-onboard-note{font-size:11.5px;color:var(--dsw-alias-label-secondary);line-height:1.6}',
     SETTINGS_PANEL_CSS,
-    AGENT_MODELS_PANEL_CSS
+    AGENT_MODELS_PANEL_CSS,
+    STUDIO_POLISH_CSS
   ].join("\n");
   let styleEl = null;
   function ensureStyles2() {
@@ -2932,6 +3436,10 @@ function createClient(require2) {
     const [retrieveResults, setRetrieveResults] = React.useState([]);
     const [retrieveBusy, setRetrieveBusy] = React.useState(false);
     const [retrieveError, setRetrieveError] = React.useState("");
+    const [trashItems, setTrashItems] = React.useState([]);
+    const [trashBusy, setTrashBusy] = React.useState(false);
+    const [trashError, setTrashError] = React.useState("");
+    const [trashNotice, setTrashNotice] = React.useState("");
     const [selStyleId, setSelStyleId] = React.useState("");
     const [styleName, setStyleName] = React.useState("");
     const [styleDesc, setStyleDesc] = React.useState("");
@@ -5624,6 +6132,58 @@ function createClient(require2) {
         setRetrieveError("\u68C0\u7D22\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
       });
     }
+    function loadTrash() {
+      if (trashBusy) return;
+      setTrashBusy(true);
+      setTrashError("");
+      setTrashNotice("");
+      call("trash-list", {}).then((result) => {
+        setTrashBusy(false);
+        setTrashItems(result && Array.isArray(result.items) ? result.items : []);
+      }).catch((failure) => {
+        setTrashBusy(false);
+        setTrashError("\u52A0\u8F7D\u56DE\u6536\u7AD9\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+      });
+    }
+    function restoreTrashBatch(projectId2, batch) {
+      if (trashBusy) return;
+      setTrashBusy(true);
+      setTrashError("");
+      setTrashNotice("");
+      call("trash-restore", { projectId: projectId2, batch }).then((result) => {
+        setTrashBusy(false);
+        if (result && result.error) {
+          setTrashError("\u6062\u590D\u5931\u8D25\uFF1A" + result.error);
+          return;
+        }
+        const count = result && Array.isArray(result.restored) ? result.restored.length : 0;
+        const renamed = result && Array.isArray(result.restored) ? result.restored.some((item) => item.newId) : false;
+        setTrashNotice("\u5DF2\u6062\u590D " + String(count) + " \u4E2A\u5B9E\u4F53" + (renamed ? "\uFF08\u4E0E\u73B0\u5B58\u5B9E\u4F53\u51B2\u7A81\u7684\u5DF2\u6362\u65B0 id\uFF09" : ""));
+        loadTrash();
+        reload();
+      }).catch((failure) => {
+        setTrashBusy(false);
+        setTrashError("\u6062\u590D\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+      });
+    }
+    function purgeTrash(projectId2, batch) {
+      if (trashBusy) return;
+      setTrashBusy(true);
+      setTrashError("");
+      setTrashNotice("");
+      call("trash-purge", projectId2 ? { projectId: projectId2, batch } : {}).then((result) => {
+        setTrashBusy(false);
+        if (result && result.error) {
+          setTrashError("\u6E05\u7A7A\u5931\u8D25\uFF1A" + result.error);
+          return;
+        }
+        setTrashNotice("\u5DF2\u6E05\u7A7A" + (result && result.purged ? "\uFF08" + String(result.purged) + " \u4E2A\u6587\u4EF6\uFF09" : ""));
+        loadTrash();
+      }).catch((failure) => {
+        setTrashBusy(false);
+        setTrashError("\u6E05\u7A7A\u5931\u8D25\uFF1A" + String(failure && failure.message || failure));
+      });
+    }
     function entityKindLabel(kind) {
       return kind === "chapter" ? "\u7AE0\u8282" : kind === "character" ? "\u89D2\u8272" : kind === "note" ? "\u7B14\u8BB0" : kind === "world" ? "\u4E16\u754C" : kind === "summary" ? "\u6458\u8981" : kind;
     }
@@ -5853,6 +6413,11 @@ function createClient(require2) {
         setTab("retrieve");
         closePalette();
       } },
+      { id: "mofei-trash", label: "\u56DE\u6536\u7AD9", hint: "\u6062\u590D\u6216\u6E05\u7A7A\u5DF2\u5220\u9664\u7684\u5B9E\u4F53", run: () => {
+        setTab("trash");
+        loadTrash();
+        closePalette();
+      } },
       { id: "mofei-git-history", label: "\u9879\u76EE\u7248\u672C\u5386\u53F2", hint: "\u67E5\u770B\u9879\u76EE Git \u5386\u53F2\u548C\u94FE\u7248\u672C\u5DEE\u5F02", run: () => {
         closePalette();
         openGitHistory(null);
@@ -5972,7 +6537,13 @@ function createClient(require2) {
         h(
           "header",
           { className: "mf-head" },
-          h("div", { className: "mf-head-main" }, h("strong", null, "\u58A8\u6249"), h("span", { className: "mf-head-context", title: project ? project.title : "\u5199\u4F5C\u5DE5\u4F5C\u53F0" }, project ? project.title : "\u5199\u4F5C\u5DE5\u4F5C\u53F0")),
+          h(
+            "div",
+            { className: "mf-head-main" },
+            h("span", { className: "mf-head-mark", "aria-hidden": "true" }, "\u58A8"),
+            h("span", { className: "mf-head-copy" }, h("strong", null, "\u58A8\u6249"), h("small", null, "\u5199\u4F5C\u5DE5\u4F5C\u53F0")),
+            h("span", { className: "mf-head-context", title: project ? project.title : "\u5199\u4F5C\u5DE5\u4F5C\u53F0" }, project ? project.title : "\u5199\u4F5C\u5DE5\u4F5C\u53F0")
+          ),
           h(
             "span",
             { className: "mf-head-actions" },
@@ -6039,6 +6610,10 @@ function createClient(require2) {
             h("button", { className: "mf-act" + (tab === "characters" ? " on" : ""), type: "button", title: "\u89D2\u8272", onClick: () => setTab("characters") }, "\u263A", h("span", null, "\u89D2\u8272")),
             h("button", { className: "mf-act" + (tab === "world" ? " on" : ""), type: "button", title: "\u4E16\u754C\u4E66", onClick: () => setTab("world") }, "\u25C8", h("span", null, "\u4E16\u754C")),
             h("button", { className: "mf-act" + (tab === "notes" ? " on" : ""), type: "button", title: "\u7B14\u8BB0", onClick: () => setTab("notes") }, "\u2630", h("span", null, "\u7B14\u8BB0")),
+            h("button", { className: "mf-act" + (tab === "trash" ? " on" : ""), type: "button", title: "\u56DE\u6536\u7AD9\uFF08\u5DF2\u5220\u9664\u5B9E\u4F53\uFF0C\u53EF\u6062\u590D\uFF09", onClick: () => {
+              setTab("trash");
+              loadTrash();
+            } }, "\u267B", h("span", null, "\u56DE\u6536\u7AD9")),
             h("button", { className: "mf-act" + (settingsOpen ? " on" : ""), type: "button", title: "\u58A8\u6249\u8BBE\u7F6E", onClick: openSettingsPanel }, "\u2699", h("span", null, "\u8BBE\u7F6E")),
             h("button", { className: "mf-act" + (chatOpen ? " on" : ""), type: "button", title: "Agent \u5BF9\u8BDD\uFF08\u7F29\u5C0F\u7248 DSH\uFF09", onClick: () => setChatOpen(!chatOpen) }, "\u{1F4AC}", h("span", null, "\u5BF9\u8BDD")),
             h("button", { className: "mf-act mf-act-bottom" + (dashOpen ? " on" : ""), type: "button", title: "\u5199\u4F5C\u4EEA\u8868\u76D8", onClick: () => setDashOpen(!dashOpen) }, "\u25A6", h("span", null, "\u8BB0\u5F55"))
@@ -6184,6 +6759,27 @@ function createClient(require2) {
               h("div", { className: "mf-sh" }, h("span", null, "\u5199\u4F5C\u98CE\u683C" + (projectId ? " \xB7 \u9879\u76EE\u7EA7\u4F18\u5148" : "")), h("span", { className: "mf-eh-actions" }, h("button", { className: "mf-btn", type: "button", onClick: createStyle }, "+ \u65B0\u5EFA"))),
               styleError ? h("div", { className: "mf-alert" }, styleError) : null,
               styles.length ? styles.map((item) => h("div", { key: item.id, className: "mf-item" + (item.id === selStyleId ? " on" : "") }, h("div", { className: "mf-row" }, h("button", { className: "mf-title", type: "button", onClick: () => loadStyleIntoEditor(item.id) }, item.name + (project && project.currentStyle === item.id ? " \u2713" : ""), h("small", null, (item.description || "") + (item.scope === "project" ? " \xB7 \u9879\u76EE\u7EA7" : ""))), h("span", { className: "mf-minis" }, h(MiniButton, { label: "\u270E", title: "\u7F16\u8F91", onClick: () => loadStyleIntoEditor(item.id) }), h(MiniButton, { label: "\xD7", danger: true, armed: armed && armed.kind === "delete-style" && armed.id === item.id + ":" + (item.scope || "global"), title: "\u5220\u9664\u98CE\u683C", onClick: () => deleteStyleItem(item.id, item.scope) }))))) : h("div", { className: "mf-empty" }, "\u6682\u65E0\u98CE\u683C\u6587\u4EF6\uFF0C\u70B9\u300C+ \u65B0\u5EFA\u300D\u521B\u5EFA\u3002")
+            ) : tab === "trash" ? h(
+              "div",
+              { className: "mf-list" },
+              h("div", { className: "mf-sh" }, h("span", null, "\u56DE\u6536\u7AD9\uFF08\u5220\u9664\u7684\u5B9E\u4F53\u5148\u5230\u8FD9\u91CC\uFF09"), h("span", { className: "mf-eh-actions" }, h("button", { className: "mf-btn", type: "button", disabled: trashBusy, onClick: loadTrash }, "\u5237\u65B0"), h("button", { className: "mf-btn mf-danger", type: "button", disabled: trashBusy || !trashItems.length, onClick: () => {
+                if (arm("trash-purge", "all")) purgeTrash(null);
+              } }, armed && armed.kind === "trash-purge" && armed.id === "all" ? "\u786E\u8BA4\u6E05\u7A7A\u5168\u90E8" : "\u6E05\u7A7A\u5168\u90E8"))),
+              trashError ? h("div", { className: "mf-alert" }, trashError) : null,
+              trashNotice ? h("div", { className: "mf-alert" }, trashNotice) : null,
+              trashBusy ? h("div", { className: "mf-empty" }, "\u5904\u7406\u4E2D\u2026") : trashItems.length ? trashItems.map((item) => h(
+                "div",
+                { key: item.projectId + ":" + item.batch, className: "mf-vol" },
+                h(
+                  "div",
+                  { className: "mf-vol-head" },
+                  h("span", { className: "mf-title" }, (projects.find((p) => p.id === item.projectId) || {}).title || item.projectId, h("small", null, new Date(item.at || 0).toLocaleString() + " \xB7 " + String(item.files.length) + " \u4E2A\u6587\u4EF6")),
+                  h("span", { className: "mf-minis" }, h(MiniButton, { label: "\u21A9", title: "\u6062\u590D\u8BE5\u6279\u6B21\uFF08\u4E0E\u73B0\u5B58\u5B9E\u4F53\u51B2\u7A81\u65F6\u81EA\u52A8\u6362\u65B0 id\uFF09", onClick: () => restoreTrashBatch(item.projectId, item.batch) }), h(MiniButton, { label: "\xD7", danger: true, armed: armed && armed.kind === "trash-purge" && armed.id === item.projectId + ":" + item.batch, title: armed && armed.kind === "trash-purge" && armed.id === item.projectId + ":" + item.batch ? "\u518D\u6B21\u70B9\u51FB\u786E\u8BA4\u5220\u9664\u8BE5\u6279\u6B21" : "\u5220\u9664\u8BE5\u6279\u6B21", onClick: () => {
+                    if (arm("trash-purge", item.projectId + ":" + item.batch)) purgeTrash(item.projectId, item.batch);
+                  } }))
+                ),
+                item.files.map((file) => h("div", { key: file, className: "mf-item" }, h("div", { className: "mf-row" }, h("span", { className: "mf-title", style: { cursor: "default" } }, file))))
+              )) : h("div", { className: "mf-empty" }, "\u56DE\u6536\u7AD9\u662F\u7A7A\u7684\u2014\u2014\u5220\u9664\u7684\u5B9E\u4F53\u5148\u79FB\u5230\u8FD9\u91CC\uFF0C\u53EF\u6062\u590D\u6216\u5F7B\u5E95\u6E05\u7A7A\u3002")
             ) : h(
               "div",
               { className: "mf-list" },
@@ -6258,7 +6854,10 @@ function createClient(require2) {
             mode === "web" ? h(
               "div",
               { className: "mf-mininav" },
-              [["projects", "\u25A4", "\u9879\u76EE"], ["retrieve", "\u2315", "\u68C0\u7D22"], ["characters", "\u263A", "\u89D2\u8272"], ["world", "\u25C8", "\u4E16\u754C"], ["notes", "\u2630", "\u7B14\u8BB0"]].map((item) => h("button", { key: item[0], type: "button", className: tab === item[0] ? "on" : "", onClick: () => setTab(item[0]) }, h("span", { className: "ic" }, item[1]), item[2])),
+              [["projects", "\u25A4", "\u9879\u76EE"], ["retrieve", "\u2315", "\u68C0\u7D22"], ["characters", "\u263A", "\u89D2\u8272"], ["world", "\u25C8", "\u4E16\u754C"], ["notes", "\u2630", "\u7B14\u8BB0"], ["trash", "\u267B", "\u56DE\u6536\u7AD9"]].map((item) => h("button", { key: item[0], type: "button", className: tab === item[0] ? "on" : "", onClick: () => {
+                setTab(item[0]);
+                if (item[0] === "trash") loadTrash();
+              } }, h("span", { className: "ic" }, item[1]), item[2])),
               h("button", { type: "button", className: skillsOpen ? "on" : "", title: "\u5199\u4F5C\u6307\u4EE4\u4E0E\u5DE5\u4F5C\u6D41", onClick: openWritingSkills }, h("span", { className: "ic" }, "\u2726"), "\u6280\u80FD")
             ) : null
           ),
@@ -6842,6 +7441,6 @@ function createClient(require2) {
   return module.exports;
 }
 
-// src/client/index.js
+// plugin/src/client/index.js
 window.__ModuleLoader__.load({ id: "dsh-mofei", factory: createClient });
 //# sourceMappingURL=client.js.map
