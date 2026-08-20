@@ -2,7 +2,7 @@
 
 > 调研对象：`F:\game\SillyTavern-1.13.2\dsh-novel-tavern-main\dsh-novel-tavern-main`
 > （DeepSeek Harness fork，目录名 `dsh-novel-tavern-main`，含 `packages/novel` 小说扩展族）。
-> 本文记录该 fork 的结构、能力与 墨扉（mofei-dsh）的对应关系。
+> 本文记录该 fork 的结构、能力与 墨扉（dsh-mofei）的对应关系。
 > **可执行的逐条借鉴清单见 [`NOVEL-TAVERN-REFERENCE.md`](NOVEL-TAVERN-REFERENCE.md)（含源码位置→墨扉方案→优先级）。**
 > ⚠️ 该目录为压缩包解出的源码快照，**无 `.git`**；以 zip `dsh-novel-tavern-main.zip` 为原始分发物。
 
@@ -42,9 +42,9 @@ tavern 注入形态（`packages/novel/tavern/README.md`）：
 - 绑定经 `tavern/binding` 会话事件持久化 → 重启/冷读时可从 session log 恢复（纯回放量）。
 - 已知限制：多角色只注入名称+描述；stage 仅整数显式推进；MVU 只读；导入忽略未知字段。
 
-## 3. 与墨扉（mofei-dsh）的对应关系
+## 3. 与墨扉（dsh-mofei）的对应关系
 
-| 能力 | dsh-novel-tavern（fork） | 墨扉（mofei-dsh） | 差异与借鉴 |
+| 能力 | dsh-novel-tavern（fork） | 墨扉（dsh-mofei） | 差异与借鉴 |
 | --- | --- | --- | --- |
 | 小说存储 | SQLite + Markdown 导出，`ctx.novel` 服务 | 文件优先 `.mofei/projects/**` + JSON 索引缓存 | 墨扉文件即平台，fork 以 SQLite 为权威；两者都导出/镜像 Markdown |
 | 世界/设定 | world engine（主体+事件折叠）+ 世界书导入 | 世界书（world.js）+ 角色 + 笔记 | fork 的时间线折叠是墨扉没有的：可借来给章节打 story time |
@@ -52,7 +52,7 @@ tavern 注入形态（`packages/novel/tavern/README.md`）：
 | 章节知识控制 | readerKnows/protagonistKnows/mustConceal/mayHint | chapter-context（角色+笔记+世界书+前情） | 墨扉上下文是「喂给模型的材料」，fork 是「章级知识约束」，两者可合并 |
 | 角色扮演 | tavern 角色卡 + lorebook 导入（JSON/PNG ccv3） | 角色实体 + `import-world-info-json`（ST Lorebook） | fork 支持**角色卡 PNG**（酒馆卡片格式），墨扉可借鉴导入路径 |
 | 提示注入 | 统一提示段 + 关键词激活窗口 + lean 模式 | 每会话 persona + 上下文拼装 | lean 模式降 token 的思路值得移植到 subagent 默认装配 |
-| 装配 | novel-bundle（cordis.patch.yml 插入三行） | 固定插件 + novel profile patch | 墨扉已是同一模式（`- id: mofei; name: mofei-dsh`）——bundle 化可作发布形态参考 |
+| 装配 | novel-bundle（cordis.patch.yml 插入三行） | 固定插件 + novel profile patch | 墨扉已是同一模式（`- id: mofei; name: dsh-mofei`）——bundle 化可作发布形态参考 |
 | 会话绑定 | `tavern/binding` 会话事件（回放量） | 绑定在 Host 内存 + 轮询 | fork 的「绑定即回放量」设计更干净，可改善墨扉重连状态恢复 |
 | Web 投影 | novel-api 只读 Remote + Web 可视化 | MOFEI-STUDIO 全屏工作台 | 墨扉 UI 远超 fork；fork 的只读投影适合做「只读分享/打印」 |
 

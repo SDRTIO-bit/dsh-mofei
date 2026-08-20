@@ -17,8 +17,8 @@ for (const [index, line] of text.split('\n').entries()) {
 }
 
 // 2. 必须调用 ModuleLoader 注册，id 与包名一致
-if (!/window\.__ModuleLoader__\.load\(\{[\s\S]*?id:\s*["']mofei-dsh["']/.test(text)) {
-  errors.push('missing window.__ModuleLoader__.load({ id: "mofei-dsh" }) registration')
+if (!/window\.__ModuleLoader__\.load\(\{[\s\S]*?id:\s*["']dsh-mofei["']/.test(text)) {
+  errors.push('missing window.__ModuleLoader__.load({ id: "dsh-mofei" }) registration')
 }
 
 // 3. factory 必须能接收加载器注入的 require：createClient(require)

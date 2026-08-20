@@ -1,4 +1,4 @@
-// 墨扉 Agent 工具插件（mofei-dsh/tools）
+// 墨扉 Agent 工具插件（dsh-mofei/tools）
 // 只应在 mofei-writer 等写作 preset 的 agent.cordis.yml 中加载。
 // 依赖 Host Plane 的 mofei 服务：ctx.get('mofei')。
 const renderText = (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }]

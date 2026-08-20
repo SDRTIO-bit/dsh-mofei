@@ -1,4 +1,4 @@
-// plugin/src/client/project-grid.js
+// src/client/project-grid.js
 var reactBinding = null;
 var reactResolved = false;
 function resolveReact() {
@@ -314,7 +314,7 @@ function ProjectGrid(props) {
   return h("div", { className: "mf-grid-root" }, toolbar, body);
 }
 
-// plugin/src/client/project-page.js
+// src/client/project-page.js
 var MAX_DESCRIPTION_CHARS = 500;
 function normalizeDescription(text) {
   const s = String(text == null ? "" : text).trim();
@@ -471,7 +471,7 @@ function ProjectPage(props) {
   );
 }
 
-// plugin/src/client/summary-panel.js
+// src/client/summary-panel.js
 var reactBinding2 = null;
 var reactResolved2 = false;
 function resolveReact2() {
@@ -836,7 +836,7 @@ function SummaryPanel(props) {
   );
 }
 
-// plugin/src/client/prompt-chains.js
+// src/client/prompt-chains.js
 var reactBinding3 = null;
 var reactResolved3 = false;
 function resolveReact3() {
@@ -1068,7 +1068,7 @@ function PromptChainsPanel(props) {
   );
 }
 
-// plugin/src/client/roles-panel.js
+// src/client/roles-panel.js
 var reactBinding4 = null;
 var reactResolved4 = false;
 function resolveReact4() {
@@ -1381,7 +1381,7 @@ function RolesPanel(props) {
   );
 }
 
-// plugin/src/client/writing-dashboard.js
+// src/client/writing-dashboard.js
 var reactBinding5 = null;
 var reactResolved5 = false;
 function resolveReact5() {
@@ -1646,7 +1646,7 @@ function WritingDashboard(props) {
   );
 }
 
-// plugin/src/client/skills-library.js
+// src/client/skills-library.js
 var reactBinding6 = null;
 var reactResolved6 = false;
 var WRITING_SKILL_LABELS = {
@@ -1865,7 +1865,7 @@ function WritingSkillsPanel(props) {
   );
 }
 
-// plugin/src/client/settings-panel.js
+// src/client/settings-panel.js
 var binding = null;
 var resolved = false;
 function react() {
@@ -1921,7 +1921,7 @@ function SettingsPanel(props) {
   } }, h("div", { className: "mf-settings", role: "dialog", "aria-label": "\u58A8\u6249\u8BBE\u7F6E" }, h("header", { className: "mf-settings-head" }, h("strong", null, "\u58A8\u6249\u8BBE\u7F6E"), h("small", null, "\u96C6\u4E2D\u7BA1\u7406\u5B50\u4EE3\u7406\u3001\u6307\u4EE4\u3001\u6458\u8981\u4E0E\u5199\u4F5C\u914D\u7F6E"), h("button", { className: "mf-action-icon", type: "button", title: "\u5173\u95ED", onClick: close }, "\xD7")), h("div", { className: "mf-settings-body" }, h("nav", { className: "mf-settings-nav" }, items.map((item) => h("button", { key: item[0], type: "button", className: active === item[0] ? "on" : "", onClick: () => select(item[0]) }, h("span", null, h("strong", null, item[1]), h("small", null, item[2]))))), h("main", { className: "mf-settings-content" }, content))));
 }
 
-// plugin/src/client/agent-models-panel.js
+// src/client/agent-models-panel.js
 var AGENT_MODELS_PANEL_CSS = ".mf-models-overlay{position:fixed;inset:0;z-index:137;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.36)}.mf-models-panel{width:min(860px,calc(100vw - 40px));max-height:calc(100vh - 64px);display:grid;grid-template-rows:58px minmax(0,1fr) auto;overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.32)}.mf-models-head{display:flex;align-items:center;gap:12px;padding:0 16px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-models-head>div{flex:1}.mf-models-head strong{display:block;font-size:14px}.mf-models-head small{display:block;margin-top:4px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-models-body{padding:18px;overflow:auto}.mf-model-card{padding:15px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;margin-bottom:12px}.mf-model-card h3{margin:0 0 6px;font-size:13px}.mf-model-card p{margin:0 0 14px;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.6}.mf-model-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.mf-model-fields label,.mf-model-row input,.mf-model-row select{min-width:0;font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-model-fields select,.mf-model-row select{display:block;max-width:100%;min-width:0;width:100%;box-sizing:border-box;margin-top:5px;padding:8px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);outline:0}.mf-model-row{display:grid;grid-template-columns:minmax(0,1.2fr) 70px minmax(0,1fr) minmax(0,1fr);gap:9px;align-items:end;min-width:0;padding:10px 0;border-top:1px solid var(--dsw-alias-border-l1)}.mf-model-role{min-width:0}.mf-model-role strong,.mf-model-role small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-model-role strong{font-size:12px}.mf-model-role small{margin-top:3px;color:var(--dsw-alias-label-tertiary);font-size:10px}.mf-model-check{display:flex;align-items:center;gap:5px;min-width:0;padding-bottom:8px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-model-row select:disabled{opacity:.45}.mf-model-actions{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--dsw-alias-border-l1)}@media(max-width:620px){.mf-models-panel{width:calc(100vw - 20px)}.mf-model-fields{grid-template-columns:1fr}.mf-model-row{grid-template-columns:1fr 70px}.mf-model-row select{grid-column:span 2}}";
 var ReactRef = null;
 function getReact() {
@@ -1992,7 +1992,7 @@ function AgentModelsPanel(props) {
   }) : h("div", { className: "mf-empty" }, "\u5F53\u524D\u9879\u76EE\u8FD8\u6CA1\u6709\u5B50\u4EE3\u7406\u6A21\u677F\uFF0C\u8BF7\u5148\u521B\u5EFA\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD\u3002")), h("footer", { className: "mf-model-actions" }, h("button", { className: "mf-btn", type: "button", onClick: close }, "\u53D6\u6D88"), h("button", { className: "mf-btn mf-primary", type: "button", disabled: !!(props && props.busy), onClick: save }, props && props.busy ? "\u4FDD\u5B58\u4E2D\u2026" : "\u4FDD\u5B58\u6A21\u578B\u914D\u7F6E")))));
 }
 
-// plugin/src/client/editor-limits.js
+// src/client/editor-limits.js
 var MAX_EDITOR_CONTENT_LINES = 2e3;
 var MAX_EDITOR_CONTENT_CHARACTERS = 1e5;
 var LINE_SEPARATORS = /* @__PURE__ */ new Set([
@@ -2038,7 +2038,7 @@ function formatContentLimitError(limit) {
   return `\u6B63\u6587\u8D85\u51FA\u4E0A\u9650\uFF1A\u5F53\u524D ${characterCount} \u5B57 / ${MAX_EDITOR_CONTENT_CHARACTERS} \u5B57\uFF0C${lineCount} \u884C / ${MAX_EDITOR_CONTENT_LINES} \u884C\u3002\u8BF7\u62C6\u5206\u7AE0\u8282\u540E\u518D\u4FDD\u5B58\u3002`;
 }
 
-// plugin/src/client/agent-bridge.js
+// src/client/agent-bridge.js
 var MENTION_MAX_EXCERPT = 4e3;
 function toText(value) {
   if (value == null) return "";
@@ -2107,7 +2107,7 @@ function buildReviewerMention(input) {
   return [REVIEWER_HEADER, "", buildChapterMention(source)].join("\n");
 }
 
-// plugin/src/client/worldbook-tools.js
+// src/client/worldbook-tools.js
 function idOf(item) {
   if (typeof item === "string") return item;
   if (item && typeof item === "object" && !Array.isArray(item) && typeof item.id === "string") return item.id;
@@ -2207,7 +2207,7 @@ function buildBulkDeletePlan(entries, selectedIds) {
   return { entryIds, count: entryIds.length };
 }
 
-// plugin/src/client/layout.js
+// src/client/layout.js
 var LAYOUT_DEFAULTS = { left: 210, middle: 250 };
 var LAYOUT_MIN = { left: 180, middle: 180 };
 var LAYOUT_MAX = { left: 420, middle: 640 };
@@ -2300,7 +2300,7 @@ function saveLayout(storage, key, layout) {
   }
 }
 
-// plugin/src/client/workspace-utils.js
+// src/client/workspace-utils.js
 function fmtTime(at) {
   try {
     return new Date(at).toLocaleString();
@@ -2315,7 +2315,7 @@ function countWords(text) {
   return String(text).replace(/\s+/g, "").length;
 }
 
-// plugin/src/client/chat-utils.js
+// src/client/chat-utils.js
 function chatTextOf(blocks) {
   const out = [];
   (Array.isArray(blocks) ? blocks : []).forEach((block) => {
@@ -2364,7 +2364,7 @@ function normalizeChatItems(snap) {
   return items;
 }
 
-// plugin/src/client/legacy.js
+// src/client/legacy.js
 function createClient(require2) {
   const module = { exports: {} };
   const exports = module.exports;
@@ -6842,6 +6842,6 @@ function createClient(require2) {
   return module.exports;
 }
 
-// plugin/src/client/index.js
-window.__ModuleLoader__.load({ id: "mofei-dsh", factory: createClient });
+// src/client/index.js
+window.__ModuleLoader__.load({ id: "dsh-mofei", factory: createClient });
 //# sourceMappingURL=client.js.map

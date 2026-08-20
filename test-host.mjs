@@ -1177,6 +1177,330 @@ test('discover-workspace 无摘要变更时不重写 summaries JSON', async () =
   }
 })
 
+test('真实文件树删除实体后镜像文件清理且 reload 不复活', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-delete-files-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  const missing = async (file, label) => {
+    try {
+      await stat(file)
+      assert.fail(label + ' 镜像文件仍存在: ' + file)
+    } catch (error) {
+      if (error && error.name === 'AssertionError') throw error
+      assert.equal(error && error.code, 'ENOENT', label + ' 删除后应为 ENOENT')
+    }
+  }
+  let projectId = ''
+  try {
+    const created = await workspaceRpc('create-project', { title: '文件删除回归' })
+    projectId = created.project.id
+    const chapterResult = await workspaceRpc('create-chapter', { projectId, title: '待删章节' })
+    const chapter = chapterResult.chapter
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '待删正文', expectedRevision: chapter.revision })
+    const character = (await workspaceRpc('create-character', { projectId, name: '待删角色' })).character
+    const note = (await workspaceRpc('create-note', { projectId, title: '待删笔记' })).note
+    const entry = (await workspaceRpc('create-world-entry', { projectId, name: '待删设定', content: '待删内容' })).entry
+    await workspaceRpc('save-chapter-summary', { projectId, chapterId: chapter.id, summary: '待删摘要' })
+    const groups = await workspaceRpc('range-summary-groups', { projectId })
+    const range = groups.groups[0]
+    await workspaceRpc('save-range-summary', { projectId, rangeId: range.id, chapterIds: range.chapterIds, summary: '待删区间摘要' })
+    const chain = (await workspaceRpc('save-prompt-chain', { projectId, name: '待删链', content: '{{chapterText}}' })).chain
+
+    const base = path.join(workspaceRoot, '.mofei', 'projects', projectId)
+    const filesToCheck = {
+      chapter: path.join(base, 'chapters', chapter.id + '.md'),
+      character: path.join(base, 'characters', character.id + '.md'),
+      note: path.join(base, 'notes', note.id + '.md'),
+      world: path.join(base, 'world', entry.id + '.md'),
+      chapterSummary: path.join(base, 'summaries', 'chapters', chapter.id + '.md'),
+      rangeSummary: path.join(base, 'summaries', 'ranges', range.id + '.md'),
+      chain: path.join(base, 'chains', chain.id + '.md'),
+    }
+    for (const [label, file] of Object.entries(filesToCheck)) await stat(file).catch(() => assert.fail(label + ' 创建后应有镜像文件: ' + file))
+
+    // 手工 Markdown 不在 manifest 中，镜像对账不应误删（即使它带实体式 frontmatter）。
+    const manualFile = path.join(base, 'notes', 'manual-reference.md')
+    await mkdir(path.dirname(manualFile), { recursive: true })
+    await writeFile(manualFile, '---\nid: "manual-reference"\ntitle: "手工参考"\n---\n外部内容\n', 'utf8')
+
+    await workspaceRpc('delete-character', { projectId, characterId: character.id })
+    await missing(filesToCheck.character, '角色')
+    await workspaceRpc('reload-from-files')
+    assert.equal((await workspaceRpc('list-projects')).projects.find((item) => item.id === projectId).characters.some((item) => item.id === character.id), false)
+
+    await workspaceRpc('delete-note', { projectId, noteId: note.id })
+    await missing(filesToCheck.note, '笔记')
+    await workspaceRpc('reload-from-files')
+    assert.equal((await workspaceRpc('list-projects')).projects.find((item) => item.id === projectId).notes.some((item) => item.id === note.id), false)
+
+    await workspaceRpc('delete-world-entry', { projectId, entryId: entry.id })
+    await missing(filesToCheck.world, '世界书')
+    await workspaceRpc('reload-from-files')
+    assert.equal((await workspaceRpc('list-projects')).projects.find((item) => item.id === projectId).worldEntries.some((item) => item.id === entry.id), false)
+
+    await workspaceRpc('delete-prompt-chain', { projectId, chainId: chain.id })
+    await missing(filesToCheck.chain, '提示词链')
+    await stat(manualFile)
+
+    await workspaceRpc('delete-chapter', { projectId, chapterId: chapter.id })
+    await missing(filesToCheck.chapter, '章节')
+    await missing(filesToCheck.chapterSummary, '章节摘要')
+    await missing(filesToCheck.rangeSummary, '区间摘要')
+    await workspaceRpc('reload-from-files')
+    const reloaded = (await workspaceRpc('list-projects')).projects.find((item) => item.id === projectId)
+    assert.ok(reloaded)
+    assert.equal(reloaded.chapters.some((item) => item.id === chapter.id), false)
+    assert.equal(reloaded.characters.some((item) => item.id === character.id), false)
+    assert.equal(reloaded.notes.some((item) => item.id === note.id), false)
+    assert.equal(reloaded.worldEntries.some((item) => item.id === entry.id), false)
+    await stat(manualFile)
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
+test('v0.26 文件优先：saveProjects 落盘后 .mofei-projects.json 不含 chapter.content/history/character.description/note.content/world.content', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-index-only-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  let projectId = ''
+  try {
+    const { project } = await workspaceRpc('create-project', { title: '文件优先' })
+    projectId = project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '第一章' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '落盘正文', expectedRevision: chapter.revision })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '落盘正文 2', expectedRevision: chapter.revision + 1 })
+    const { character } = await workspaceRpc('create-character', { projectId, name: '主角', description: '主角描述' })
+    await workspaceRpc('update-character', { projectId, characterId: character.id, name: '主角改名' })
+    const { note } = await workspaceRpc('create-note', { projectId, title: '设定' })
+    await workspaceRpc('update-note', { projectId, noteId: note.id, title: '设定改名', content: '笔记正文' })
+    const { entry } = await workspaceRpc('create-world-entry', { projectId, name: '门派', content: '世界书正文' })
+    await workspaceRpc('update-world-entry', { projectId, entryId: entry.id, name: '门派改名' })
+    await workspaceRpc('save-prompt-chain', { projectId, name: '链', content: '链内容' })
+
+    const projectsFile = path.join(workspaceRoot, '.mofei-projects.json')
+    const chainsFile = path.join(workspaceRoot, '.mofei-chains.json')
+    const projectsJson = JSON.parse(await readFile(projectsFile, 'utf8'))
+    const projectsChain = JSON.parse(await readFile(chainsFile, 'utf8'))
+    const stored = projectsJson.projects.find((item) => item.id === projectId)
+    assert.ok(stored, '项目必须落盘到 .mofei-projects.json')
+    // v0.26: JSON 不再含 content / history（文件树才是正文来源）。
+    for (const chapterItem of stored.chapters) {
+      assert.equal(chapterItem.content, undefined, 'chapter.content 已抽离 .mofei-projects.json')
+      assert.equal(chapterItem.history, undefined, 'chapter.history 已抽离 .mofei-projects.json')
+    }
+    for (const characterItem of stored.characters) assert.equal(characterItem.description, undefined, 'character.description 已抽离')
+    for (const noteItem of stored.notes) assert.equal(noteItem.content, undefined, 'note.content 已抽离')
+    for (const entryItem of stored.worldEntries) assert.equal(entryItem.content, undefined, 'world.content 已抽离')
+    // 链 store 同理
+    const chainList = projectsChain.byProject && projectsChain.byProject[projectId]
+    assert.ok(Array.isArray(chainList) && chainList.length)
+    for (const chain of chainList) assert.equal(chain.content, undefined, 'chain.content 已抽离 .mofei-chains.json')
+
+    // 镜像文件必须在工作区下存在并带正文
+    const base = path.join(workspaceRoot, '.mofei', 'projects', projectId)
+    const chapterFile = path.join(base, 'chapters', chapter.id + '.md')
+    const chapterBody = await readFile(chapterFile, 'utf8')
+    assert.ok(chapterBody.includes('落盘正文 2'), 'chapter 镜像 .md 含最新版正文')
+    const chapterHistoryFile = path.join(base, 'chapters', chapter.id + '.history.jsonl')
+    const historyText = await readFile(chapterHistoryFile, 'utf8')
+    const historyLines = historyText.split('\n').filter(Boolean)
+    // pushHistory 每次写之前先快照「上一版」：第一次 update-chapter 后历史 = 空 → 落盘正文 v2，
+    // 第二次 update 后历史 = 空 + 落盘正文 → 落盘正文 2 v3。
+    assert.equal(historyLines.length, 2, 'history.jsonl 含两次快照')
+    const oldRevision = JSON.parse(historyLines[0])
+    const newRevision = JSON.parse(historyLines[1])
+    assert.equal(oldRevision.content, '', 'history.jsonl 首条记录「落盘正文」之前的旧正文（空）')
+    assert.equal(newRevision.content, '落盘正文', 'history.jsonl 第二条记录「落盘正文 2」之前的旧正文')
+    assert.ok(oldRevision.at > 0 && newRevision.at > 0, '历史条目带 at 时间戳')
+    // 角色/笔记/世界书/链：正文写到对应的 .md
+    const characterBody = await readFile(path.join(base, 'characters', character.id + '.md'), 'utf8')
+    assert.ok(characterBody.includes('主角描述'))
+    const noteBody = await readFile(path.join(base, 'notes', note.id + '.md'), 'utf8')
+    assert.ok(noteBody.includes('笔记正文'))
+    const worldBody = await readFile(path.join(base, 'world', entry.id + '.md'), 'utf8')
+    assert.ok(worldBody.includes('世界书正文'))
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
+test('v0.26 文件优先：第二实例从文件树回填 chapter.content/character.description/note.content/world.content', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-reload-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  let projectId = ''
+  try {
+    const { project } = await workspaceRpc('create-project', { title: '文件优先 reload' })
+    projectId = project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '回填章节' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '回填正文', expectedRevision: chapter.revision })
+    const { character } = await workspaceRpc('create-character', { projectId, name: '回填角色', description: '回填描述' })
+    const { note } = await workspaceRpc('create-note', { projectId, title: '回填笔记' })
+    await workspaceRpc('update-note', { projectId, noteId: note.id, title: '回填笔记', content: '回填笔记正文' })
+    const { entry } = await workspaceRpc('create-world-entry', { projectId, name: '回填条目', content: '回填条目正文' })
+
+    // 落盘后 JSON 不应含 content；第二实例启动后从文件树回填。
+    const projectsFile = path.join(workspaceRoot, '.mofei-projects.json')
+    const projectsSnapshot = JSON.parse(await readFile(projectsFile, 'utf8'))
+    const storedProject = projectsSnapshot.projects.find((item) => item.id === projectId)
+    assert.ok(storedProject)
+    for (const c of storedProject.chapters) assert.equal(c.content, undefined)
+    for (const c of storedProject.characters) assert.equal(c.description, undefined)
+    for (const n of storedProject.notes) assert.equal(n.content, undefined)
+    for (const e of storedProject.worldEntries) assert.equal(e.content, undefined)
+
+    // 第二实例：同样 fs 重启 plugin，触发 importFileTree 从 .mofei/projects/** 重建。
+    const secondRoutes = {}
+    plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { secondRoutes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+    const secondRoute = secondRoutes['/api/mofei']
+    const secondRpc = async (method, args = {}) => {
+      let body = ''
+      let done = false
+      const payload = JSON.stringify({ method, args })
+      const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+      const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+      await secondRoute.handler(req, res)
+      const parsed = JSON.parse(body)
+      if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+      return parsed.value
+    }
+    const reloaded = await secondRpc('read-chapter', { projectId, chapterId: chapter.id })
+    assert.equal(reloaded.chapter.content, '回填正文', '第二实例从 .md 恢复 chapter.content')
+
+    const listed = await secondRpc('list-projects')
+    const reloadedProject = listed.projects.find((item) => item.id === projectId)
+    assert.ok(reloadedProject)
+    const reloadedCharacter = reloadedProject.characters.find((item) => item.id === character.id)
+    assert.equal(reloadedCharacter.description, '回填描述')
+    const reloadedNote = reloadedProject.notes.find((item) => item.id === note.id)
+    assert.equal(reloadedNote.content, '回填笔记正文')
+    const reloadedEntry = reloadedProject.worldEntries.find((item) => item.id === entry.id)
+    assert.equal(reloadedEntry.content, '回填条目正文')
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
+test('v0.26 文件优先：delete-chapter 同步清理 .history.jsonl；reload 不复活历史', async () => {
+  const workspaceRoot = await mkdtemp(path.join(os.tmpdir(), 'mofei-delete-history-'))
+  const workspaceFs = {
+    async resolve(name, options) { return path.join(options && options.cwd || workspaceRoot, name) },
+    async stat(target) { try { const info = await stat(target); return { size: info.size } } catch (error) { return undefined } },
+    async readText(target) { return readFile(target, 'utf8') },
+    async writeText(target, content) { await writeFile(target, content, 'utf8') },
+  }
+  const routes = {}
+  plugin.apply({ fs: workspaceFs, sandboxPolicy: { workspaceRoot, resolve: () => ({}) }, webServer: { register: (definition) => { routes[definition.path] = definition } }, get: () => undefined, effect: () => {} })
+  const workspaceRoute = routes['/api/mofei']
+  const workspaceRpc = async (method, args = {}) => {
+    let body = ''
+    let done = false
+    const payload = JSON.stringify({ method, args })
+    const req = { method: 'POST', [Symbol.asyncIterator]() { return { next: async () => done ? { done: true } : (done = true, { value: payload, done: false }) } } }
+    const res = { setHeader: () => {}, end: (chunk) => { body = String(chunk) } }
+    await workspaceRoute.handler(req, res)
+    const parsed = JSON.parse(body)
+    if (!parsed.ok) throw new Error(method + ': ' + JSON.stringify(parsed))
+    return parsed.value
+  }
+  const missing = async (file, label) => {
+    try {
+      await stat(file)
+      assert.fail(label + ' 镜像文件仍存在: ' + file)
+    } catch (error) {
+      if (error && error.name === 'AssertionError') throw error
+      assert.equal(error && error.code, 'ENOENT', label + ' 删除后应为 ENOENT')
+    }
+  }
+  let projectId = ''
+  try {
+    const created = await workspaceRpc('create-project', { title: '文件优先 删除' })
+    projectId = created.project.id
+    const { chapter } = await workspaceRpc('create-chapter', { projectId, title: '待删' })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '内容 v1', expectedRevision: chapter.revision })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '内容 v2', expectedRevision: chapter.revision + 1 })
+    await workspaceRpc('update-chapter', { projectId, chapterId: chapter.id, content: '内容 v3', expectedRevision: chapter.revision + 2 })
+    const base = path.join(workspaceRoot, '.mofei', 'projects', projectId)
+    const chapterFile = path.join(base, 'chapters', chapter.id + '.md')
+    const chapterHistoryFile = path.join(base, 'chapters', chapter.id + '.history.jsonl')
+    await stat(chapterFile)
+    await stat(chapterHistoryFile)
+    const historyBefore = (await readFile(chapterHistoryFile, 'utf8')).split('\n').filter(Boolean)
+    assert.ok(historyBefore.length >= 1, '至少有一条历史快照')
+
+    await workspaceRpc('delete-chapter', { projectId, chapterId: chapter.id })
+    await missing(chapterFile, '章节 .md')
+    await missing(chapterHistoryFile, '章节 .history.jsonl')
+
+    await workspaceRpc('reload-from-files')
+    const list = await workspaceRpc('list-projects')
+    const reloaded = list.projects.find((item) => item.id === projectId)
+    assert.ok(reloaded)
+    assert.equal(reloaded.chapters.some((item) => item.id === chapter.id), false, 'reload-from-files 后章节不复活')
+  } finally {
+    if (projectId) { try { await workspaceRpc('delete-project', { projectId }) } catch (error) { /* noop */ } }
+    await rm(workspaceRoot, { recursive: true, force: true })
+  }
+})
+
 test('Windows ReplaceFileW 1175 短暂冲突会重试持久化写入', async () => {
   const retryRoot = 'virtual-root-retry'
   const retryFiles = new Map()

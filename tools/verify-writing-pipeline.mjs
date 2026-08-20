@@ -3,7 +3,8 @@
 // 真实 subagent + mofei_* 工具的流水线实测需在 DSH 重启加载新工具 schema 后执行。
 import http from 'node:http'
 
-const BASE = process.env.MOFEI_BASE || 'http://127.0.0.1:3080'
+// 墨扉写作环境固定使用 novel profile 的 3088；需要覆盖时显式设置 MOFEI_BASE。
+const BASE = process.env.MOFEI_BASE || 'http://127.0.0.1:3088'
 const ts = String(Date.now()).slice(-6)
 const TITLE = '流水线验证-' + ts
 

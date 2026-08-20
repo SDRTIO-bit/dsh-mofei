@@ -1,4 +1,4 @@
-﻿// 墨扉AI 会话/批量摘要纯逻辑（无 DSH 依赖，可独立单元测试）
+// 墨扉AI 会话/批量摘要纯逻辑（无 DSH 依赖，可独立单元测试）
 export function truncate(value, max) {
   const text = typeof value === 'string' ? value : ''
   return text.length > max ? text.slice(0, max) : text
@@ -24,7 +24,7 @@ export function buildAiMessages(session, userContent, options) {
   const maxHistory = Math.min(24, Math.max(0, options && typeof options.maxHistory === 'number' ? Math.floor(options.maxHistory) : 8))
   const historyChars = Math.min(8000, Math.max(200, options && typeof options.historyChars === 'number' ? Math.floor(options.historyChars) : 2000))
   const history = normalized.messages.slice(-maxHistory)
-  const source = { kind: 'plugin', plugin: 'mofei-dsh' }
+  const source = { kind: 'plugin', plugin: 'dsh-mofei' }
   const messages = history.map((item) => ({ id: 'mofei-hist-' + item.id, role: item.role, content: [{ type: 'text', text: truncate(item.content, historyChars) }], source }))
   messages.push({ id: 'mofei-user-' + String(Date.now()), role: 'user', content: [{ type: 'text', text: truncate(userContent, 24000) }], source })
   return messages

@@ -1,4 +1,4 @@
-# mofei-dsh 插件包
+# dsh-mofei 插件包
 
 墨扉写作平台（DSH 插件版）。包内结构：
 

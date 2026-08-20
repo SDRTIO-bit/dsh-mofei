@@ -1,10 +1,10 @@
-# mofei-dsh 架构说明（v0.24）
+# dsh-mofei 架构说明（v0.24）
 
 > 面向维护者。装配与用法见 `README.md`，Agent 协作见 `AGENTS.md`。
 
 ## 1. 形态：一个 npm 包，四种装配面
 
-`mofei-dsh`（`plugin/`）是**固定插件**（非动态插件，重启自动加载），同一包内按
+`dsh-mofei`（`plugin/`）是**固定插件**（非动态插件，重启自动加载），同一包内按
 `package.json` 的 `exports` 提供四个入口，分别在不同装配点加载：
 
 | 入口 | 文件 | 装配点 | 职责 |

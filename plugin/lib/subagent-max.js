@@ -1,4 +1,4 @@
-// 墨扉子代理辅助插件（mofei-dsh/subagent-max）
+// 墨扉子代理辅助插件（dsh-mofei/subagent-max）
 // 注册 subagent_with_model：每次调用由中控指定子代理的 role / model / provider / effort / context。
 //
 // 角色注入机制（v0.20+）：
@@ -12,7 +12,7 @@
 // 只应在 mofei-writer 等写作 preset 的 agent.cordis.yml 中加载（隔离：standard 会话不可见）。
 // 子代理 preset 由 childPreset 配置决定；配置后使用本模块的 one-shot provider 显式挂载该 preset，
 // 因为官方 continuable provider 会固定 composeFrom(parent)，无法切换到另一个 agent preset。
-// 说明：本模块由 @aaravarr/dsh-subagent-max v0.1.1 的 host 半区改造而来，现已直接并入 mofei-dsh 打包。
+// 说明：本模块由 @aaravarr/dsh-subagent-max v0.1.1 的 host 半区改造而来，现已直接并入 dsh-mofei 打包。
 
 import { randomUUID } from 'node:crypto'
 import mofeiTools from './tools.js'
@@ -371,7 +371,7 @@ export default {
 
     const mount = (provider) => {
       if (continuable && typeof provider.prepareContinuable !== 'function') {
-        throw new Error(`mofei-dsh/subagent-max: provider ${provider.name} does not support backgroundMode: continuable`)
+        throw new Error(`dsh-mofei/subagent-max: provider ${provider.name} does not support backgroundMode: continuable`)
       }
       const definition = {
         name: toolName,

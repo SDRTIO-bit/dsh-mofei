@@ -8,6 +8,7 @@ import { WritingDashboard } from './writing-dashboard.js'
 import { WritingSkillsPanel } from './skills-library.js'
 import { SettingsPanel, SETTINGS_PANEL_CSS } from './settings-panel.js'
 import { AgentModelsPanel, AGENT_MODELS_PANEL_CSS } from './agent-models-panel.js'
+import { STUDIO_POLISH_CSS } from './studio-polish.js'
 import { getEditorContentLimit, formatContentLimitError } from './editor-limits.js'
 import { buildChapterMention, buildSelectionMention, buildWriterMention, buildReviewerMention } from './agent-bridge.js'
 import { filterWorldEntries, worldNameConflict, toggleAllSelection, buildBulkTogglePlan, buildBulkDeletePlan } from './worldbook-tools.js'
@@ -186,7 +187,8 @@ export function createClient(require) {
     // v0.18: 初始向导
     '.mf-onboard{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55)}.mf-onboard-card{width:min(560px,calc(100vw - 40px));display:grid;gap:14px;padding:28px 30px;border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 26px 80px rgba(0,0,0,.5)}.mf-onboard-card h2{margin:0;font-size:18px}.mf-onboard-card p{margin:0;color:var(--dsw-alias-label-secondary);font-size:13px;line-height:1.7}.mf-onboard-folder{display:flex;gap:8px;align-items:center}.mf-onboard-folder input{flex:1;min-width:0;box-sizing:border-box;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:12px/1.4 sans-serif;outline:0}.mf-onboard-folder input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard input[type="text"]{box-sizing:border-box;width:100%;padding:9px 11px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;background:var(--dsw-alias-bg-base);color:inherit;font:13px/1.4 sans-serif;outline:0}.mf-onboard input:focus{border-color:var(--dsw-alias-state-business-primary)}.mf-onboard-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}.mf-onboard-error{color:#f87171;font-size:12px}.mf-onboard-note{font-size:11.5px;color:var(--dsw-alias-label-secondary);line-height:1.6}',
   SETTINGS_PANEL_CSS,
-     AGENT_MODELS_PANEL_CSS,
+      AGENT_MODELS_PANEL_CSS,
+      STUDIO_POLISH_CSS,
    ].join('\n')
   let styleEl = null
   function ensureStyles() {
@@ -2222,7 +2224,10 @@ export function createClient(require) {
     }
     const mfChildren = [h('section', { className: 'mf-panel' + (mode === 'web' ? ' mf-view' : '') + (focus ? ' mf-focus' : ''), role: 'dialog', 'aria-label': '墨扉写作工作区' },
       h('header', { className: 'mf-head' },
-        h('div', { className: 'mf-head-main' }, h('strong', null, '墨扉'), h('span', { className: 'mf-head-context', title: project ? project.title : '写作工作台' }, project ? project.title : '写作工作台')),
+        h('div', { className: 'mf-head-main' },
+          h('span', { className: 'mf-head-mark', 'aria-hidden': 'true' }, '墨'),
+          h('span', { className: 'mf-head-copy' }, h('strong', null, '墨扉'), h('small', null, '写作工作台')),
+          h('span', { className: 'mf-head-context', title: project ? project.title : '写作工作台' }, project ? project.title : '写作工作台')),
         h('span', { className: 'mf-head-actions' },
           h('button', { className: 'mf-action-icon', type: 'button', title: paletteOpen ? '关闭快捷操作' : '快捷操作（Ctrl+Shift+P）', 'aria-label': paletteOpen ? '关闭快捷操作' : '打开快捷操作', 'aria-expanded': paletteOpen, 'aria-controls': 'mf-palette', 'data-mf-palette-trigger': 'true', onClick: () => paletteOpen ? closePalette() : (setPaletteOpen(true), setPaletteQuery('')) }, '⋯'),
           mode === 'web' ? h('button', { className: 'mf-btn mf-primary', type: 'button', title: project ? '在当前项目新建章节' : '新建项目', onClick: () => { if (project) { setChapterForm(true); setTab('projects') } else { setProjectForm(true); setTab('projects') } } }, '＋ 新建') : null,

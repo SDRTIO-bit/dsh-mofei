@@ -2,7 +2,7 @@
 
 墨扉是运行在 DeepSeek Harness（DSH）中的小说写作工作台插件。它把项目、卷章、角色、世界书、笔记、摘要和提示词链放在同一套写作数据模型里，并将 `mofei-writer` 写作会话与 DSH 原生工作区连接起来。
 
-当前固定插件版本：`mofei-dsh v0.25.0`。
+当前固定插件版本：`dsh-mofei v0.25.0`。
 
 ## 能做什么
 
@@ -37,7 +37,7 @@ Copy-Item .\presets\mofei-writer "$env:USERPROFILE\.dsh\.agent-presets\mofei-wri
 ```yaml
 - insert:
     - id: mofei
-      name: mofei-dsh
+      name: dsh-mofei
 ```
 
 更新仓库后的 preset 时，确认没有本地自定义后再执行：
@@ -57,14 +57,17 @@ cd F:\game\SillyTavern-1.13.2\OpenFic-DSH
 dsh --profile novel --port 3088
 ```
 
-> 注意：不要写中间的 `web` 子命令（`dsh --profile novel web ...` 是错误写法）；
-> 3081 是 WSL DSH 专用端口，勿占用。
+`3088` 是本项目约定的墨扉写作入口，不是 DSH 的全局默认端口。请始终以
+`dsh --profile novel --port 3088` 启动墨扉，不要写中间的 `web` 子命令
+（`dsh --profile novel web ...` 是错误写法）；3081 是 WSL DSH 专用端口，勿占用。
 
 打开 `http://127.0.0.1:3088/`，点击 DSH 侧栏底部的「墨扉」进入工作台。新建项目时，默认保存到当前 DSH 工作区；项目栏右侧的「同步」按钮可立即扫描工作区中的墨扉项目。
 
 工作台顶栏的「⋯」是快捷操作入口，可搜索新建章节、摘要、写作风格、版本历史和 Writer/Reviewer 等动作；打开后点击右上角「×」、再次点击「⋯」、按 `Escape` 或点击面板外部即可关闭。
 
-标准 DSH 环境可以继续使用 `dsh web`；它不会加载 `mofei-dsh` 写作插件。
+普通 `dsh web` 未指定端口时会使用 DSH 的 `3080` 默认端口。该地址是干净的标准
+DSH/browser 测试环境，不是墨扉入口，也不应加载 `dsh-mofei` 写作插件；需要写作时请访问
+`http://127.0.0.1:3088/`。
 
 ## 工作区文件
 

@@ -72,7 +72,7 @@ export default {
      function normalizeModelStore(value) { const source = value && typeof value === 'object' ? value : {}; const out = { version: 1, general: modelRef(source.general), byRole: {}, byProject: {} }; const roles = source.byRole && typeof source.byRole === 'object' ? source.byRole : {}; Object.keys(roles).forEach((id) => { if (id !== '__proto__' && id !== 'constructor' && id !== 'prototype') out.byRole[id] = modelRef(roles[id]) }); const projects = source.byProject && typeof source.byProject === 'object' ? source.byProject : {}; Object.keys(projects).forEach((projectId) => { if (projectId !== '__proto__' && projectId !== 'constructor' && projectId !== 'prototype') { const item = projects[projectId] && typeof projects[projectId] === 'object' ? projects[projectId] : {}; out.byProject[projectId] = { general: modelRef(item.general), byRole: {} }; const projectRoles = item.byRole && typeof item.byRole === 'object' ? item.byRole : {}; Object.keys(projectRoles).forEach((id) => { out.byProject[projectId].byRole[id] = modelRef(projectRoles[id]) }) } }); return out }
      function resolvedModel(projectId, roleId) { const project = projectId && modelStore.byProject[projectId]; const projectRole = project && project.byRole && project.byRole[roleId]; const globalRole = modelStore.byRole[roleId]; const hasProjectRole = !!projectRole; const dedicatedRole = projectRole && projectRole.mode === 'dedicated' && projectRole.model ? projectRole : !hasProjectRole && globalRole && globalRole.mode === 'dedicated' && globalRole.model ? globalRole : null; if (dedicatedRole) return { ...dedicatedRole, source: 'role' }; const projectGeneral = project && project.general; const general = projectGeneral && projectGeneral.mode !== 'dedicated' && projectGeneral.model ? projectGeneral : modelStore.general; return { ...general, source: general && general.model ? 'general' : 'dsh-default' } }
      function ragIndexFor(projectId) { return ragStore.byProject && ragStore.byProject[projectId] ? ragStore.byProject[projectId] : null }
-     function projectSummaries(projectId) { const out = {}; Object.keys(summaryStore.chapters || {}).forEach((id) => { const item = summaryStore.chapters[id]; if (item && (!projectId || item.projectId === projectId || !item.projectId)) out[id] = item }); return out }
+     function projectSummaries(projectId) { const project = projectId ? projectBy(projectId) : null; const chapterIds = project ? new Set((project.chapters || []).map((chapter) => chapter.id)) : null; const out = {}; Object.keys(summaryStore.chapters || {}).forEach((id) => { const item = summaryStore.chapters[id]; if (item && (!projectId || (chapterIds && chapterIds.has(id)))) out[id] = item }); return out }
      async function modelCatalog() {
        const llm = ctx.get('llm')
        if (!llm || typeof llm.listProviders !== 'function' || typeof llm.listModels !== 'function') return { providers: [], error: 'LLM_CATALOG_UNAVAILABLE' }
@@ -354,12 +354,50 @@ export default {
         }
       }
     }
-    async function saveProjects() { await writePersisted(projectTarget, store); await mirrorFileTree(); await gitCommitAll('墨扉 项目保存').catch(() => { /* 非 git 工作区忽略 */ }) }
+    // v0.26: 文件优先——store 里的 content/history 仅留在内存中作为工作集，
+    // 落到 .mofei-projects.json / .mofei-chains.json 时把正文/描述/历史抽空，
+    // 由 mirrorFileTree() 写到 .mofei/projects/<id>/** 作为唯一持久形式。
+    // 保持 version 字段不变以兼容现有读取路径；缺字段视为内容迁移到文件树。
+    function toIndexableStore(source) {
+      const cloned = source && typeof source === 'object' ? JSON.parse(JSON.stringify(source)) : { version: 4, nextId: 1, projects: [] }
+      cloned.version = 4
+      if (!Array.isArray(cloned.projects)) cloned.projects = []
+      cloned.projects.forEach((project) => {
+        if (Array.isArray(project && project.chapters)) project.chapters.forEach((chapter) => {
+          if (chapter && typeof chapter.content === 'string') delete chapter.content
+          if (chapter && Array.isArray(chapter.history)) delete chapter.history
+        })
+        if (Array.isArray(project && project.characters)) project.characters.forEach((character) => {
+          if (character && typeof character.description === 'string') delete character.description
+        })
+        if (Array.isArray(project && project.notes)) project.notes.forEach((note) => {
+          if (note && typeof note.content === 'string') delete note.content
+        })
+        if (Array.isArray(project && project.worldEntries)) project.worldEntries.forEach((entry) => {
+          if (entry && typeof entry.content === 'string') delete entry.content
+        })
+      })
+      return cloned
+    }
+    function toIndexableChainStore(source) {
+      const cloned = source && typeof source === 'object' ? JSON.parse(JSON.stringify(source)) : { version: 1, byProject: {} }
+      cloned.version = 1
+      const byProject = cloned.byProject && typeof cloned.byProject === 'object' ? cloned.byProject : {}
+      Object.keys(byProject).forEach((projectId) => {
+        const list = byProject[projectId]
+        if (Array.isArray(list)) list.forEach((chain) => {
+          if (chain && typeof chain.content === 'string') delete chain.content
+        })
+      })
+      cloned.byProject = byProject
+      return cloned
+    }
+    async function saveProjects() { await writePersisted(projectTarget, toIndexableStore(store)); await mirrorFileTree(); await gitCommitAll('墨扉 项目保存').catch(() => { /* 非 git 工作区忽略 */ }) }
     async function saveDrafts() { await writePersisted(draftTarget, draftStore); await mirrorFileTree() }
     async function saveStats() { await writePersisted(statsTarget, stats); await mirrorFileTree() }
     async function saveAiSessions() { await writePersisted(aiSessionsTarget, aiSessions) }
     async function saveSummaries() { await writePersisted(summaryTarget, summaryStore); await mirrorFileTree() }
-    async function saveChains() { await writePersisted(chainsTarget, chainStore); await mirrorFileTree() }
+    async function saveChains() { await writePersisted(chainsTarget, toIndexableChainStore(chainStore)); await mirrorFileTree() }
     async function saveRoles() { await writePersisted(rolesTarget, rolesStore); await mirrorFileTree() }
      async function saveInstructions() { await writePersisted(instructionsTarget, instructionStore); await mirrorFileTree() }
      async function saveModels() { await writePersisted(modelsTarget, modelStore); await mirrorFileTree() }
@@ -402,30 +440,138 @@ export default {
       await mkdir(path.dirname(target), { recursive: true })
       await writeFile(target, content, 'utf8')
     }
+    // v0.24: 镜像清单只记录由墨扉生成的相对路径。清理时只使用清单中的路径，
+    // 因此 rootDir 下用户自行维护的其它文件不会被递归删除。
+    const mirrorManifestName = '.mofei-manifest.json'
+    function isMirrorManagedFile(relative) {
+      const normalized = mirrorRelative(relative)
+      if (!normalized) return false
+      if (normalized === 'project.yml') return true
+      const parts = normalized.split(/[\\/]/)
+      const top = parts[0]
+      if (top === 'chapters') {
+        if (parts.length >= 2 && normalized.endsWith('.md')) return true
+        // v0.26: 章节历史走 .history.jsonl，frontmatter.id 对应的章节存在时随镜像写。
+        if (parts.length >= 2 && normalized.endsWith('.history.jsonl')) return true
+        return false
+      }
+      if (top === 'characters' || top === 'notes' || top === 'world' || top === 'chains') return parts.length === 2 && normalized.endsWith('.md')
+      return top === 'summaries' && parts.length >= 3 && normalized.endsWith('.md') && (parts[1] === 'chapters' || parts[1] === 'ranges')
+    }
+    function mirrorRelative(value) {
+      if (typeof value !== 'string' || !value.trim() || path.isAbsolute(value)) return null
+      const normalized = path.normalize(value.trim())
+      if (normalized === '.' || normalized === '..' || path.isAbsolute(normalized)) return null
+      const parts = normalized.split(/[\\/]+/)
+      if (!parts.length || parts.some((part) => !part || part === '.' || part === '..' || /^[A-Za-z]:$/.test(part))) return null
+      return normalized
+    }
+    async function readMirrorManifest(base) {
+      try {
+        const parsed = JSON.parse(await readFile(path.join(base, mirrorManifestName), 'utf8'))
+        const files = Array.isArray(parsed && parsed.files) ? parsed.files.map(mirrorRelative).filter((file) => file && isMirrorManagedFile(file)) : []
+        return { files: Array.from(new Set(files)) }
+      } catch (error) { return { files: [] } }
+    }
+    async function removeMirrorFiles(base, previous, desired) {
+      const keep = new Set(desired)
+      for (const relative of previous) {
+        if (keep.has(relative)) continue
+        const safeRelative = mirrorRelative(relative)
+        if (!isMirrorManagedFile(safeRelative)) continue
+        if (!safeRelative) continue
+        try { await rm(path.join(base, safeRelative), { force: true }) } catch (error) { /* 文件已被外部删除 */ }
+      }
+    }
+    // 兼容 manifest 引入前的镜像：只在删除时按 frontmatter 中的实体 ID 定位，
+    // 绝不按文件名或目录全量删除，避免误伤 rootDir 中的外部 Markdown。
+    async function removeMirrorEntityFiles(project, kind, entityIds) {
+      if (!project || String(cwd).startsWith('virtual-root')) return
+      const directory = { chapter: 'chapters', character: 'characters', note: 'notes', world: 'world', summaryChapter: path.join('summaries', 'chapters'), summaryRange: path.join('summaries', 'ranges'), chain: 'chains' }[kind]
+      const metaKey = kind === 'summaryChapter' ? 'chapterId' : 'id'
+      const wanted = new Set((Array.isArray(entityIds) ? entityIds : [entityIds]).filter((id) => typeof id === 'string' && id))
+      if (!directory || !wanted.size) return
+      const base = projectFileBase(project)
+      const files = await listMofeiMarkdown(path.join(base, directory))
+      for (const file of files) {
+        try {
+          const parsed = parseFrontmatter(await mofeiReadFile(file))
+          if (!wanted.has(parsed.meta[metaKey])) continue
+          await rm(file, { force: true })
+          // v0.26: 章节同步删除旁边的 .history.jsonl（仅 chapter kind）。
+          if (kind === 'chapter' && parsed.meta.id) {
+            const historyFile = file.replace(/\.md$/i, '.history.jsonl')
+            try { await rm(historyFile, { force: true }) } catch (error) { /* noop */ }
+          }
+        } catch (error) { /* 无法解析或已被外部删除时保持原样 */ }
+      }
+    }
+    async function removeDeletedMirrorEntities(project, deleted) {
+      const items = deleted && typeof deleted === 'object' ? deleted : {}
+      await removeMirrorEntityFiles(project, 'chapter', items.chapters)
+      await removeMirrorEntityFiles(project, 'character', items.characters)
+      await removeMirrorEntityFiles(project, 'note', items.notes)
+      await removeMirrorEntityFiles(project, 'world', items.worldEntries)
+      await removeMirrorEntityFiles(project, 'summaryChapter', items.chapterSummaries)
+      await removeMirrorEntityFiles(project, 'summaryRange', items.rangeSummaries)
+      await removeMirrorEntityFiles(project, 'chain', items.chains)
+    }
+    async function removeProjectMirror(project) {
+      if (!project || String(cwd).startsWith('virtual-root')) return
+      const hasExternalRoot = typeof project.rootDir === 'string' && project.rootDir.trim() && path.isAbsolute(project.rootDir)
+      const base = projectFileBase(project)
+      if (!hasExternalRoot) {
+        try { await rm(base, { recursive: true, force: true }) } catch (error) { console.error('墨扉 mirror delete failed', error) }
+        return
+      }
+      // 外部 rootDir 可能包含用户文件，删除项目时只移除墨扉清单及 project.yml。
+      const manifest = await readMirrorManifest(base)
+      await removeMirrorFiles(base, manifest.files, new Set())
+      try { await rm(path.join(base, mirrorManifestName), { force: true }) } catch (error) { /* 已不存在 */ }
+      try { await rm(path.join(base, 'project.yml'), { force: true }) } catch (error) { /* 已不存在 */ }
+    }
     async function mirrorFileTree() {
       if (String(cwd).startsWith('virtual-root')) return
       await writeMofeiFile('zone.yml', 'active: true\nversion: 1\n')
       for (const project of store.projects) {
         // v0.18: 项目级 rootDir（小说文件夹）或工作区 .mofei/projects/<id>
         const base = projectFileBase(project)
-        await writeMofeiFile(path.join(base, 'project.yml'), frontmatter(styleMeta(project)))
-        for (const volume of project.volumes || []) {
-          const volDir = safeFileSegment(volume.id, volume.title || '卷')
-          for (const chapter of project.chapters.filter((item) => item.volumeId === volume.id)) {
-            await writeMofeiFile(path.join(base, 'chapters', volDir, `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`), frontmatter({ id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision, volumeId: chapter.volumeId || null }) + (chapter.content || ''))
+        const previousManifest = await readMirrorManifest(base)
+        const desiredFiles = new Set()
+        const writeProjectFile = async (relative, content) => {
+          const safeRelative = mirrorRelative(relative)
+          if (!safeRelative || !isMirrorManagedFile(safeRelative)) return
+          desiredFiles.add(safeRelative)
+          await writeMofeiFile(path.join(base, safeRelative), content)
+        }
+        await writeProjectFile('project.yml', frontmatter(styleMeta(project)))
+        // v0.26: 章节历史走 .history.jsonl（JSONL = 每行一条快照）；content 写到 .md 正文。
+        // 历史只追加、超过 HISTORY_CAP 的旧条目由 pushHistory() 截断，因此文件层不再做轮转。
+        const writeChapterMirror = async (chapter, relativeDir) => {
+          const fileBase = safeFileSegment(chapter.id, chapter.title || '章节')
+          await writeProjectFile(path.join(relativeDir, `${fileBase}.md`), frontmatter({ id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision, volumeId: chapter.volumeId || null }) + (chapter.content || ''))
+          if (Array.isArray(chapter.history) && chapter.history.length) {
+            const jsonl = chapter.history.map((entry) => JSON.stringify({ revision: entry.revision, content: entry.content, at: entry.at || 0, ...(entry.source ? { source: entry.source } : {}) })).join('\n') + '\n'
+            await writeProjectFile(path.join(relativeDir, `${fileBase}.history.jsonl`), jsonl)
           }
         }
-        for (const chapter of project.chapters.filter((item) => !item.volumeId)) {
-          await writeMofeiFile(path.join(base, 'chapters', `${safeFileSegment(chapter.id, chapter.title || '章节')}.md`), frontmatter({ id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision, volumeId: null }) + (chapter.content || ''))
+        for (const volume of project.volumes || []) {
+          const volDir = safeFileSegment(volume.id, volume.title || '卷')
+          const chapterDir = path.join('chapters', volDir)
+          for (const chapter of project.chapters.filter((item) => item.volumeId === volume.id)) await writeChapterMirror(chapter, chapterDir)
         }
-        for (const character of project.characters || []) await writeMofeiFile(path.join(base, 'characters', `${safeFileSegment(character.id, character.name || '角色')}.md`), frontmatter({ id: character.id, name: character.name, isFavorited: !!character.isFavorited }) + (character.description || ''))
-        for (const note of project.notes || []) await writeMofeiFile(path.join(base, 'notes', `${safeFileSegment(note.id, note.title || '笔记')}.md`), frontmatter({ id: note.id, title: note.title, categoryId: note.categoryId || null, isLocked: !!note.isLocked, isHidden: !!note.isHidden }) + (note.content || ''))
-        for (const entry of project.worldEntries || []) await writeMofeiFile(path.join(base, 'world', `${safeFileSegment(entry.id, entry.name || '条目')}.md`), frontmatter({ id: entry.id, name: entry.name, keys: normalizeKeys(entry.keys), isEnabled: entry.isEnabled !== false, constant: !!entry.constant, order: entry.order }) + (entry.content || ''))
+        for (const chapter of project.chapters.filter((item) => !item.volumeId)) await writeChapterMirror(chapter, 'chapters')
+        for (const character of project.characters || []) await writeProjectFile(path.join('characters', `${safeFileSegment(character.id, character.name || '角色')}.md`), frontmatter({ id: character.id, name: character.name, isFavorited: !!character.isFavorited }) + (character.description || ''))
+        for (const note of project.notes || []) await writeProjectFile(path.join('notes', `${safeFileSegment(note.id, note.title || '笔记')}.md`), frontmatter({ id: note.id, title: note.title, categoryId: note.categoryId || null, isLocked: !!note.isLocked, isHidden: !!note.isHidden }) + (note.content || ''))
+        for (const entry of project.worldEntries || []) await writeProjectFile(path.join('world', `${safeFileSegment(entry.id, entry.name || '条目')}.md`), frontmatter({ id: entry.id, name: entry.name, keys: normalizeKeys(entry.keys), isEnabled: entry.isEnabled !== false, constant: !!entry.constant, order: entry.order }) + (entry.content || ''))
+        const projectChapterIds = new Set((project.chapters || []).map((chapter) => chapter.id))
         const chapterSummaries = (summaryStore.chapters && summaryStore.chapters || {})
-        for (const [chapterId, entry] of Object.entries(chapterSummaries)) if (entry && entry.summary) await writeMofeiFile(path.join(base, 'summaries', 'chapters', `${safeFileSegment(chapterId, 'chapter')}.md`), frontmatter({ chapterId, updatedAt: entry.updatedAt || 0, chapterRevision: entry.chapterRevision || 0 }) + entry.summary)
-        for (const range of summaryStore.ranges || []) await writeMofeiFile(path.join(base, 'summaries', 'ranges', `${safeFileSegment(range.id, 'range')}.md`), frontmatter({ id: range.id, title: range.title || range.id, chapterIds: range.chapterIds || [] }) + (range.summary || ''))
+        for (const [chapterId, entry] of Object.entries(chapterSummaries)) if (projectChapterIds.has(chapterId) && entry && entry.summary) await writeProjectFile(path.join('summaries', 'chapters', `${safeFileSegment(chapterId, 'chapter')}.md`), frontmatter({ chapterId, updatedAt: entry.updatedAt || 0, chapterRevision: entry.chapterRevision || 0 }) + entry.summary)
+        for (const range of summaryStore.ranges || []) if (range && Array.isArray(range.chapterIds) && range.chapterIds.length && range.chapterIds.every((chapterId) => projectChapterIds.has(chapterId))) await writeProjectFile(path.join('summaries', 'ranges', `${safeFileSegment(range.id, 'range')}.md`), frontmatter({ id: range.id, title: range.title || range.id, chapterIds: range.chapterIds || [] }) + (range.summary || ''))
         const chains = (chainStore.byProject && chainStore.byProject[project.id]) || []
-        for (const chain of chains) await writeMofeiFile(path.join(base, 'chains', `${safeFileSegment(chain.id, chain.name || '链')}.md`), frontmatter({ id: chain.id, name: chain.name, updatedAt: chain.updatedAt || 0 }) + (chain.content || ''))
+        for (const chain of chains) await writeProjectFile(path.join('chains', `${safeFileSegment(chain.id, chain.name || '链')}.md`), frontmatter({ id: chain.id, name: chain.name, updatedAt: chain.updatedAt || 0 }) + (chain.content || ''))
+        await removeMirrorFiles(base, previousManifest.files, desiredFiles)
+        await writeMofeiFile(path.join(base, mirrorManifestName), JSON.stringify({ version: 1, files: Array.from(desiredFiles).sort() }, null, 2) + '\n')
       }
       const styleDir = path.join(mofeiFileRoot, 'styles')
       await mkdir(styleDir, { recursive: true })
@@ -530,6 +676,25 @@ export default {
     // v0.10.1: 从 .mofei/projects/** 文件树重建内存 store（文件优先）。
     // 规则：文件 revision >= 内存 revision → 文件胜出；否则内存胜出并计入 conflicts。
     // v0.10.2: options.preferFiles=true（显式回滚）时文件无条件胜出。
+    // v0.26: 章节历史走 .history.jsonl，content 仍在 .md 正文。
+    function chapterHistoryPath(mdRelative) {
+      return mdRelative.replace(/\.md$/i, '.history.jsonl')
+    }
+    function parseChapterHistoryJsonl(textValue, fallback) {
+      const lines = String(textValue || '').split('\n').map((line) => line.trim()).filter(Boolean)
+      if (!lines.length) return fallback
+      const out = []
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line)
+          if (!parsed || typeof parsed !== 'object') continue
+          if (typeof parsed.revision !== 'number') continue
+          if (typeof parsed.content !== 'string') continue
+          out.push({ revision: parsed.revision, content: parsed.content, at: typeof parsed.at === 'number' ? parsed.at : 0, ...(parsed.source ? { source: parsed.source } : {}) })
+        } catch (error) { /* 坏行直接忽略 */ }
+      }
+      return out.length ? out : fallback
+    }
     async function importFileTree(options) {
       const preferFiles = !!(options && options.preferFiles)
       const empty = () => ({ added: 0, updated: 0, conflicts: 0 })
@@ -579,9 +744,11 @@ export default {
             report.changed = true
           }
           const fileRevision = typeof parsed.meta.revision === 'number' && isFinite(parsed.meta.revision) ? Math.max(1, Math.floor(parsed.meta.revision)) : 1
+          let history = []
+          try { history = parseChapterHistoryJsonl(await mofeiReadFile(chapterHistoryPath(relative)), []) || [] } catch (error) { history = [] }
           const existing = chapterBy(project, id)
           if (!existing) {
-            project.chapters.push({ id, title: text(parsed.meta.title, '未命名章节'), content: parsed.body, order: typeof parsed.meta.order === 'number' && isFinite(parsed.meta.order) ? parsed.meta.order : project.chapters.length, revision: fileRevision, history: [], volumeId })
+            project.chapters.push({ id, title: text(parsed.meta.title, '未命名章节'), content: parsed.body, order: typeof parsed.meta.order === 'number' && isFinite(parsed.meta.order) ? parsed.meta.order : project.chapters.length, revision: fileRevision, history, volumeId })
             report.chapters.added += 1
             report.changed = true
           } else if (preferFiles || fileRevision >= existing.revision) {
@@ -593,9 +760,11 @@ export default {
             if (titleChanged) existing.title = text(parsed.meta.title, existing.title)
             if (orderChanged) existing.order = parsed.meta.order
             if (volumeChanged) existing.volumeId = volumeId
+            // v0.26: 文件胜出时 history 整体替换（按文件时间序，JSONL 已是顺序追加）。
+            if (history.length) existing.history = history
             if (contentChanged) existing.revision = preferFiles ? Math.max(1, fileRevision) : fileRevision
             else if (titleChanged || orderChanged || volumeChanged) existing.revision = Math.max(existing.revision, fileRevision)
-            if (contentChanged || titleChanged || orderChanged || volumeChanged) { report.chapters.updated += 1; report.changed = true }
+            if (contentChanged || titleChanged || orderChanged || volumeChanged || history.length) { report.chapters.updated += 1; report.changed = true }
           } else {
             report.chapters.conflicts += 1
           }
@@ -766,22 +935,24 @@ export default {
     }
     async function dropSummariesFor(chapterIds) {
       const doomed = new Set(Array.isArray(chapterIds) ? chapterIds : [])
-      if (!doomed.size) return
+      const removed = { chapterSummaries: [], rangeSummaries: [] }
+      if (!doomed.size) return removed
       let changed = false
       const chapters = {}
       Object.keys(summaryStore.chapters).forEach((chapterId) => {
-        if (doomed.has(chapterId)) changed = true
+        if (doomed.has(chapterId)) { changed = true; removed.chapterSummaries.push(chapterId) }
         else chapters[chapterId] = summaryStore.chapters[chapterId]
       })
       const ranges = summaryStore.ranges.filter((range) => {
         const touched = range.chapterIds.some((chapterId) => doomed.has(chapterId))
-        if (touched) changed = true
+        if (touched) { changed = true; removed.rangeSummaries.push(range.id) }
         return !touched
       })
       if (changed) {
         summaryStore = { version: 1, chapters, ranges }
         await saveSummaries()
       }
+      return removed
     }
     function summaryPlanView(chapter) { return { id: chapter.id, title: chapter.title, order: chapter.order, revision: chapter.revision } }
     function summaryRangeView(group) {
@@ -1540,21 +1711,24 @@ export default {
         const project = projectBy(args && args.projectId)
         if (!project) return { error: 'PROJECT_NOT_FOUND' }
         const removedChapterIds = project.chapters.map((item) => item.id)
+        const removedCharacterIds = project.characters.map((item) => item.id)
+        const removedNoteIds = project.notes.map((item) => item.id)
+        const removedWorldEntryIds = project.worldEntries.map((item) => item.id)
+        const removedChainIds = chainList(project.id).map((item) => item.id)
         for (const [sessionId, binding] of agentContexts) if (binding.projectId === project.id) agentContexts.delete(sessionId)
         store.projects = store.projects.filter((item) => item.id !== project.id)
         const before = draftStore.items.length
         draftStore.items = draftStore.items.filter((item) => item.projectId !== project.id)
         if (before !== draftStore.items.length) await saveDrafts()
-        await dropSummariesFor(removedChapterIds)
+        const summaries = await dropSummariesFor(removedChapterIds)
         await dropChainsFor(project.id)
         await dropRolesFor(project.id)
         await saveProjects()
-        // rootDir 项目直接把实体文件放在用户选定的小说目录；删除项目记录时绝不能递归删除
-        // 该目录，避免一个项目条目删除整本小说或用户选定的上级文件夹。默认镜像项目才清理其专属目录。
-        const hasExternalRoot = typeof project.rootDir === 'string' && project.rootDir.trim()
-        if (!String(cwd).startsWith('virtual-root') && !hasExternalRoot) {
-          try { await rm(path.join(mofeiFileRoot, 'projects', safeFileSegment(project.id, 'project')), { recursive: true, force: true }) } catch (error) { console.error('墨扉 mirror delete failed', error) }
-        }
+        // rootDir 项目直接把实体文件放在用户选定的小说目录；只清理墨扉镜像文件，
+        // 不递归删除外部目录中的用户内容。默认项目目录则可安全整目录移除。
+        await removeProjectMirror(project)
+        // rootDir 在旧版本无 manifest 时仍须按 ID 清理墨扉实体文件。
+        await removeDeletedMirrorEntities(project, { chapters: removedChapterIds, characters: removedCharacterIds, notes: removedNoteIds, worldEntries: removedWorldEntryIds, chains: removedChainIds, ...summaries })
         return { deleted: true, projectId: project.id }
       }),
       'update-chapter-meta': async (args) => mutate(async () => {
@@ -1569,13 +1743,16 @@ export default {
         if (!project) return { error: 'PROJECT_NOT_FOUND' }
         const index = project.chapters.findIndex((item) => item.id === (args && args.chapterId))
         if (index < 0) return { error: 'CHAPTER_NOT_FOUND' }
+        const removedChapter = project.chapters[index]
         project.chapters.splice(index, 1)
         project.chapters.forEach((item, order) => { item.order = order })
         const before = draftStore.items.length
         draftStore.items = draftStore.items.filter((item) => !(item.projectId === project.id && item.chapterId === (args && args.chapterId)))
         if (before !== draftStore.items.length) await saveDrafts()
-        await dropSummariesFor([args && args.chapterId])
-        await saveProjects(); return { deleted: true, chapterId: args.chapterId }
+        const summaries = await dropSummariesFor([removedChapter.id])
+        await saveProjects()
+        await removeDeletedMirrorEntities(project, { chapters: [removedChapter.id], ...summaries })
+        return { deleted: true, chapterId: args.chapterId }
       }),
       'move-chapter': async (args) => mutate(async () => {
         const project = projectBy(args && args.projectId)
@@ -1724,8 +1901,10 @@ export default {
         const before = draftStore.items.length
         draftStore.items = draftStore.items.filter((item) => !(item.projectId === project.id && removedIds.includes(item.chapterId)))
         if (before !== draftStore.items.length) await saveDrafts()
-        await dropSummariesFor(removedIds)
-        await saveProjects(); return { deleted: true, volumeId: volume.id, chapterCount: count }
+        const summaries = await dropSummariesFor(removedIds)
+        await saveProjects()
+        await removeDeletedMirrorEntities(project, { chapters: removedIds, ...summaries })
+        return { deleted: true, volumeId: volume.id, chapterCount: count }
       }),
       'move-volume': async (args) => mutate(async () => {
         const project = projectBy(args && args.projectId)
@@ -1795,7 +1974,9 @@ export default {
         const before = project.characters.length
         project.characters = project.characters.filter((c) => c.id !== (args && args.characterId))
         if (before === project.characters.length) return { error: 'CHARACTER_NOT_FOUND' }
-        await saveProjects(); return { deleted: true, characterId: args.characterId }
+        await saveProjects()
+        await removeDeletedMirrorEntities(project, { characters: [args.characterId] })
+        return { deleted: true, characterId: args.characterId }
       }),
       'toggle-character-favorite': async (args) => mutate(async () => {
         const project = projectBy(args && args.projectId)
@@ -1864,7 +2045,9 @@ export default {
         const before = project.notes.length
         project.notes = project.notes.filter((n) => n.id !== (args && args.noteId))
         if (before === project.notes.length) return { error: 'NOTE_NOT_FOUND' }
-        await saveProjects(); return { deleted: true, noteId: args.noteId }
+        await saveProjects()
+        await removeDeletedMirrorEntities(project, { notes: [args.noteId] })
+        return { deleted: true, noteId: args.noteId }
       }),
       'move-note': async (args) => mutate(async () => {
         const project = projectBy(args && args.projectId)
@@ -1908,7 +2091,9 @@ export default {
         const before = project.worldEntries.length
         project.worldEntries = project.worldEntries.filter((item) => item.id !== (args && args.entryId))
         if (before === project.worldEntries.length) return { error: 'WORLD_ENTRY_NOT_FOUND' }
-        await saveProjects(); return { deleted: true, entryId: args.entryId }
+        await saveProjects()
+        await removeDeletedMirrorEntities(project, { worldEntries: [args.entryId] })
+        return { deleted: true, entryId: args.entryId }
       }),
       'update-world-entries': async (args) => mutate(async () => {
         const project = projectBy(args && args.projectId); if (!project) return { error: 'PROJECT_NOT_FOUND' }
@@ -1936,6 +2121,7 @@ export default {
         project.worldEntries = (project.worldEntries || []).filter((entry) => !ids.includes(entry.id))
         project.worldEntries.forEach((entry, order) => { entry.order = order })
         await saveProjects()
+        await removeDeletedMirrorEntities(project, { worldEntries: ids })
         return { deleted: true, count: ids.length }
       }),
       'move-world-entry': async (args) => mutate(async () => {
@@ -2369,6 +2555,7 @@ export default {
         Object.defineProperty(byProject, project.id, { value: list.filter((item) => item.id !== chainId), enumerable: true, writable: true, configurable: true })
         chainStore = { version: 1, byProject }
         await saveChains()
+        await removeDeletedMirrorEntities(project, { chains: [chainId] })
         gitCommitAll('墨扉 链删除: ' + chainId, true).catch(() => { /* 非 git 工作区忽略 */ })
         return { deleted: true, chainId }
       }),
@@ -2550,7 +2737,7 @@ export default {
         }
       },
     })
-    // 墨扉服务契约：Agent Plane 插件（mofei-dsh/tools / context）通过 ctx.get('mofei') 使用。
+    // 墨扉服务契约：Agent Plane 插件（dsh-mofei/tools / context）通过 ctx.get('mofei') 使用。
     // core 本身不注册任何 Agent 工具/技能，避免污染 standard coding 会话。
     const runMethod = async (method, args) => {
       await load(); await queue
@@ -2611,7 +2798,7 @@ export default {
     // v0.10.2: 挂接 DSH jobs controller（使 unowned 后台任务可启动）；无 jobs 服务时忽略。
     try {
       const jobs = ctx.get('jobs')
-      if (jobs && typeof jobs.attachController === 'function') jobs.attachController('mofei-dsh')
+      if (jobs && typeof jobs.attachController === 'function') jobs.attachController('dsh-mofei')
     } catch (error) { console.warn('墨扉 jobs attachController 失败', error) }
     // v0.24 P0: 可逆副作用——卸载/热重载时回收 webServer 路由、git 节流定时器与代理上下文。
     // 此前路由 disposer 被丢弃，重装配会因 duplicate prefix route 崩溃。
