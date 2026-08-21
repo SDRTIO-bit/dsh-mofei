@@ -1,5 +1,5 @@
 // 墨扉 DSH Agent 面验收：通过 /api 协议创建临时 session，核对 Host 注册的写作 skills。
-// 用法（在 OpenFic-DSH 目录）：
+// 用法（在 dsh-mofei 目录）：
 //   $env:MOFEI_BASE='http://127.0.0.1:3088'; node tools\verify-agent-surface.mjs
 import crypto from 'node:crypto'
 

@@ -1,5 +1,5 @@
 // 从 OpenFic-main 的 skills/*.yaml 生成 plugin/lib/skills.js（DSH runtime skills）
-// 用法：node OpenFic-DSH/tools/migrate-skills.mjs
+// 用法：node tools/migrate-skills.mjs
 // 生成物完全可复现；源 YAML 更新后重跑即可。不依赖第三方包：按缩进解析 content 块。
 import fs from 'node:fs'
 import path from 'node:path'

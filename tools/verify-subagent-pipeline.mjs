@@ -1,6 +1,6 @@
 // 墨扉真实子代理写作流水线验收：主会话 agent 使用 DSH subagent 工具派 Writer 续写，
 // 再派 Reviewer 审稿，最后回读章节验证正文确实由 mofei_* 工具写回。
-// 用法（在 OpenFic-DSH 目录）：
+// 用法（在 dsh-mofei 目录）：
 //   $env:MOFEI_BASE='http://127.0.0.1:3088'; node tools\verify-subagent-pipeline.mjs
 import crypto from 'node:crypto'
 import { mkdtemp, rm } from 'node:fs/promises'

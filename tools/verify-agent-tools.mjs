@@ -1,6 +1,6 @@
 // 墨扉 DSH Agent 工具面真实验收：让会话 agent 调用 Host inspect 的 Tool.listTools，
 // 核对 23 个 mofei_* + 23 个 openfic_* + 关键工具可调用。
-// 用法（在 OpenFic-DSH 目录）：
+// 用法（在 dsh-mofei 目录）：
 //   $env:MOFEI_BASE='http://127.0.0.1:3088'; node tools\verify-agent-tools.mjs
 import crypto from 'node:crypto'
 

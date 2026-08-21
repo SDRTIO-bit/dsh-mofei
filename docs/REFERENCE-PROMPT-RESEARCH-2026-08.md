@@ -8,7 +8,7 @@
 
 ## 材料
 
-拆书样本目录：`F:\game\SillyTavern-1.13.2\OpenFic-DSH\新建文件夹`
+拆书样本目录：`F:\game\SillyTavern-1.13.2\dsh-mofei\新建文件夹`
 
 | 样本 | 已分析范围 | 观察用途 |
 | --- | --- | --- |

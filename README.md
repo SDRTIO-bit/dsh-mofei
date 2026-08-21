@@ -1,8 +1,8 @@
-﻿# 墨扉（Mofei）DSH
+# 墨扉（Mofei）DSH
 
 墨扉是运行在 DeepSeek Harness（DSH）中的小说写作工作台插件。它把项目、卷章、角色、世界书、笔记、摘要和提示词链放在同一套写作数据模型里，并将 `mofei-writer` 写作会话与 DSH 原生工作区连接起来。
 
-当前固定插件版本：`dsh-mofei v0.26.0`。
+当前固定插件版本：`dsh-mofei v0.24.0`（以 `plugin/package.json` 为准）。
 
 ## 能做什么
 
@@ -128,7 +128,7 @@ plugin/
   cordis.patch.yml              插件 bundle patch（dsh.bundle 自动挂载入口）
   lib/index.js                  Host 半体：webServer RPC、SSE、文件同步和持久化
   lib/client.js                 生成的 Client bundle（由 src/client/ 构建）
-  lib/tools.js                  73 个 mofei_* 工具注册（消费 ctx.get('mofei') 服务）
+  lib/tools.js                  73 个 mofei_* 工具注册（消费 ctx.get('mofei') 服务；详见 docs/TOOL-REFERENCE.md）
   lib/subagent-max.js           subagent_with_model 子代理工具（角色/模型/推理强度）
   lib/{ai,summary,prompt-chain,roles,instructions,rag,local-retrieval,txt,world}.js
                                 业务子模块
@@ -166,6 +166,8 @@ node verify-v0.18-onboard.cjs
 
 - [v0.26 变更说明](v0.26-changelog.md)
 - [架构说明](docs/ARCHITECTURE.md)
+- [开发文档](docs/DEVELOPMENT.md)（构建/运行/测试/常见修改路径）
+- [Agent 工具参考](docs/TOOL-REFERENCE.md)（`mofei_*` 工具全表 + 错误码）
 - [整体验收报告](docs/ACCEPTANCE-2026-08.md)
 - [Agent 协作约定](AGENTS.md)
 - [dsh-novel-tavern fork 调研](docs/NOVEL-TAVERN-FORK-NOTES.md)（小说存储/酒馆格式对照）
