@@ -1,6 +1,6 @@
 # dsh-novel-tavern 参考手册（给墨扉的借鉴清单）
 
-> 日期：2026-08-20。来源：`F:\game\SillyTavern-1.13.2\dsh-novel-tavern-main\dsh-novel-tavern-main`
+> 日期：2026-08-20。来源：`dsh-novel-tavern-main`
 > （DeepSeek Harness fork，作者另有其人，本手册把它当**参考实现**拆解，供墨扉借鉴，不合并代码）。
 > 每个可借鉴点都给出「fork 源码位置 → 机制 → 墨扉现状 → 借鉴方案 → 优先级」，可直接按条目落地。
 > 总览与能力对照见 `docs/NOVEL-TAVERN-FORK-NOTES.md`。

@@ -3,7 +3,7 @@
 > 目标：让会话 agent（或子代理）通过 `mofei_*` 工具直接读写 墨扉 项目，
 > 实现「人写草稿 → Agent 润色 → Reviewer 把关」的写作流水线。
 > 前置：在「写作环境」中使用——`dsh --profile novel --port 3088`（注意：不要写中间的 `web` 子命令；
-> 3081 是 WSL DSH，勿占用。默认 web profile 为纯 coding，不加载 dsh-mofei）；
+> 默认 web profile 为纯 coding，不加载 dsh-mofei）；
 > 工具注册成功（`Tool.listTools` 中可见 `mofei_*` 即注册成功）。
 
 ## 工具清单（Host 注册）

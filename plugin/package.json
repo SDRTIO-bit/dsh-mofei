@@ -56,6 +56,30 @@
                     "check":  "node --check lib/index.js \u0026\u0026 node --check lib/client.js \u0026\u0026 node --check lib/txt.js \u0026\u0026 node --check lib/world.js \u0026\u0026 node --check lib/ai.js \u0026\u0026 node --check lib/tools.js \u0026\u0026 node --check lib/roles.js \u0026\u0026 node --check lib/instructions.js \u0026\u0026 node --check lib/subagent-max.js \u0026\u0026 node --check lib/rag.js \u0026\u0026 node --check lib/local-retrieval.js"
                 },
     "license":  "Apache-2.0",
+    "author":  "SDRTIO-bit",
+    "homepage":  "https://github.com/SDRTIO-bit/dsh-mofei#readme",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/SDRTIO-bit/dsh-mofei.git"
+                   },
+    "bugs":  {
+                  "url":  "https://github.com/SDRTIO-bit/dsh-mofei/issues"
+              },
+    "keywords":  [
+                     "dsh",
+                     "deepseek-harness",
+                     "cordis",
+                     "sillytavern",
+                     "ai-writing",
+                     "novel-writing",
+                     "writing-tool",
+                     "ai-novel",
+                     "mofei"
+                 ],
+    "publishConfig":  {
+                         "access":  "public",
+                         "registry":  "https://registry.npmjs.org/"
+                     },
     "peerDependencies":  {
                              "@deepseek-ai/cordis":  "^4.0.1",
                              "react":  "^18.2.0"

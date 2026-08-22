@@ -74,13 +74,12 @@ npm run check
 墨扉设计为独立 profile，避免污染标准 coding 会话：
 
 ```powershell
-cd F:\game\SillyTavern-1.13.2\dsh-mofei
+cd <你的仓库目录>
 dsh --profile novel --port 3088
 ```
 
 - 端口 `3088` 是约定写作入口；不要写中间的 `web` 子命令。
 - `3080` 是 DSH 默认端口（干净 coding 环境，不加载 dsh-mofei）。
-- `3081` 是 WSL DSH 专用端口，勿占用。
 
 访问 `http://127.0.0.1:3088/`，点侧栏底部「墨扉」进入工作台。
 

@@ -1,7 +1,6 @@
 # dsh-novel-tavern 源码调研（2026-08-20）
 
-> 调研对象：`F:\game\SillyTavern-1.13.2\dsh-novel-tavern-main\dsh-novel-tavern-main`
-> （DeepSeek Harness fork，目录名 `dsh-novel-tavern-main`，含 `packages/novel` 小说扩展族）。
+> 调研对象：`dsh-novel-tavern-main`（DeepSeek Harness fork，含 `packages/novel` 小说扩展族）。
 > 本文记录该 fork 的结构、能力与 墨扉（dsh-mofei）的对应关系。
 > **可执行的逐条借鉴清单见 [`NOVEL-TAVERN-REFERENCE.md`](NOVEL-TAVERN-REFERENCE.md)（含源码位置→墨扉方案→优先级）。**
 > ⚠️ 该目录为压缩包解出的源码快照，**无 `.git`**；以 zip `dsh-novel-tavern-main.zip` 为原始分发物。
@@ -10,8 +9,7 @@
 
 - 上游：DeepSeek Harness（`@deepseek-ai/dsh-root` v0.1.0-rc.5，pnpm workspace 单仓），
   全套继承 `docs/`、`scripts/` 门禁、`.agents/notes`、`vendor/`（vendored Cordis）。
-- 本机已装的正式 DSH 为 v0.1.0-rc.6（`C:\Users\zhao\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh`），
-  说明 fork 底版略旧于当前安装。
+- 本机已装的正式 DSH 为 v0.1.0-rc.6，说明 fork 底版略旧于当前安装。
 - 新增核心：`packages/novel/` 一个多包组 = 长篇小说写作能力族 + SillyTavern（酒馆）格式集成。
 - 命名 `novel-tavern`：小说存储 + 酒馆角色/世界书互操作，与 墨扉 的定位高度重叠，值得对照。
 

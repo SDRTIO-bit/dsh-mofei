@@ -1,6 +1,6 @@
 # OpenFic 摘要与检索/RAG 调研（v0.10.1）
 
-> 调研日期：2026-08。源码：`F:\game\SillyTavern-1.13.2\OpenFic-main\OpenFic-main\backend\app`（Python/FastAPI）。
+> 调研日期：2026-08。源码：OpenFic（Python/FastAPI，`backend/app`）。
 > 用途：为墨扉后续版本提供借鉴清单。原则：只借鉴写作域产品设计，不移植 Python/LangChain/SQLite 运行时。
 
 ## 一、摘要体系（两级，无更高层）

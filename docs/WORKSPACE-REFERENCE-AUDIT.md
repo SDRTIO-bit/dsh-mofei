@@ -2,9 +2,8 @@
 
 Date: 2026-08-16
 
-This audit compares the Mofei DSH workspace with the user's reference project at
-`F:\game\SillyTavern-1.13.2\OpenFic-main\OpenFic-main`. The reference is a
-product and layout guide, not a runtime to copy into DSH.
+This audit compares the Mofei DSH workspace with the user's reference project,
+OpenFic. The reference is a product and layout guide, not a runtime to copy into DSH.
 
 ## Layout
 

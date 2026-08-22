@@ -83,13 +83,13 @@ config:
 在 Windows PowerShell 中启动写作环境：
 
 ```powershell
-cd F:\game\SillyTavern-1.13.2\dsh-mofei
+cd <你的仓库目录>
 dsh --profile novel --port 3088
 ```
 
 `3088` 是本项目约定的墨扉写作入口，不是 DSH 的全局默认端口。请始终以
 `dsh --profile novel --port 3088` 启动墨扉，不要写中间的 `web` 子命令
-（`dsh --profile novel web ...` 是错误写法）；3081 是 WSL DSH 专用端口，勿占用。
+（`dsh --profile novel web ...` 是错误写法）。
 
 打开 `http://127.0.0.1:3088/`，点击 DSH 侧栏底部的「墨扉」进入工作台。新建项目时，默认保存到当前 DSH 工作区；项目栏右侧的「同步」按钮可立即扫描工作区中的墨扉项目。
 
