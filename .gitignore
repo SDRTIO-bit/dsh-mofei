@@ -22,8 +22,11 @@ node_modules/
 /.mofei-*.json
 /.openfic-*.json
 
-# Keep the existing .mofei/ writing history tracked. Source, presets, skills,
-# scripts, tests, and documentation are intentionally tracked from this point.
+# Keep source, presets, skills, scripts, tests, and documentation tracked.
+# 小说写作数据(.mofei/)属于私人内容，不入库——由本地 DSH 实例持有。
+
+# 小说写作数据（私人内容，不入库）
+/.mofei/
 
 # 历史交接/规划文档（含本机开发痕迹，仅本地保留，不入库）
 /docs/archive/
