@@ -1877,13 +1877,13 @@ function react() {
   return binding;
 }
 var SETTINGS_PANEL_CSS = [
-  ".mf-settings-overlay{position:fixed;inset:0;z-index:136;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.36);transform:none!important}",
-  ".mf-settings{width:min(780px,calc(100vw - 40px));height:min(620px,calc(100vh - 64px));display:grid;grid-template-rows:52px minmax(0,1fr);overflow:hidden;border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 22px 64px rgba(0,0,0,.32)}",
-  ".mf-settings-head{display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-settings-head strong{font-size:14px}.mf-settings-head small{color:var(--dsw-alias-label-secondary);font-size:11px;flex:1}",
-  ".mf-settings-body{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:0}.mf-settings-nav{padding:10px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto}.mf-settings-nav button{display:flex;width:100%;align-items:flex-start;gap:9px;box-sizing:border-box;min-height:52px;padding:10px;border:0;border-radius:10px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;text-align:left;font-size:12px;line-height:1.35}.mf-settings-nav button:hover,.mf-settings-nav button.on{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-settings-nav button>span{display:block;min-width:0;line-height:1.35}.mf-settings-nav button strong{display:block;color:inherit;font-size:12px;line-height:1.35;white-space:normal}.mf-settings-nav button small{display:block;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:1.35;margin-top:3px;white-space:normal}",
-  ".mf-settings-content{padding:22px;overflow:auto}.mf-settings-content h3{margin:0 0 8px;font-size:16px}.mf-settings-content p{margin:0 0 18px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.7}.mf-settings-card{padding:14px;border:1px solid var(--dsw-alias-border-l1);border-radius:11px;background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-base));margin-bottom:10px}.mf-settings-card strong{display:block;font-size:13px}.mf-settings-card small{display:block;margin-top:5px;color:var(--dsw-alias-label-secondary);line-height:1.5}.mf-settings-action{margin-top:14px;padding:8px 12px;border:0;border-radius:10px;background:var(--dsw-alias-state-business-primary);color:#fff;cursor:pointer;font-size:12px;line-height:1.2}",
-  ".mf-settings-action:disabled{opacity:.55;cursor:wait}.mf-settings-status{display:grid;gap:8px;margin-top:12px}.mf-settings-status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 9px;border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base));font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-settings-status-row strong{color:var(--dsw-alias-state-error-primary);font-weight:600;text-align:right;word-break:break-word}.mf-settings-status-row strong.ok{color:var(--dsw-alias-state-success-primary)}.mf-settings-error{display:block;color:var(--dsw-alias-state-error-primary);line-height:1.5;word-break:break-word}"
-].join("");
+  ".mf-settings-overlay{position:fixed;inset:0;z-index:136;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.44);transform:none!important;backdrop-filter:blur(4px)}",
+  ".mf-settings{width:min(880px,calc(100vw - 32px));height:min(680px,calc(100vh - 48px));display:grid;grid-template-rows:56px minmax(0,1fr);overflow:hidden;border:1px solid var(--dsw-alias-border-l2);border-radius:18px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);box-shadow:0 28px 92px rgba(0,0,0,.48)}",
+  ".mf-settings-head{display:flex;align-items:center;gap:12px;padding:0 18px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-settings-head strong{font-size:15px;letter-spacing:.02em}.mf-settings-head small{color:var(--dsw-alias-label-secondary);font-size:11px;flex:1}",
+  ".mf-settings-body{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:0}.mf-settings-nav{padding:12px 10px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base))}.mf-settings-group{padding:10px 10px 5px;font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--dsw-alias-label-tertiary);text-transform:uppercase}.mf-settings-nav button{display:flex;width:100%;align-items:center;gap:10px;box-sizing:border-box;min-height:46px;padding:9px 11px;border:0;border-radius:12px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;text-align:left;font-size:12px;line-height:1.35;position:relative;transition:background .12s ease,color .12s ease}.mf-settings-nav button::before{content:'';position:absolute;left:0;top:50%;width:3px;height:0;transform:translateY(-50%);border-radius:0 4px 4px 0;background:var(--dsw-alias-state-business-primary);transition:height .12s ease}.mf-settings-nav button:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-settings-nav button.on{background:var(--dsw-alias-state-business-tertiary,var(--dsw-alias-interactive-bg-hover));color:var(--dsw-alias-label-primary)}.mf-settings-nav button.on::before{height:22px}.mf-settings-nav button>span{display:block;min-width:0;line-height:1.35}.mf-settings-nav button strong{display:block;color:inherit;font-size:12px;font-weight:600;line-height:1.35;white-space:normal}.mf-settings-nav button small{display:block;color:var(--dsw-alias-label-tertiary);font-size:10px;line-height:1.35;margin-top:3px;white-space:normal}",
+  ".mf-settings-content{padding:26px;overflow:auto}.mf-settings-content h3{margin:0 0 10px;font-size:17px;letter-spacing:.01em}.mf-settings-content p{margin:0 0 20px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:1.75}.mf-settings-card{padding:16px;border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-elevated,var(--dsw-alias-bg-base));margin-bottom:12px;box-shadow:0 1px 0 rgba(255,255,255,.02) inset}.mf-settings-card strong{display:block;font-size:13px}.mf-settings-card small{display:block;margin-top:6px;color:var(--dsw-alias-label-secondary);line-height:1.6}.mf-settings-action{margin-top:16px;padding:9px 14px;border:0;border-radius:12px;background:var(--dsw-alias-state-business-primary);color:#fff;cursor:pointer;font-size:12px;line-height:1.2;box-shadow:0 6px 18px rgba(37,99,235,.22)}.mf-settings-action:disabled{opacity:.55;cursor:wait}",
+  ".mf-settings-status{display:grid;gap:8px;margin-top:14px}.mf-settings-status-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base));font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-settings-status-row strong{color:var(--dsw-alias-state-error-primary);font-weight:600;text-align:right;word-break:break-word}.mf-settings-status-row strong.ok{color:var(--dsw-alias-state-success-primary)}.mf-settings-error{display:block;color:var(--dsw-alias-state-error-primary);line-height:1.5;word-break:break-word}"
+].join("\n");
 function SettingsPanel(props) {
   const r = react();
   if (!r) return null;
@@ -1898,27 +1898,127 @@ function SettingsPanel(props) {
   const open = (name) => {
     if (props && props[name]) props[name]();
   };
-  const items = [
-    ["agents", "\u5B50\u4EE3\u7406", "\u6A21\u677F\u4E0E\u8C03\u5EA6\u5165\u53E3"],
-    ["models", "\u5B50\u4EE3\u7406\u6A21\u578B", "\u4E13\u7528\u6A21\u578B\u4E0E\u901A\u7528\u6A21\u578B"],
-    ["roles", "\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD", "\u8EAB\u4EFD\u3001\u804C\u8D23\u4E0E\u8F93\u51FA\u5951\u7EA6"],
-    ["instructions", "\u79C1\u6709\u5199\u4F5C\u6307\u4EE4", "\u9ED8\u8BA4\u6CE8\u5165\u4E0E\u4E13\u9879\u6307\u4EE4"],
-    ["summary", "\u6458\u8981", "\u7AE0\u8282\u4E0E\u533A\u95F4\u6458\u8981"],
-    ["chains", "\u63D0\u793A\u8BCD\u94FE", "\u53EF\u590D\u7528\u63D0\u793A\u8BCD\u6D41\u7A0B"],
-    ["styles", "\u5199\u4F5C\u98CE\u683C", "\u9879\u76EE\u6587\u98CE\u4E0E\u6837\u5F0F"],
-    ["retrieval", "\u68C0\u7D22\u6A21\u578B", "\u672C\u5730 Embedding \u4E0E Rerank"]
+  const groups = [
+    { label: "\u5199\u4F5C\u4E0E\u6A21\u578B", items: [
+      ["agents", "\u5B50\u4EE3\u7406", "\u6A21\u677F\u4E0E\u8C03\u5EA6\u5165\u53E3"],
+      ["models", "\u5B50\u4EE3\u7406\u6A21\u578B", "\u4E13\u7528\u6A21\u578B\u4E0E\u901A\u7528\u6A21\u578B"],
+      ["roles", "\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD", "\u8EAB\u4EFD\u3001\u804C\u8D23\u4E0E\u8F93\u51FA\u5951\u7EA6"],
+      ["instructions", "\u79C1\u6709\u5199\u4F5C\u6307\u4EE4", "\u9ED8\u8BA4\u6CE8\u5165\u4E0E\u4E13\u9879\u6307\u4EE4"]
+    ] },
+    { label: "\u5185\u5BB9\u4E0E\u68C0\u7D22", items: [
+      ["summary", "\u6458\u8981", "\u7AE0\u8282\u4E0E\u533A\u95F4\u6458\u8981"],
+      ["chains", "\u63D0\u793A\u8BCD\u94FE", "\u53EF\u590D\u7528\u63D0\u793A\u8BCD\u6D41\u7A0B"],
+      ["styles", "\u5199\u4F5C\u98CE\u683C", "\u9879\u76EE\u6587\u98CE\u4E0E\u6837\u5F0F"],
+      ["retrieval", "\u68C0\u7D22\u6A21\u578B", "\u672C\u5730 Embedding \u4E0E Rerank"]
+    ] }
   ];
+  const items = groups.flatMap((group) => group.items);
+  const activeMeta = items.find((item) => item[0] === active);
   let content;
   if (active === "retrieval") {
     const status = props && props.retrievalStatus;
     const line = (label, value, good) => h("div", { className: "mf-settings-status-row", key: label }, h("span", null, label), h("strong", { className: good ? "ok" : "" }, value));
-    content = h("div", null, h("h3", null, "\u68C0\u7D22\u6A21\u578B"), h("p", null, "\u68C0\u7D22\u6A21\u578B\u72EC\u7ACB\u4E8E DSH \u804A\u5929\u6A21\u578B\u3002\u58A8\u6249\u5148\u7528\u672C\u5730 Embedding \u53EC\u56DE\uFF0C\u518D\u7528\u672C\u5730 Rerank \u91CD\u6392\uFF1B\u672A\u5C31\u7EEA\u65F6\u4F1A\u4FDD\u7559\u8BCD\u6CD5\u68C0\u7D22\u7ED3\u679C\u3002"), h("div", { className: "mf-settings-card mf-settings-status-card" }, h("strong", null, "\u672C\u5730\u8FD0\u884C\u72B6\u6001"), status ? h("div", { className: "mf-settings-status" }, line("Embedding", status.embeddingReady ? (status.embeddingModel || "\u672C\u5730\u6A21\u578B") + " \xB7 " + (status.embeddingDimensions || "?") + " \u7EF4" : "\u672A\u5C31\u7EEA", !!status.embeddingReady), line("Rerank", status.rerankReady ? status.rerankModel || "\u672C\u5730\u6A21\u578B" : status.rerankCachePresent === false ? "\u6A21\u578B\u7F13\u5B58\u672A\u627E\u5230" : "\u672A\u5C31\u7EEA", !!status.rerankReady), status.embeddingError ? h("small", { className: "mf-settings-error" }, "Embedding\uFF1A" + status.embeddingError) : null, status.rerankError ? h("small", { className: "mf-settings-error" }, "Rerank\uFF1A" + status.rerankError) : null) : h("small", null, props && props.retrievalBusy ? "\u68C0\u6D4B\u672C\u5730\u6A21\u578B\u4E2D\u2026" : "\u5C1A\u672A\u68C0\u6D4B"), h("button", { className: "mf-settings-action", type: "button", disabled: !!(props && props.retrievalBusy), onClick: () => props && props.onRefreshRetrieval && props.onRefreshRetrieval() }, props && props.retrievalBusy ? "\u68C0\u6D4B\u4E2D\u2026" : "\u5237\u65B0\u672C\u5730\u6A21\u578B\u72B6\u6001")));
-  } else if (active === "models") content = h("div", null, h("h3", null, "\u5B50\u4EE3\u7406\u6A21\u578B"), h("p", null, "\u4E3A\u4E0D\u540C\u4E13\u4E1A\u5B50\u4EE3\u7406\u914D\u7F6E\u4E13\u7528\u6A21\u578B\uFF1B\u672A\u6307\u5B9A\u4E13\u7528\u6A21\u578B\u65F6\u4F7F\u7528\u901A\u7528\u6A21\u578B\u3002\u6A21\u578B\u914D\u7F6E\u7531\u58A8\u6249\u7EDF\u4E00\u7BA1\u7406\uFF0C\u4E0D\u7531\u4E2D\u63A7\u4E34\u65F6\u51B3\u5B9A\u3002"), h("div", { className: "mf-settings-card" }, h("strong", null, "\u6A21\u578B\u914D\u7F6E\u5165\u53E3"), h("small", null, "\u6A21\u578B\u7ED1\u5B9A\u5C06\u6309\u5B50\u4EE3\u7406\u6A21\u677F\u4FDD\u5B58\u3002\u5F53\u524D\u53EF\u4ECE\u5B50\u4EE3\u7406\u6A21\u677F\u8FDB\u5165\u914D\u7F6E\uFF1B\u8FD9\u91CC\u4F5C\u4E3A\u7EDF\u4E00\u8BBE\u7F6E\u5165\u53E3\u4FDD\u7559\u3002"), h("button", { className: "mf-settings-action", type: "button", onClick: () => open("onOpenModels") }, "\u6253\u5F00\u6A21\u578B\u914D\u7F6E")));
-  else if (active === "agents") content = h("div", null, h("h3", null, "\u5B50\u4EE3\u7406"), h("p", null, "\u7BA1\u7406\u5B50\u4EE3\u7406\u6A21\u677F\u3001\u6A21\u578B\u3001\u9ED8\u8BA4\u5199\u4F5C\u6307\u4EE4\u548C\u672C\u6B21\u4EFB\u52A1\u7684\u8C03\u5EA6\u65B9\u5F0F\u3002"), h("div", { className: "mf-settings-card" }, h("strong", null, "\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD"), h("small", null, "\u6A21\u677F\u51B3\u5B9A\u5B50\u4EE3\u7406\u8EAB\u4EFD\u4E0E\u804C\u8D23\uFF1B\u4E2D\u63A7\u53EA\u80FD\u4E3A\u5F53\u524D\u4EFB\u52A1\u8FFD\u52A0\u6307\u4EE4\uFF0C\u4E0D\u80FD\u79FB\u9664\u6A21\u677F\u9ED8\u8BA4\u6307\u4EE4\u3002"), h("button", { className: "mf-settings-action", type: "button", onClick: () => open("onOpenRoles") }, "\u7BA1\u7406\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD")));
-  else content = h("div", null, h("h3", null, items.find((item) => item[0] === active)?.[1] || "\u58A8\u6249\u8BBE\u7F6E"), h("p", null, items.find((item) => item[0] === active)?.[2] || "\u96C6\u4E2D\u7BA1\u7406\u58A8\u6249\u5199\u4F5C\u914D\u7F6E\u3002"), h("button", { className: "mf-settings-action", type: "button", onClick: () => open(active === "roles" ? "onOpenRoles" : active === "instructions" ? "onOpenInstructions" : active === "summary" ? "onOpenSummary" : active === "chains" ? "onOpenChains" : active === "styles" ? "onOpenStyles" : "onOpenRoles") }, "\u6253\u5F00\u6B64\u8BBE\u7F6E"));
-  return h("div", { className: "mf-settings-overlay", onMouseDown: (event) => {
-    if (event.target === event.currentTarget) close();
-  } }, h("div", { className: "mf-settings", role: "dialog", "aria-label": "\u58A8\u6249\u8BBE\u7F6E" }, h("header", { className: "mf-settings-head" }, h("strong", null, "\u58A8\u6249\u8BBE\u7F6E"), h("small", null, "\u96C6\u4E2D\u7BA1\u7406\u5B50\u4EE3\u7406\u3001\u6307\u4EE4\u3001\u6458\u8981\u4E0E\u5199\u4F5C\u914D\u7F6E"), h("button", { className: "mf-action-icon", type: "button", title: "\u5173\u95ED", onClick: close }, "\xD7")), h("div", { className: "mf-settings-body" }, h("nav", { className: "mf-settings-nav" }, items.map((item) => h("button", { key: item[0], type: "button", className: active === item[0] ? "on" : "", onClick: () => select(item[0]) }, h("span", null, h("strong", null, item[1]), h("small", null, item[2]))))), h("main", { className: "mf-settings-content" }, content))));
+    content = h(
+      "div",
+      null,
+      h("h3", null, "\u68C0\u7D22\u6A21\u578B"),
+      h("p", null, "\u68C0\u7D22\u6A21\u578B\u72EC\u7ACB\u4E8E DSH \u804A\u5929\u6A21\u578B\u3002\u58A8\u6249\u5148\u7528\u672C\u5730 Embedding \u53EC\u56DE\uFF0C\u518D\u7528\u672C\u5730 Rerank \u91CD\u6392\uFF1B\u672A\u5C31\u7EEA\u65F6\u4F1A\u4FDD\u7559\u8BCD\u6CD5\u68C0\u7D22\u7ED3\u679C\u3002"),
+      h(
+        "div",
+        { className: "mf-settings-card" },
+        h("strong", null, "\u672C\u5730\u8FD0\u884C\u72B6\u6001"),
+        status ? h(
+          "div",
+          { className: "mf-settings-status" },
+          line("Embedding", status.embeddingReady ? (status.embeddingModel || "\u672C\u5730\u6A21\u578B") + " \xB7 " + (status.embeddingDimensions || "?") + " \u7EF4" : "\u672A\u5C31\u7EEA", !!status.embeddingReady),
+          line("Rerank", status.rerankReady ? status.rerankModel || "\u672C\u5730\u6A21\u578B" : status.rerankCachePresent === false ? "\u6A21\u578B\u7F13\u5B58\u672A\u627E\u5230" : "\u672A\u5C31\u7EEA", !!status.rerankReady),
+          status.embeddingError ? h("small", { className: "mf-settings-error" }, "Embedding\uFF1A" + status.embeddingError) : null,
+          status.rerankError ? h("small", { className: "mf-settings-error" }, "Rerank\uFF1A" + status.rerankError) : null
+        ) : h("small", null, props && props.retrievalBusy ? "\u68C0\u6D4B\u672C\u5730\u6A21\u578B\u4E2D\u2026" : "\u5C1A\u672A\u68C0\u6D4B"),
+        h("button", { className: "mf-settings-action", type: "button", disabled: !!(props && props.retrievalBusy), onClick: () => props && props.onRefreshRetrieval && props.onRefreshRetrieval() }, props && props.retrievalBusy ? "\u68C0\u6D4B\u4E2D\u2026" : "\u5237\u65B0\u672C\u5730\u6A21\u578B\u72B6\u6001")
+      ),
+      props.ragIndexStatus ? h(
+        "div",
+        { className: "mf-settings-card" },
+        h("strong", null, "\u5F53\u524D\u9879\u76EE\u7D22\u5F15" + (props.projectTitle ? " \xB7 " + props.projectTitle : "")),
+        h(
+          "div",
+          { className: "mf-settings-status" },
+          line("\u72B6\u6001", props.ragIndexStatus.status === "fresh" ? "\u53EF\u7528 \xB7 " + (props.ragIndexStatus.indexedChunks || 0) + " \u5757" : props.ragIndexStatus.status === "stale" ? "\u5DF2\u8FC7\u671F \xB7 " + (props.ragIndexStatus.indexedChunks || 0) + " \u5757" : "\u5C1A\u672A\u5EFA\u7ACB", props.ragIndexStatus.status === "fresh"),
+          line("\u53EC\u56DE", "\u672C\u5730 Embedding", true),
+          line("\u91CD\u6392", "\u672C\u5730 Rerank\uFF08\u5931\u8D25\u56DE\u9000\u8BCD\u6CD5\uFF09", !!(props && props.retrievalStatus && props.retrievalStatus.rerankReady))
+        ),
+        h("small", null, "\u5728\u300C\u68C0\u7D22\u300D\u6807\u7B7E\u4E2D\u9996\u6B21\u641C\u7D22\u4F1A\u81EA\u52A8\u5EFA\u7ACB/\u66F4\u65B0\u7D22\u5F15\uFF1BAgent \u4E5F\u53EF\u901A\u8FC7 mofei_search-rag \u4F7F\u7528\u8BE5\u7D22\u5F15\u3002")
+      ) : null
+    );
+  } else if (active === "models") {
+    content = h(
+      "div",
+      null,
+      h("h3", null, "\u5B50\u4EE3\u7406\u6A21\u578B"),
+      h("p", null, "\u4E3A\u4E0D\u540C\u4E13\u4E1A\u5B50\u4EE3\u7406\u914D\u7F6E\u4E13\u7528\u6A21\u578B\uFF1B\u672A\u6307\u5B9A\u4E13\u7528\u6A21\u578B\u65F6\u4F7F\u7528\u901A\u7528\u6A21\u578B\u3002\u6A21\u578B\u914D\u7F6E\u7531\u58A8\u6249\u7EDF\u4E00\u7BA1\u7406\uFF0C\u4E0D\u7531\u4E2D\u63A7\u4E34\u65F6\u51B3\u5B9A\u3002"),
+      h(
+        "div",
+        { className: "mf-settings-card" },
+        h("strong", null, "\u6A21\u578B\u914D\u7F6E\u5165\u53E3"),
+        h("small", null, "\u6A21\u578B\u7ED1\u5B9A\u5C06\u6309\u5B50\u4EE3\u7406\u6A21\u677F\u4FDD\u5B58\u3002\u5F53\u524D\u53EF\u4ECE\u5B50\u4EE3\u7406\u6A21\u677F\u8FDB\u5165\u914D\u7F6E\uFF1B\u8FD9\u91CC\u4F5C\u4E3A\u7EDF\u4E00\u8BBE\u7F6E\u5165\u53E3\u4FDD\u7559\u3002"),
+        h("button", { className: "mf-settings-action", type: "button", onClick: () => open("onOpenModels") }, "\u6253\u5F00\u6A21\u578B\u914D\u7F6E")
+      )
+    );
+  } else if (active === "agents") {
+    content = h(
+      "div",
+      null,
+      h("h3", null, "\u5B50\u4EE3\u7406"),
+      h("p", null, "\u7BA1\u7406\u5B50\u4EE3\u7406\u6A21\u677F\u3001\u6A21\u578B\u3001\u9ED8\u8BA4\u5199\u4F5C\u6307\u4EE4\u548C\u672C\u6B21\u4EFB\u52A1\u7684\u8C03\u5EA6\u65B9\u5F0F\u3002"),
+      h(
+        "div",
+        { className: "mf-settings-card" },
+        h("strong", null, "\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD"),
+        h("small", null, "\u6A21\u677F\u51B3\u5B9A\u5B50\u4EE3\u7406\u8EAB\u4EFD\u4E0E\u804C\u8D23\uFF1B\u4E2D\u63A7\u53EA\u80FD\u4E3A\u5F53\u524D\u4EFB\u52A1\u8FFD\u52A0\u6307\u4EE4\uFF0C\u4E0D\u80FD\u79FB\u9664\u6A21\u677F\u9ED8\u8BA4\u6307\u4EE4\u3002"),
+        h("button", { className: "mf-settings-action", type: "button", onClick: () => open("onOpenRoles") }, "\u7BA1\u7406\u5B50\u4EE3\u7406\u63D0\u793A\u8BCD")
+      )
+    );
+  } else {
+    const title = activeMeta ? activeMeta[1] : "\u58A8\u6249\u8BBE\u7F6E";
+    const description = activeMeta ? activeMeta[2] : "\u96C6\u4E2D\u7BA1\u7406\u58A8\u6249\u5199\u4F5C\u914D\u7F6E\u3002";
+    const openName = active === "roles" ? "onOpenRoles" : active === "instructions" ? "onOpenInstructions" : active === "summary" ? "onOpenSummary" : active === "chains" ? "onOpenChains" : active === "styles" ? "onOpenStyles" : "onOpenRoles";
+    content = h("div", null, h("h3", null, title), h("p", null, description), h("button", { className: "mf-settings-action", type: "button", onClick: () => open(openName) }, "\u6253\u5F00\u6B64\u8BBE\u7F6E"));
+  }
+  return h(
+    "div",
+    { className: "mf-settings-overlay", onMouseDown: (event) => {
+      if (event.target === event.currentTarget) close();
+    } },
+    h(
+      "div",
+      { className: "mf-settings", role: "dialog", "aria-label": "\u58A8\u6249\u8BBE\u7F6E" },
+      h(
+        "header",
+        { className: "mf-settings-head" },
+        h("strong", null, "\u58A8\u6249\u8BBE\u7F6E"),
+        h("small", null, "\u96C6\u4E2D\u7BA1\u7406\u5B50\u4EE3\u7406\u3001\u6307\u4EE4\u3001\u6458\u8981\u4E0E\u5199\u4F5C\u914D\u7F6E"),
+        h("button", { className: "mf-action-icon", type: "button", title: "\u5173\u95ED", onClick: close }, "\xD7")
+      ),
+      h(
+        "div",
+        { className: "mf-settings-body" },
+        h(
+          "nav",
+          { className: "mf-settings-nav" },
+          groups.map((group) => [
+            h("div", { key: "group-" + group.label, className: "mf-settings-group" }, group.label),
+            ...group.items.map((item) => h(
+              "button",
+              { key: item[0], type: "button", className: active === item[0] ? "on" : "", onClick: () => select(item[0]) },
+              h("span", null, h("strong", null, item[1]), h("small", null, item[2]))
+            ))
+          ])
+        ),
+        h("main", { className: "mf-settings-content" }, content)
+      )
+    )
+  );
 }
 
 // plugin/src/client/agent-models-panel.js
@@ -3066,10 +3166,10 @@ function createClient(require2) {
     ".mf-tabs{display:flex;gap:4px;padding:6px 8px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-tab{flex:1;border:0;border-radius:14px;background:transparent;color:var(--dsw-alias-label-secondary);padding:5px 0;cursor:pointer;font-weight:600;font-size:12px;line-height:1.2}.mf-tab.on{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}",
     ".mf-sh,.mf-eh{height:46px;font-size:12px;font-weight:600}.mf-eh-actions{display:flex;align-items:center;gap:8px}",
     ".mf-list{overflow:auto;padding:8px}",
-    ".mf-item{display:block;width:100%;min-width:0;padding:6px 8px;border:0;border-radius:14px;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit;transition:background .12s ease,opacity .12s ease}.mf-item:hover,.mf-item.on{background:var(--dsw-alias-interactive-bg-hover)}.mf-item.on{font-weight:600}.mf-item.dragging{opacity:.45}.mf-item.drop-target{outline:1px dashed var(--dsw-alias-state-business-primary)}.mf-item small{display:block;margin-top:3px;color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:400}",
-    ".mf-row{display:flex;align-items:center;gap:6px;width:100%;min-width:0}.mf-title{flex:1;min-width:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mf-minis{display:flex;gap:4px;flex-shrink:0}",
+    ".mf-item{display:block;width:100%;min-width:0;padding:8px 10px;margin-bottom:2px;border:1px solid transparent;border-radius:14px;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit;transition:background .12s ease,border-color .12s ease,opacity .12s ease}.mf-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-item.on{background:var(--dsw-alias-state-business-tertiary);border-color:rgba(103,158,254,.28);font-weight:600}.mf-item.dragging{opacity:.45}.mf-item.drop-target{outline:1px dashed var(--dsw-alias-state-business-primary)}.mf-item small{display:block;margin-top:3px;color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:400}",
+    ".mf-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;min-width:0}.mf-title{flex:1;min-width:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;font:inherit;white-space:normal;overflow-wrap:anywhere;line-height:1.35}.mf-minis{display:flex;gap:4px;flex-shrink:0}.mf-row .mf-minis{flex-basis:100%;margin-top:2px}",
     ".mf-mini{display:grid;place-items:center;min-width:24px;height:22px;padding:0 7px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font-size:12px;line-height:1;transition:background .12s ease,color .12s ease}.mf-mini:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-mini.danger{color:var(--dsw-alias-state-error-primary,var(--dsw-alias-label-tertiary));border-color:rgba(224,117,110,.35)}.mf-mini.danger:hover{background:var(--dsw-alias-interactive-bg-hover-danger)}.mf-mini.danger.armed{background:rgba(224,117,110,.2);color:var(--dsw-alias-state-error-primary)}.mf-mini.on{background:var(--dsw-alias-state-business-primary);border-color:transparent;color:#fff}",
-    ".mf-vol{font-weight:600;font-size:12px;padding:6px 8px 2px;color:var(--dsw-alias-label-secondary)}.mf-vol-head{display:flex;align-items:center;gap:5px}.mf-vol-head .mf-title{font-weight:600;color:var(--dsw-alias-label-primary)}.mf-vol small{margin-left:4px;font-weight:400;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-vol-children{margin-left:10px;border-left:1px solid var(--dsw-alias-border-l1);padding-left:4px}",
+    ".mf-vol{font-weight:600;font-size:12px;padding:6px 8px 2px;color:var(--dsw-alias-label-secondary)}.mf-vol-head{display:flex;flex-wrap:wrap;align-items:center;gap:5px}.mf-vol-head .mf-title{font-weight:600;color:var(--dsw-alias-label-primary)}.mf-vol-head .mf-minis{flex-basis:100%;margin-top:2px}.mf-vol small{margin-left:4px;font-weight:400;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-vol-children{margin-left:10px;border-left:1px solid var(--dsw-alias-border-l1);padding-left:4px}",
     ".mf-btn{border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-base);color:inherit;padding:6px 9px;cursor:pointer;font:inherit;transition:background .12s ease,opacity .12s ease}.mf-btn:disabled{opacity:.5}.mf-primary{border-color:transparent;background:var(--dsw-alias-state-business-primary);color:#fff}",
     ".mf-form{display:grid;gap:7px;padding:9px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-input{box-sizing:border-box;width:100%;padding:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit}.mf-rename{min-width:0;padding:4px 6px;font-size:12px}",
     ".mf-goal{padding:6px 9px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-goal-btn{width:100%;border:1px dashed var(--dsw-alias-border-l1);border-radius:14px;background:transparent;color:var(--dsw-alias-label-secondary);padding:6px;cursor:pointer;font:inherit;font-size:11px}",
@@ -3077,7 +3177,7 @@ function createClient(require2) {
     ".mf-editor{display:flex;min-width:0;min-height:0;height:100%;flex-direction:column}.mf-editor-pane{display:flex;flex:1 1 auto;min-width:0;min-height:0;flex-direction:column}.mf-status{font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-status.unsaved{color:#b45309}.mf-status.saving{color:#2563eb}.mf-status.error{color:#dc2626}",
     ".mf-title-input{box-sizing:border-box;width:100%;padding:12px 18px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:700 17px/1.4 ui-serif,Georgia,serif;outline:0}",
     ".mf-alert{padding:10px 14px;border-bottom:1px solid rgba(220,38,38,.25);background:rgba(220,38,38,.08);color:#dc2626;font-size:12px}.mf-actions{display:flex;gap:7px;margin-top:8px}",
-    ".mf-text{box-sizing:border-box;width:100%;flex:1;min-height:0;resize:none;border:0;outline:0;background:var(--dsw-alias-bg-base);color:inherit;padding:28px clamp(20px,6vw,72px);font:16px/1.85 ui-serif,Georgia,serif}",
+    ".mf-code{display:flex;flex:1;min-height:0;min-width:0;background:var(--dsw-alias-bg-base)}.mf-editor-lines{flex:0 0 46px;overflow:hidden;padding:28px 8px 28px 12px;text-align:right;color:var(--dsw-alias-label-tertiary);font:11px/29.6px ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base));border-right:1px solid var(--dsw-alias-border-l1);user-select:none}.mf-editor-lines span{display:block}.mf-code .mf-text{width:auto;flex:1;min-width:0}.mf-text{box-sizing:border-box;width:100%;flex:1;min-width:0;min-height:0;resize:none;border:0;outline:0;background:var(--dsw-alias-bg-base);color:inherit;padding:28px clamp(20px,6vw,72px);font:16px/1.85 ui-serif,Georgia,serif}",
     ".mf-hist{max-height:240px;overflow:auto;border-bottom:1px solid var(--dsw-alias-border-l1);padding:8px}.mf-hist-head{display:flex;align-items:center;justify-content:space-between;padding:2px 6px 8px;font-size:12px;font-weight:600}.mf-hist-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 8px;border-radius:14px}.mf-hist-item:hover{background:var(--dsw-alias-interactive-bg-hover)}.mf-hist-meta{display:flex;align-items:center;gap:10px;min-width:0}.mf-hist-meta strong{font-size:12px}.mf-hist-meta span{color:var(--dsw-alias-label-secondary);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}",
     ".mf-foot{flex:0 0 38px;height:38px;min-height:38px;padding:0 14px;border-top:1px solid var(--dsw-alias-border-l1);border-bottom:0;color:var(--dsw-alias-label-secondary);font-size:11.5px;overflow:hidden}.mf-stat{display:inline-flex;gap:12px;min-width:0;white-space:nowrap}.mf-context-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--dsw-alias-label-tertiary)}",
     ".mf-search{padding:8px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-search input{box-sizing:border-box;width:100%;padding:6px 8px;border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-base);color:inherit;font:inherit;font-size:12px}.mf-sr-item{padding:6px 4px;border-bottom:1px dashed var(--dsw-alias-border-l1)}.mf-sr-item strong{font-size:12px}.mf-sr-line{color:var(--dsw-alias-label-secondary);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
@@ -3088,7 +3188,7 @@ function createClient(require2) {
     ".mf-heat{padding:8px 14px;border-top:1px solid var(--dsw-alias-border-l1);display:grid;gap:8px}.mf-heat-grid{display:grid;grid-template-columns:repeat(12,12px);grid-auto-rows:12px;gap:3px;justify-content:start}.mf-hm-cell{width:12px;height:12px;border-radius:3px;background:var(--dsw-alias-interactive-bg-hover);border:1px solid var(--dsw-alias-border-l1)}.mf-hm-cell.l1{background:rgba(67,160,71,.35)}.mf-hm-cell.l2{background:rgba(67,160,71,.55)}.mf-hm-cell.l3{background:rgba(67,160,71,.75)}.mf-hm-cell.l4{background:rgba(67,160,71,.95)}.mf-heat small{color:var(--dsw-alias-label-secondary);font-size:11px}",
     ".mf-ai{display:grid;gap:8px;padding:10px 14px;border-top:1px solid var(--dsw-alias-border-l1);max-height:280px;overflow:auto}.mf-ai-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.mf-ai select{font:inherit;font-size:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-base);color:inherit;padding:4px 6px}.mf-ai textarea{box-sizing:border-box;width:100%;min-height:56px;padding:8px;border:1px solid var(--dsw-alias-border-l1);border-radius:14px;background:var(--dsw-alias-bg-base);color:inherit;font-size:12px;line-height:1.6;resize:vertical}.mf-ai-result{white-space:pre-wrap;font:13px/1.7 ui-serif,Georgia,serif;padding:8px 10px;border:1px dashed var(--dsw-alias-border-l1);border-radius:14px;max-height:140px;overflow:auto;color:var(--dsw-alias-label-primary)}",
     ".mf-panel.mf-focus .mf-body{grid-template-columns:minmax(0,1fr)}.mf-panel.mf-focus .mf-col,.mf-panel.mf-focus .mf-activity,.mf-panel.mf-focus .mf-gutter,.mf-panel.mf-focus .mf-chat{display:none}",
-    "@media(max-width:760px){.mf-panel{width:100vw;height:100vh;margin:0;border:0;border-radius:0}.mf-body{grid-template-columns:48px 110px minmax(0,1fr)}.mf-body>.mf-col.mf-mid{display:none}.mf-gutter{display:none}.mf-chat{display:none}.mf-text{padding:18px 15px}.mf-head small{display:none}}",
+    "@media(max-width:760px){.mf-panel{width:100vw;height:100vh;margin:0;border:0;border-radius:0}.mf-body{grid-template-columns:48px 110px minmax(0,1fr)}.mf-body>.mf-col.mf-mid{display:none}.mf-gutter{display:none}.mf-chat{display:none}.mf-text{padding:18px 15px}.mf-head small{display:none}.mf-list .mf-item{padding:6px 7px}.mf-list .mf-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}.mf-list .mf-title small{display:none}.mf-list .mf-minis{display:none}}",
     ".mf-standalone .mf-overlay{position:absolute;background:transparent}.mf-standalone .mf-panel{width:100vw;height:100vh;margin:0;border-radius:0;border:none}",
     ".mf-palette{position:fixed;left:50%;top:72px;transform:translateX(-50%);width:min(620px,calc(100% - 24px));max-height:min(520px,calc(100vh - 96px));overflow:auto;background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35);z-index:130}.mf-palette-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid var(--dsw-alias-border-l1)}.mf-palette-head strong{font-size:13px;font-weight:700}.mf-palette-head small{display:block;margin-top:2px;color:var(--dsw-alias-label-secondary);font-size:11px}.mf-palette-close{flex:0 0 auto;width:28px;height:28px;padding:0;border:0;border-radius:14px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font-size:18px;line-height:1}.mf-palette-close:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-palette input{box-sizing:border-box;width:100%;padding:10px 12px;border:0;border-bottom:1px solid var(--dsw-alias-border-l1);background:transparent;color:inherit;font:inherit}.mf-palette-item{display:block;width:100%;margin:2px 0;padding:11px 14px;border:0;border-radius:10px;background:transparent;color:inherit;text-align:left;cursor:pointer;font-size:13px;line-height:1.5;transition:background .12s ease,color .12s ease}.mf-palette-item:last-of-type{margin-bottom:6px}.mf-palette-item:hover,.mf-palette-item.on{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}.mf-palette-item small{display:block;margin-top:3px;color:var(--dsw-alias-label-secondary);font-size:11px}",
     ".mf-stylebar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dsw-alias-label-secondary)}.mf-stylebar select{font:inherit;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-base);color:inherit;padding:3px 6px}",
@@ -3534,6 +3634,7 @@ function createClient(require2) {
     const [settingsSection, setSettingsSection] = React.useState("agents");
     const [retrievalStatus, setRetrievalStatus] = React.useState(null);
     const [retrievalBusy, setRetrievalBusy] = React.useState(false);
+    const [ragIndexStatus, setRagIndexStatus] = React.useState(null);
     const [roles, setRoles] = React.useState([]);
     const [roleScopeId, setRoleScopeId] = React.useState("");
     const [roleActiveId, setRoleActiveId] = React.useState("");
@@ -4847,10 +4948,18 @@ function createClient(require2) {
       setRetrievalBusy(true);
       call("retrieval-model-status").then((result) => setRetrievalStatus(result || null)).catch((failure) => setRetrievalStatus({ embeddingReady: false, rerankReady: false, embeddingError: String(failure && failure.message || failure) })).finally(() => setRetrievalBusy(false));
     }
+    function loadRagIndexStatus() {
+      if (!projectId) {
+        setRagIndexStatus(null);
+        return;
+      }
+      call("rag-status", { projectId }).then((result) => setRagIndexStatus(result || null)).catch(() => setRagIndexStatus(null));
+    }
     function openSettingsPanel() {
       if (props && props.onOpenSettings) props.onOpenSettings();
       setSettingsOpen(true);
       if (!retrievalStatus) loadRetrievalStatus();
+      loadRagIndexStatus();
     }
     function openModelsPanel() {
       setModelsOpen(true);
@@ -6602,7 +6711,7 @@ function createClient(require2) {
     }, onDragEnd: () => {
       setDragKind("");
       setDragId("");
-    } }, h("div", { className: "mf-row" }, h("button", { className: "mf-title", type: "button", onClick: () => pickChapter(item) }, item.title, h("small", null, "r" + String(item.revision) + (item.historyCount ? " \xB7 \u5386\u53F2 " + String(item.historyCount) : ""))), rename && rename.kind === "chapter" && rename.id === item.id ? h("input", { className: "mf-input mf-rename", value: renameValue, autoFocus: true, onFocus: (event) => event.target.select(), onChange: (event) => setRenameValue(event.target.value), onKeyDown: (event) => {
+    } }, h("div", { className: "mf-row" }, h("button", { className: "mf-title", type: "button", title: String(item.title == null ? "" : item.title), onClick: () => pickChapter(item) }, item.title, h("small", null, "r" + String(item.revision) + (item.historyCount ? " \xB7 \u5386\u53F2 " + String(item.historyCount) : ""))), rename && rename.kind === "chapter" && rename.id === item.id ? h("input", { className: "mf-input mf-rename", value: renameValue, autoFocus: true, onFocus: (event) => event.target.select(), onChange: (event) => setRenameValue(event.target.value), onKeyDown: (event) => {
       if (event.key === "Enter") commitRename();
       if (event.key === "Escape") setRename(null);
     } }) : h("span", { className: "mf-minis" }, moveVolFor === item.id ? h("select", { className: "mf-sel", value: item.volumeId || "", onChange: (event) => setChapterVolume(item.id, event.target.value), onBlur: () => setMoveVolFor("") }, h("option", { value: "" }, "\u672A\u5206\u5377"), volumesSorted.map((v) => h("option", { key: v.id, value: v.id }, v.title))) : null, h(MiniButton, { label: "\u5377", title: "\u79FB\u52A8\u5230\u5377", on: !!item.volumeId, onClick: () => setMoveVolFor(moveVolFor === item.id ? "" : item.id) }), h(MiniButton, { label: "\u2191", title: "\u4E0A\u79FB", onClick: () => moveChapter(item.id, "up") }), h(MiniButton, { label: "\u2193", title: "\u4E0B\u79FB", onClick: () => moveChapter(item.id, "down") }), h(MiniButton, { label: "\u270E", title: "\u91CD\u547D\u540D", onClick: () => startRename("chapter", item.id, item.title) }), h(MiniButton, { label: "\xD7", danger: true, armed: armed && armed.kind === "delete-chapter" && armed.id === item.id, title: armed && armed.kind === "delete-chapter" && armed.id === item.id ? "\u518D\u6B21\u70B9\u51FB\u786E\u8BA4\u5220\u9664" : "\u5220\u9664\u7AE0\u8282", onClick: () => deleteChapter(item.id) }))));
@@ -7168,54 +7277,63 @@ function createClient(require2) {
                   event.target.blur();
                 }
               }, onBlur: () => commitTitle(), title: "\u7AE0\u8282\u6807\u9898" }) : null,
-              chapter ? h("textarea", { className: "mf-text", value: draft, spellCheck: true, placeholder: "\u5F00\u59CB\u5199\u4F5C\u2026\uFF08Ctrl+S \u4FDD\u5B58\u6B63\u6587\uFF0CCtrl+F \u67E5\u627E\u66FF\u6362\uFF09", onScroll: saveScrollPos, onSelect: (event) => {
-                setSelStart(event.target.selectionStart);
-                setSelEnd(event.target.selectionEnd);
-              }, onMouseUp: (event) => {
-                setSelStart(event.target.selectionStart);
-                setSelEnd(event.target.selectionEnd);
-              }, onChange: (event) => {
-                setDraft(event.target.value);
-                if (!conflict) {
-                  setStatus("unsaved");
-                  setError("");
-                }
-              }, onKeyDown: (event) => {
-                const key = String(event.key).toLowerCase();
-                if ((event.ctrlKey || event.metaKey) && key === "s") {
-                  event.preventDefault();
-                  saveChapter();
-                }
-                if ((event.ctrlKey || event.metaKey) && key === "f") {
-                  event.preventDefault();
-                  setFindOpen(true);
-                  updateFind("");
-                  later(() => {
-                    const el = document.querySelector(".mf-findbar input");
-                    if (el) el.focus();
-                  }, 60);
-                }
-                if (event.key === "Tab" && !event.ctrlKey && !event.altKey && !event.metaKey) {
-                  event.preventDefault();
-                  const el = event.target;
-                  const start = el.selectionStart || 0;
-                  const end = el.selectionEnd || start;
-                  const next = draft.slice(0, start) + "\u3000\u3000" + draft.slice(end);
-                  const caret = start + 2;
-                  setDraft(next);
+              chapter ? h(
+                "div",
+                { className: "mf-code" },
+                h("div", { className: "mf-editor-lines", "aria-hidden": "true" }, Array.from({ length: String(draft || "").split("\n").length }, (_, index) => h("span", { key: index }, String(index + 1)))),
+                h("textarea", { className: "mf-text", value: draft, spellCheck: true, placeholder: "\u5F00\u59CB\u5199\u4F5C\u2026\uFF08Ctrl+S \u4FDD\u5B58\u6B63\u6587\uFF0CCtrl+F \u67E5\u627E\u66FF\u6362\uFF09", onScroll: (event) => {
+                  saveScrollPos();
+                  const lineEl = document.querySelector(".mf-editor-lines");
+                  if (lineEl) lineEl.scrollTop = event.target.scrollTop;
+                }, onSelect: (event) => {
+                  setSelStart(event.target.selectionStart);
+                  setSelEnd(event.target.selectionEnd);
+                }, onMouseUp: (event) => {
+                  setSelStart(event.target.selectionStart);
+                  setSelEnd(event.target.selectionEnd);
+                }, onChange: (event) => {
+                  setDraft(event.target.value);
                   if (!conflict) {
                     setStatus("unsaved");
                     setError("");
                   }
-                  later(() => {
-                    const target = document.querySelector("textarea.mf-text");
-                    if (target) {
-                      target.focus();
-                      target.setSelectionRange(caret, caret);
+                }, onKeyDown: (event) => {
+                  const key = String(event.key).toLowerCase();
+                  if ((event.ctrlKey || event.metaKey) && key === "s") {
+                    event.preventDefault();
+                    saveChapter();
+                  }
+                  if ((event.ctrlKey || event.metaKey) && key === "f") {
+                    event.preventDefault();
+                    setFindOpen(true);
+                    updateFind("");
+                    later(() => {
+                      const el = document.querySelector(".mf-findbar input");
+                      if (el) el.focus();
+                    }, 60);
+                  }
+                  if (event.key === "Tab" && !event.ctrlKey && !event.altKey && !event.metaKey) {
+                    event.preventDefault();
+                    const el = event.target;
+                    const start = el.selectionStart || 0;
+                    const end = el.selectionEnd || start;
+                    const next = draft.slice(0, start) + "\u3000\u3000" + draft.slice(end);
+                    const caret = start + 2;
+                    setDraft(next);
+                    if (!conflict) {
+                      setStatus("unsaved");
+                      setError("");
                     }
-                  }, 0);
-                }
-              } }) : h("div", { className: "mf-empty" }, "\u9009\u62E9\u7AE0\u8282\u540E\u5F00\u59CB\u5199\u4F5C\u3002"),
+                    later(() => {
+                      const target = document.querySelector("textarea.mf-text");
+                      if (target) {
+                        target.focus();
+                        target.setSelectionRange(caret, caret);
+                      }
+                    }, 0);
+                  }
+                } })
+              ) : h("div", { className: "mf-empty" }, "\u9009\u62E9\u7AE0\u8282\u540E\u5F00\u59CB\u5199\u4F5C\u3002"),
               aiOpen ? h(
                 "div",
                 { className: "mf-ai" },
@@ -7330,7 +7448,7 @@ function createClient(require2) {
       settingsOpen ? h(SettingsPanel, { active: settingsSection, onSelect: (section) => {
         setSettingsSection(section);
         if (section === "retrieval" && !retrievalStatus && !retrievalBusy) loadRetrievalStatus();
-      }, retrievalStatus, retrievalBusy, onRefreshRetrieval: loadRetrievalStatus, onClose: () => setSettingsOpen(false), onOpenModels: () => {
+      }, retrievalStatus, retrievalBusy, ragIndexStatus, projectTitle: project ? project.title : "", onRefreshRetrieval: loadRetrievalStatus, onClose: () => setSettingsOpen(false), onOpenModels: () => {
         setSettingsOpen(false);
         openModelsPanel();
       }, onOpenRoles: () => {

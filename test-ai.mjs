@@ -57,7 +57,9 @@ test('summaryRequest 生成章节摘要提示词', () => {
   const request = summaryRequest({ id: 'c1', title: '初雪', content: 'a'.repeat(20000) }, { maxChars: 1000 })
   assert.match(request, /初雪/)
   assert.match(request, /150 字以内/)
-  assert.ok(request.length <= 1000 + 200)
+    assert.match(request, /因果链/)
+    assert.match(request, /伏笔/)
+    assert.ok(request.length <= 1000 + 600)
 })
 
 let failed = 0

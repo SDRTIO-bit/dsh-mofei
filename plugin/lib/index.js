@@ -1143,7 +1143,7 @@ export default {
       if (!output) return { error: 'LLM_EMPTY' }
       return { text: output }
     }
-    const SUMMARY_SYSTEM = '你是 墨扉小说编辑。请只输出摘要正文，不要解释，不要使用 Markdown 标记。'
+    const SUMMARY_SYSTEM = '你是墨扉小说编辑。你的任务是阅读用户提供的章节或区间内容并输出高质量小说摘要；只输出摘要正文，不要解释、不要评价、不要使用 Markdown 标记。'
     async function generateChapterSummary(selectedModel, chapter, args, hooks) {
       const request = summaryRequest(chapter, { maxChars: typeof (args && args.maxChars) === 'number' ? args.maxChars : 8000 })
       const result = await generateText(selectedModel.provider, selectedModel.model, SUMMARY_SYSTEM, buildAiMessages({ messages: [] }, request, { maxHistory: 0 }), 700, hooks)
@@ -1162,7 +1162,17 @@ export default {
         const excerpt = entry && entry.summary ? entry.summary : String(chapter.content || '').replace(/\s+/g, '').slice(0, 400)
         return '《' + chapter.title + '》' + (excerpt ? '：' + excerpt : '')
       }).filter(Boolean).join('\n')
-      const request = '请为以下连续章节生成 300 字以内的区间摘要，只输出摘要正文：\n' + pieces
+      const request = [
+      '请为以下连续章节生成 300 字以内的区间摘要。',
+      '',
+      '要求：',
+      '1. 只输出摘要正文，不要解释、不要评价、不要使用 Markdown 标记。',
+      '2. 摘要需要覆盖区间内的主要剧情推进、人物状态变化、关键伏笔和结尾状态。',
+      '3. 优先整合已有章节摘要，不要逐句复述原文。',
+      '',
+      '章节/摘要材料：',
+      pieces,
+    ].join('\n')
       const result = await generateText(selectedModel.provider, selectedModel.model, SUMMARY_SYSTEM, buildAiMessages({ messages: [] }, request, { maxHistory: 0 }), 900, hooks)
       if (result.error || result.canceled) return result
       await mutate(async () => {
